@@ -1010,6 +1010,8 @@ button {
 .admin-panel {
   width: min(1180px, calc(100vw - 32px));
   max-height: min(88vh, 920px);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 32px;
@@ -1127,6 +1129,7 @@ button {
 }
 
 .admin-body {
+  flex: 1;
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   min-height: 0;
@@ -1193,7 +1196,10 @@ button {
 }
 
 .admin-content {
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 22px;
 }
 
@@ -1512,6 +1518,11 @@ button {
     border-radius: 24px;
   }
 
+  .admin-body {
+    grid-template-columns: 1fr;
+    max-height: calc(100vh - 160px);
+  }
+
   .admin-header,
   .admin-content,
   .admin-sidebar,
@@ -1522,6 +1533,15 @@ button {
   .admin-login-card {
     padding: 22px;
     border-radius: 22px;
+  }
+
+  .admin-sidebar {
+    max-height: 180px;
+    overflow: auto;
+  }
+
+  .admin-content {
+    padding: 18px;
   }
 
   .topnav {
