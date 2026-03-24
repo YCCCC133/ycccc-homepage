@@ -3,7 +3,6 @@
 import type { CSSProperties } from "react";
 import {
   startTransition,
-  useDeferredValue,
   useEffect,
   useEffectEvent,
   useRef,
@@ -55,17 +54,15 @@ export default function ExperienceShell({ initialProfile }: Props) {
   const adminLongPressTriggeredRef = useRef(false);
   const projectSectionRef = useRef<HTMLElement | null>(null);
   const projectTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const activeProjectIndexRef = useRef(0);
   const [profile, setProfile] = useState(initialProfile);
-  const [projectScrollMode, setProjectScrollMode] = useState(false);
   const [activeSection, setActiveSection] =
     useState<(typeof sections)[number]["id"]>("overview");
   const [activeProjectIndex, setActiveProjectIndex] = useState(0);
+  const [projectDetailsOpen, setProjectDetailsOpen] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
 
-  const deferredProjectIndex = useDeferredValue(activeProjectIndex);
-  const activeProject = profile.projects[deferredProjectIndex] ?? null;
+  const activeProject = projectDetailsOpen ? profile.projects[activeProjectIndex] ?? null : null;
   const headlineParts = profile.headline
     .split("|")
     .map((part) => part.trim())
@@ -79,7 +76,7 @@ export default function ExperienceShell({ initialProfile }: Props) {
     "合作沟通"
   )}&body=${encodeURIComponent("你好，我想和你聊一个项目。")}`;
   const progressWidth = profile.projects.length
-    ? ((deferredProjectIndex + 1) / profile.projects.length) * 100
+    ? ((activeProjectIndex + 1) / profile.projects.length) * 100
     : 0;
 
   const resetPointer = useEffectEvent(() => {
@@ -106,31 +103,6 @@ export default function ExperienceShell({ initialProfile }: Props) {
 
   useEffect(() => {
     document.documentElement.lang = "zh-CN";
-  }, []);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia(
-      "(min-width: 1161px) and (hover: hover) and (pointer: fine)"
-    );
-
-    const syncMode = () => {
-      setProjectScrollMode(mediaQuery.matches);
-    };
-
-    syncMode();
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", syncMode);
-    } else {
-      mediaQuery.addListener(syncMode);
-    }
-
-    return () => {
-      if (typeof mediaQuery.removeEventListener === "function") {
-        mediaQuery.removeEventListener("change", syncMode);
-      } else {
-        mediaQuery.removeListener(syncMode);
-      }
-    };
   }, []);
 
   useEffect(() => {
@@ -207,104 +179,14 @@ export default function ExperienceShell({ initialProfile }: Props) {
   }, [initialProfile]);
 
   useEffect(() => {
-    if (deferredProjectIndex < profile.projects.length) {
-      return;
-    }
-
-    setActiveProjectIndex(0);
-  }, [deferredProjectIndex, profile.projects.length]);
-
-  useEffect(() => {
-    activeProjectIndexRef.current = activeProjectIndex;
-  }, [activeProjectIndex]);
-
-  useEffect(() => {
     projectTabRefs.current = projectTabRefs.current.slice(0, profile.projects.length);
   }, [profile.projects.length]);
 
-  useEffect(() => {
-    if (!projectScrollMode || !profile.projects.length) {
-      return;
-    }
-
-    let frameId = 0;
-
-    function syncProjectByScroll() {
-      frameId = 0;
-
-      const section = projectSectionRef.current;
-      if (!section) {
-        return;
-      }
-
-      const sectionRect = section.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-
-      if (
-        sectionRect.bottom < viewportHeight * 0.16 ||
-        sectionRect.top > viewportHeight * 0.76
-      ) {
-        return;
-      }
-
-      const targetLine = viewportHeight * 0.42;
-      let nextIndex = activeProjectIndexRef.current;
-      let nearestDistance = Number.POSITIVE_INFINITY;
-
-      projectTabRefs.current.forEach((node, index) => {
-        if (!node) {
-          return;
-        }
-
-        const rect = node.getBoundingClientRect();
-        const center = rect.top + rect.height / 2;
-        const distance = Math.abs(center - targetLine);
-
-        if (distance < nearestDistance) {
-          nearestDistance = distance;
-          nextIndex = index;
-        }
-      });
-
-      if (nextIndex !== activeProjectIndexRef.current) {
-        startTransition(() => {
-          setActiveProjectIndex(nextIndex);
-        });
-      }
-    }
-
-    function handleScroll() {
-      if (frameId) {
-        return;
-      }
-
-      frameId = window.requestAnimationFrame(syncProjectByScroll);
-    }
-
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
-
-    return () => {
-      if (frameId) {
-        window.cancelAnimationFrame(frameId);
-      }
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
-    };
-  }, [profile.projects.length, projectScrollMode]);
-
-  function handleProjectChange(index: number, alignCard = false) {
+  function handleProjectChange(index: number) {
     startTransition(() => {
       setActiveProjectIndex(index);
+      setProjectDetailsOpen(true);
     });
-
-    if (alignCard && projectScrollMode) {
-      projectTabRefs.current[index]?.scrollIntoView({
-        block: "center",
-        behavior: "smooth",
-      });
-    }
   }
 
   function handleTiltMove(event: React.PointerEvent<HTMLElement>) {
@@ -581,7 +463,7 @@ export default function ExperienceShell({ initialProfile }: Props) {
           <div className="project-board">
             <div className="project-list">
               {profile.projects.map((project, index) => {
-                const isActive = index === activeProjectIndex;
+                const isActive = projectDetailsOpen && index === activeProjectIndex;
                 return (
                   <button
                     key={project.title}
@@ -590,7 +472,7 @@ export default function ExperienceShell({ initialProfile }: Props) {
                     }}
                     type="button"
                     className={`project-tab tilt-card${isActive ? " active" : ""}`}
-                    onClick={() => handleProjectChange(index, true)}
+                    onClick={() => handleProjectChange(index)}
                     onFocus={() => handleProjectChange(index)}
                     onPointerMove={handleTiltMove}
                     onPointerLeave={handleTiltLeave}
@@ -619,19 +501,19 @@ export default function ExperienceShell({ initialProfile }: Props) {
               {activeProject ? (
                 <div className="project-stage-stick">
                   <article
-                    key={`${activeProject.title}-${deferredProjectIndex}`}
+                    key={`${activeProject.title}-${activeProjectIndex}`}
                     className="project-stage tilt-card reveal"
                     style={motionStyle(140)}
                     onPointerMove={handleTiltMove}
                     onPointerLeave={handleTiltLeave}
                   >
                     <div className="project-stage-glow" aria-hidden="true">
-                      {String(deferredProjectIndex + 1).padStart(2, "0")}
+                      {String(activeProjectIndex + 1).padStart(2, "0")}
                     </div>
                     <div className="project-stage-header">
                       <div className="project-stage-meta">
                         <span className="project-stage-tag">
-                          案例 {String(deferredProjectIndex + 1).padStart(2, "0")}
+                          案例 {String(activeProjectIndex + 1).padStart(2, "0")}
                         </span>
                         {activeProject.period ? (
                           <span className="project-period project-period-stage">
@@ -725,7 +607,15 @@ export default function ExperienceShell({ initialProfile }: Props) {
                     </div>
                   </article>
                 </div>
-              ) : null}
+              ) : (
+                <article className="project-stage project-stage-collapsed tilt-card reveal" style={motionStyle(140)}>
+                  <div className="project-stage-collapsed-copy">
+                    <span className="project-stage-tag">折叠状态</span>
+                    <h3>选择左侧项目后展开查看详情</h3>
+                    <p>当前已关闭自动切换，详情区会在你手动点击项目卡片后展开。</p>
+                  </div>
+                </article>
+              )}
             </div>
           </div>
         </section>

@@ -644,14 +644,16 @@ button {
 }
 
 .project-stage-column {
-  position: relative;
+  position: sticky;
+  top: 110px;
   min-width: 0;
   align-self: start;
+  height: calc(100vh - 146px);
 }
 
 .project-stage-stick {
-  position: sticky;
-  top: 110px;
+  position: relative;
+  height: 100%;
 }
 
 .project-tab {
@@ -766,8 +768,9 @@ button {
 
 .project-stage {
   position: relative;
-  min-height: calc(100vh - 146px);
-  max-height: calc(100vh - 146px);
+  min-height: 100%;
+  max-height: none;
+  height: 100%;
   display: grid;
   align-content: start;
   padding: 24px;
@@ -777,6 +780,33 @@ button {
   background:
     linear-gradient(180deg, rgba(21, 23, 50, 0.88), rgba(8, 11, 24, 0.96)),
     rgba(9, 13, 25, 0.9);
+}
+
+.project-stage-collapsed {
+  min-height: 240px;
+  max-height: 320px;
+  height: auto;
+  align-content: center;
+  overflow: hidden;
+}
+
+.project-stage-collapsed-copy {
+  display: grid;
+  gap: 14px;
+  max-width: 32rem;
+}
+
+.project-stage-collapsed-copy h3 {
+  margin: 0;
+  font-size: clamp(1.7rem, 2.2vw, 2.2rem);
+  line-height: 1.04;
+}
+
+.project-stage-collapsed-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.7;
 }
 
 .project-stage::-webkit-scrollbar {
@@ -1404,6 +1434,9 @@ button {
 
   .project-stage-column {
     order: 2;
+    position: static;
+    top: auto;
+    height: auto;
   }
 
   .project-stage-stick {
