@@ -702,13 +702,19 @@ button {
   transform: scaleX(1);
 }
 
-.project-tab-top,
-.project-stage-header {
+.project-tab-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.project-stage-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px 18px;
 }
 
 .project-order,
@@ -864,6 +870,9 @@ button {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  max-width: 100%;
 }
 
 .inline-link {
@@ -962,10 +971,14 @@ button {
   position: relative;
   width: 100%;
   height: 4px;
-  margin-top: 30px;
+  margin-top: 34px;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
+}
+
+.project-stage .action-row {
+  margin-top: 22px;
 }
 
 .project-progress span {
@@ -1450,6 +1463,18 @@ button {
     overflow: visible;
   }
 
+  .project-stage-header {
+    grid-template-columns: 1fr;
+  }
+
+  .project-link-row {
+    justify-content: flex-start;
+  }
+
+  .project-stage .action-row {
+    margin-top: 26px;
+  }
+
   .admin-body,
   .admin-section-grid,
   .admin-inline-grid {
@@ -1544,6 +1569,26 @@ button {
     grid-template-columns: 1fr;
     gap: 12px;
     padding: 16px;
+  }
+
+  .project-stage-header,
+  .project-link-row,
+  .project-stage .action-row {
+    width: 100%;
+  }
+
+  .project-stage .action-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .project-stage .action-row > * {
+    width: 100%;
+  }
+
+  .project-stage .primary-button,
+  .project-stage .secondary-button {
+    width: 100%;
   }
 
   .capability-index-standalone {
