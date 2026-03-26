@@ -6,7 +6,6 @@ import {
   saveProfile,
   ProfileData,
 } from "../../../lib/site-data";
-import { hasCosConfig } from "../../../lib/tencent-cos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,16 +24,6 @@ export async function PUT(request: Request) {
   const authError = await requireAdmin();
   if (authError) {
     return authError;
-  }
-
-  if (!hasCosConfig()) {
-    return NextResponse.json(
-      {
-        error:
-          "Tencent COS is not configured. Set the COS env vars before saving profile data.",
-      },
-      { status: 503 }
-    );
   }
 
   let payload: ProfileData | null = null;
@@ -60,6 +49,13 @@ export async function PUT(request: Request) {
     status: 200,
     headers: {
       "Cache-Control": "no-store, max-age=0",
+      "X-Persistence-Mode": process.env.TENCENT_SECRET_ID &&
+        process.env.TENCENT_SECRET_KEY &&
+        process.env.TENCENT_COS_REGION &&
+        process.env.TENCENT_COS_BUCKET &&
+        process.env.TENCENT_COS_APP_ID
+        ? "cos"
+        : "memory",
     },
   });
 }

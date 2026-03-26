@@ -239,11 +239,16 @@ export default function AdminConsole({
       }
 
       const savedProfile = data as ProfileData;
+      const persistenceMode = response.headers.get("x-persistence-mode");
       setDraft(savedProfile);
       setRawJson(JSON.stringify(savedProfile, null, 2));
       setAiReview(null);
       onSaved(savedProfile);
-      setStatusMessage("已保存");
+      setStatusMessage(
+        persistenceMode === "memory"
+          ? "已保存到当前运行实例，COS 未配置，重启后会丢失"
+          : "已保存"
+      );
     } catch {
       setStatusMessage("保存失败");
     } finally {
