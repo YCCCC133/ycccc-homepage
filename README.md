@@ -148,13 +148,9 @@ docker run --rm -p 3000:3000 --env-file .env.local ycccc-homepage
 
 ### GitHub + Vercel 自动部署
 
-- 代码推送到 GitHub 后，`.github/workflows/vercel-deploy.yml` 会自动触发 Vercel 发布
-- `main` 分支执行生产部署，其他分支执行预览部署
-- 需要在 GitHub 仓库的 `Secrets and variables -> Actions` 中配置：
-  - `VERCEL_TOKEN`
-  - `VERCEL_ORG_ID`
-  - `VERCEL_PROJECT_ID`
-- `VERCEL_ORG_ID` 和 `VERCEL_PROJECT_ID` 可以直接从仓库内的 `.vercel/project.json` 读取
+- 代码推送到 GitHub 后，如果 Vercel 项目已在 Dashboard 里连接该仓库，Vercel 会自动拉取并部署
+- `main` 分支通常对应生产部署，其他分支通常对应预览部署
+- 仓库内的 `.vercel/project.json` 已包含当前项目的 `projectId` 和 `orgId`
 
 ## API 接口
 
