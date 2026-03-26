@@ -73,6 +73,7 @@ export type ProfileData = {
 };
 
 const PROFILE_KEY = "site/profile.json";
+const PROFILE_CACHE_TTL_MS = 30_000;
 
 const memoryStore: {
   profile: ProfileData;
@@ -244,6 +245,21 @@ const memoryStore: {
 };
 
 const defaultProfile = memoryStore.profile;
+const profileCache: {
+  profile: ProfileData;
+  loadedAt: number;
+  source: "default" | "memory" | "cos";
+} = {
+  profile: defaultProfile,
+  loadedAt: 0,
+  source: "default",
+};
+
+function cacheProfile(profile: ProfileData, source: "memory" | "cos") {
+  profileCache.profile = profile;
+  profileCache.loadedAt = Date.now();
+  profileCache.source = source;
+}
 
 export function normalizeProfile(profile: Partial<ProfileData> & { updatedAt?: string }): ProfileData {
   return {
@@ -361,21 +377,29 @@ function clampText(input: string, max: number): string {
 }
 
 export async function getProfile(): Promise<ProfileData> {
-  if (hasCosConfig()) {
-    try {
-      const data = await getJsonObject<ProfileData>(PROFILE_KEY);
-      if (data) {
-        const normalized = normalizeProfile(data);
-        if (normalized !== data) {
-          memoryStore.profile = normalized;
-        }
-        return normalized;
-      }
-    } catch (error) {
-      console.warn("[site-data] getProfile COS failed:", error);
-    }
+  if (!hasCosConfig()) {
+    return profileCache.profile;
   }
-  return memoryStore.profile;
+
+  if (
+    profileCache.source === "cos" &&
+    Date.now() - profileCache.loadedAt < PROFILE_CACHE_TTL_MS
+  ) {
+    return profileCache.profile;
+  }
+
+  try {
+    const data = await getJsonObject<ProfileData>(PROFILE_KEY);
+    if (data) {
+      const normalized = normalizeProfile(data);
+      cacheProfile(normalized, "cos");
+      return normalized;
+    }
+  } catch (error) {
+    console.warn("[site-data] getProfile COS failed:", error);
+  }
+
+  return profileCache.profile;
 }
 
 export async function saveProfile(profile: ProfileData): Promise<ProfileData> {
@@ -383,14 +407,13 @@ export async function saveProfile(profile: ProfileData): Promise<ProfileData> {
     ...profile,
     updatedAt: new Date().toISOString(),
   });
-  memoryStore.profile = updated;
 
-  if (hasCosConfig()) {
-    try {
-      await putJsonObject(PROFILE_KEY, updated);
-    } catch (error) {
-      console.warn("[site-data] saveProfile COS failed:", error);
-    }
+  if (!hasCosConfig()) {
+    cacheProfile(updated, "memory");
+    return updated;
   }
+
+  await putJsonObject(PROFILE_KEY, updated);
+  cacheProfile(updated, "cos");
   return updated;
 }

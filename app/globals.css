@@ -1128,6 +1128,119 @@ button {
   color: var(--muted);
 }
 
+.admin-review {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid rgba(138, 239, 255, 0.14);
+  border-radius: 24px;
+  background: rgba(138, 239, 255, 0.05);
+}
+
+.admin-review-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.admin-review-kicker {
+  display: inline-flex;
+  color: var(--accent);
+  font-size: 0.76rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.admin-review-head h4 {
+  margin: 8px 0 0;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  letter-spacing: -0.04em;
+}
+
+.admin-review-list {
+  display: grid;
+  gap: 14px;
+  max-height: 42vh;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.admin-review-group {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 20px;
+  background: rgba(5, 8, 16, 0.54);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-review-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-review-group-head h5 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.admin-review-group-head span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.admin-review-items {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-review-item {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-review-item strong {
+  font-size: 0.98rem;
+}
+
+.admin-review-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-review-columns div {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-review-columns span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.admin-review-columns p {
+  margin: 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(5, 8, 16, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
 .admin-body {
   flex: 1;
   display: grid;

@@ -14,6 +14,9 @@ type EditableProfile = Partial<
     | "brand"
     | "coreCapabilities"
     | "projects"
+    | "techSystem"
+    | "blog"
+    | "orgPractice"
     | "contact"
   >
 >;
@@ -40,6 +43,9 @@ function pickEditableProfile(profile: ProfileData): EditableProfile {
     brand: profile.brand,
     coreCapabilities: profile.coreCapabilities,
     projects: profile.projects,
+    techSystem: profile.techSystem,
+    blog: profile.blog,
+    orgPractice: profile.orgPractice,
     contact: profile.contact,
   };
 }
@@ -62,6 +68,31 @@ function mergeEditableProfile(
       : currentProfile.brand,
     coreCapabilities: incoming.coreCapabilities ?? currentProfile.coreCapabilities,
     projects: incoming.projects ?? currentProfile.projects,
+    techSystem: incoming.techSystem
+      ? {
+          ...currentProfile.techSystem,
+          ...incoming.techSystem,
+          pillars: incoming.techSystem.pillars ?? currentProfile.techSystem.pillars,
+          toolchain: incoming.techSystem.toolchain ?? currentProfile.techSystem.toolchain,
+        }
+      : currentProfile.techSystem,
+    blog: incoming.blog
+      ? {
+          ...currentProfile.blog,
+          ...incoming.blog,
+          posts: incoming.blog.posts ?? currentProfile.blog.posts,
+        }
+      : currentProfile.blog,
+    orgPractice: incoming.orgPractice
+      ? {
+          ...currentProfile.orgPractice,
+          ...incoming.orgPractice,
+          organizations:
+            incoming.orgPractice.organizations ?? currentProfile.orgPractice.organizations,
+          socialProjects:
+            incoming.orgPractice.socialProjects ?? currentProfile.orgPractice.socialProjects,
+        }
+      : currentProfile.orgPractice,
     contact: incoming.contact
       ? {
           ...currentProfile.contact,
@@ -77,12 +108,13 @@ function mergeEditableProfile(
 function buildSystemPrompt(mode: AiProfileMode): string {
   const goal =
     mode === "import"
-      ? "将 sourceText 中有明确依据的信息合并进 currentProfile"
-      : "在不改变事实的前提下润色 currentProfile";
+      ? "将 sourceText 中有明确依据的信息合并进 currentProfile，并对整个站点资料做中文润色"
+      : "在不改变事实的前提下润色 currentProfile 的整个站点资料";
 
   return [
     "你是一个中文个人网站资料编辑器。",
     `任务目标：${goal}。`,
+    "currentProfile 包含整个站点的可编辑内容，包括基础资料、品牌定位、核心能力、项目、技术体系、博客、组织实践和联系方式。",
     "输出必须是一个 JSON 对象，不要输出 Markdown、解释或代码块。",
     "只返回需要修改或新增的字段，允许返回部分字段；不要原样重写整个对象。",
     "如果没有必要修改，返回空对象 {}。",

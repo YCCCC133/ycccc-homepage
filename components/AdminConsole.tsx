@@ -3,6 +3,7 @@
 import type { MouseEvent } from "react";
 import { useEffect, useState } from "react";
 import type { ProfileData } from "../lib/site-data";
+import { buildProfileReview, type ReviewChange } from "../lib/profile-review";
 
 type Props = {
   open: boolean;
@@ -12,6 +13,12 @@ type Props = {
 };
 
 type AdminTab = "profile" | "projects" | "contact" | "ai" | "json";
+
+type AiReviewState = {
+  mode: "import" | "polish";
+  profile: ProfileData;
+  changes: ReviewChange[];
+};
 
 const adminTabs: Array<{ id: AdminTab; label: string }> = [
   { id: "profile", label: "个人信息" },
@@ -90,10 +97,20 @@ export default function AdminConsole({
   const [authError, setAuthError] = useState("");
   const [aiSourceText, setAiSourceText] = useState("");
   const [aiInstruction, setAiInstruction] = useState("");
+  const [aiReview, setAiReview] = useState<AiReviewState | null>(null);
   const [loginPending, setLoginPending] = useState(false);
   const [savePending, setSavePending] = useState(false);
   const [aiPending, setAiPending] = useState(false);
   const projectCount = draft.projects.length;
+  const aiReviewGroups = aiReview
+    ? aiReview.changes.reduce<Record<string, ReviewChange[]>>((groups, change) => {
+        if (!groups[change.section]) {
+          groups[change.section] = [];
+        }
+        groups[change.section].push(change);
+        return groups;
+      }, {})
+    : null;
 
   useEffect(() => {
     if (!open) {
@@ -105,6 +122,7 @@ export default function AdminConsole({
     setStatusMessage("");
     setAuthError("");
     setActiveTab("profile");
+    setAiReview(null);
 
     void (async () => {
       setSessionReady(false);
@@ -154,6 +172,7 @@ export default function AdminConsole({
 
   function patchDraft(updater: (profile: ProfileData) => ProfileData) {
     setDraft((current) => updater(cloneProfile(current)));
+    setAiReview(null);
   }
 
   async function handleLogin() {
@@ -193,6 +212,7 @@ export default function AdminConsole({
     setAuthenticated(false);
     setStatusMessage("");
     setAuthError("");
+    setAiReview(null);
   }
 
   async function handleSave() {
@@ -221,6 +241,7 @@ export default function AdminConsole({
       const savedProfile = data as ProfileData;
       setDraft(savedProfile);
       setRawJson(JSON.stringify(savedProfile, null, 2));
+      setAiReview(null);
       onSaved(savedProfile);
       setStatusMessage("已保存");
     } catch {
@@ -236,8 +257,10 @@ export default function AdminConsole({
       return;
     }
 
+    const draftSnapshot = cloneProfile(draft);
     setAiPending(true);
     setStatusMessage("");
+    setAiReview(null);
 
     try {
       const response = await fetch("/api/admin/ai", {
@@ -245,14 +268,14 @@ export default function AdminConsole({
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
-        body: JSON.stringify({
-          mode,
-          profile: draft,
-          sourceText: aiSourceText,
-          instruction: aiInstruction,
-        }),
-      });
+          credentials: "include",
+          body: JSON.stringify({
+            mode,
+            profile: draftSnapshot,
+            sourceText: aiSourceText,
+            instruction: aiInstruction,
+          }),
+        });
 
       const data = (await response.json()) as {
         error?: string;
@@ -267,10 +290,26 @@ export default function AdminConsole({
         return;
       }
 
-      setDraft(data.profile);
-      setRawJson(JSON.stringify(data.profile, null, 2));
-      setStatusMessage(mode === "import" ? "AI 已导入到草稿" : "AI 已润色草稿");
-      setActiveTab("profile");
+      const changes = buildProfileReview(draftSnapshot, data.profile);
+      if (changes.length === 0) {
+        setStatusMessage("AI 已完成，但当前草稿没有可应用的差异");
+        setAiReview({
+          mode,
+          profile: data.profile,
+          changes,
+        });
+        return;
+      }
+
+      setAiReview({
+        mode,
+        profile: data.profile,
+        changes,
+      });
+      setStatusMessage(
+        `AI 已生成 ${changes.length} 条修改预览，请确认后再应用`
+      );
+      setActiveTab("ai");
     } catch {
       setStatusMessage("AI 处理失败");
     } finally {
@@ -278,10 +317,32 @@ export default function AdminConsole({
     }
   }
 
+  function handleApplyAiReview() {
+    if (!aiReview) {
+      return;
+    }
+
+    setDraft(aiReview.profile);
+    setRawJson(JSON.stringify(aiReview.profile, null, 2));
+    setStatusMessage(
+      aiReview.mode === "import"
+        ? "AI 导入结果已应用到草稿"
+        : "AI 润色结果已应用到草稿"
+    );
+    setAiReview(null);
+    setActiveTab("profile");
+  }
+
+  function handleDiscardAiReview() {
+    setAiReview(null);
+    setStatusMessage("已取消本次 AI 修改预览");
+  }
+
   function applyRawJson() {
     try {
       const parsed = JSON.parse(rawJson) as ProfileData;
       setDraft(parsed);
+      setAiReview(null);
       setStatusMessage("JSON 已应用到草稿");
     } catch {
       setStatusMessage("JSON 格式错误");
@@ -975,9 +1036,9 @@ export default function AdminConsole({
               {activeTab === "ai" ? (
                 <div className="admin-section-grid">
                   <section className="admin-section-card admin-section-card-full">
-                    <h3>AI 一键处理</h3>
+                    <h3>AI 一键润色</h3>
                     <p className="admin-hint">
-                      当前接入 Kimi API，可将简历或项目文本导入为结构化草稿，也可直接润色当前内容。
+                      当前接入 Kimi API，可对整站资料做统一润色，并先生成修改预览，确认后再应用到草稿。
                     </p>
                     <label className="admin-field">
                       <span>额外要求</span>
@@ -989,11 +1050,11 @@ export default function AdminConsole({
                       />
                     </label>
                     <label className="admin-field">
-                      <span>导入文本</span>
+                      <span>导入文本（可选）</span>
                       <textarea
                         className="admin-textarea large"
                         rows={10}
-                        placeholder="在这里粘贴简历、项目描述、获奖经历等文本。"
+                        placeholder="在这里粘贴简历、项目描述、获奖经历等文本，AI 会基于当前草稿合并这些内容并生成预览。"
                         value={aiSourceText}
                         onChange={(event) => setAiSourceText(event.target.value)}
                       />
@@ -1005,7 +1066,7 @@ export default function AdminConsole({
                         onClick={() => void handleAiAction("polish")}
                         disabled={aiPending}
                       >
-                        {aiPending ? "处理中..." : "AI 润色当前草稿"}
+                        {aiPending ? "处理中..." : "AI 一键润色全站"}
                       </button>
                       <button
                         type="button"
@@ -1013,9 +1074,76 @@ export default function AdminConsole({
                         onClick={() => void handleAiAction("import")}
                         disabled={aiPending}
                       >
-                        {aiPending ? "处理中..." : "AI 导入并合并文本"}
+                        {aiPending ? "处理中..." : "AI 导入并生成预览"}
                       </button>
                     </div>
+                    {aiReview ? (
+                      <div className="admin-review">
+                        <div className="admin-review-head">
+                          <div>
+                            <span className="admin-review-kicker">
+                              {aiReview.mode === "import" ? "导入结果预览" : "润色结果预览"}
+                            </span>
+                            <h4>AI 已生成修改内容</h4>
+                          </div>
+                          <div className="admin-action-row">
+                            <button
+                              type="button"
+                              className="admin-ghost"
+                              onClick={handleDiscardAiReview}
+                            >
+                              放弃修改
+                            </button>
+                            <button
+                              type="button"
+                              className="admin-primary"
+                              onClick={handleApplyAiReview}
+                            >
+                              应用到草稿
+                            </button>
+                          </div>
+                        </div>
+
+                        {aiReview.changes.length === 0 ? (
+                          <p className="admin-hint">
+                            AI 没有生成可应用的差异，当前草稿与建议稿一致。
+                          </p>
+                        ) : (
+                          <div className="admin-review-list">
+                            {aiReviewGroups
+                              ? Object.entries(aiReviewGroups).map(([section, changes]) => (
+                                  <section key={section} className="admin-review-group">
+                                    <div className="admin-review-group-head">
+                                      <h5>{section}</h5>
+                                      <span>{changes.length} 项变更</span>
+                                    </div>
+                                    <div className="admin-review-items">
+                                      {changes.map((change, index) => (
+                                        <article
+                                          key={`${change.section}-${index}-${change.label}`}
+                                          className="admin-review-item"
+                                        >
+                                          <strong>{change.label}</strong>
+                                          <div className="admin-review-columns">
+                                            <div>
+                                              <span>原文</span>
+                                              <p>{change.before}</p>
+                                            </div>
+                                            <div>
+                                              <span>建议</span>
+                                              <p>{change.after}</p>
+                                            </div>
+                                          </div>
+                                        </article>
+                                      ))}
+                                    </div>
+                                  </section>
+                                ))
+                              : null}
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
                   </section>
                 </div>
               ) : null}
