@@ -9,30 +9,11 @@ import {
   MapPin,
   MessageSquare,
   Heart,
+  Settings,
 } from 'lucide-react';
-import { useState } from 'react';
 
 export function Footer() {
   const router = useRouter();
-  const [clickCount, setClickCount] = useState(0);
-  const [lastClickTime, setLastClickTime] = useState(0);
-
-  // 隐蔽入口：连续快速点击5次版权信息进入后台
-  const handleSecretClick = () => {
-    const now = Date.now();
-    if (now - lastClickTime < 500) {
-      // 500ms内连续点击
-      const newCount = clickCount + 1;
-      setClickCount(newCount);
-      if (newCount >= 5) {
-        setClickCount(0);
-        router.push('/admin');
-      }
-    } else {
-      setClickCount(1);
-    }
-    setLastClickTime(now);
-  };
 
   return (
     <footer className="border-t border-border/40 bg-gradient-to-b from-primary/5 to-primary/10">
@@ -157,12 +138,20 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="mt-8 border-t border-border/40 pt-6 md:pt-8">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <p
-              className="cursor-default select-none text-center text-xs text-muted-foreground md:text-left"
-              onClick={handleSecretClick}
-            >
-              © 2025 北京市西城区人民检察院 · 护薪检察支持起诉智能平台
-            </p>
+            <div className="flex flex-col items-center gap-2 md:flex-row md:gap-4">
+              <p className="text-center text-xs text-muted-foreground md:text-left">
+                © 2025 北京市西城区人民检察院 · 护薪检察支持起诉智能平台
+              </p>
+              {/* 后台管理入口 - 隐蔽但可点击 */}
+              <button
+                onClick={() => router.push('/admin')}
+                className="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-muted-foreground/30 transition-all hover:bg-muted hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary"
+                title="管理入口"
+              >
+                <Settings className="h-3 w-3" />
+                <span className="hidden sm:inline">管理</span>
+              </button>
+            </div>
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground md:gap-4">
               <Link href="/privacy" className="rounded outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">
                 隐私政策
