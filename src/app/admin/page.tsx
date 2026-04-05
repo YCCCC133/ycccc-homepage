@@ -7,7 +7,7 @@ import {
   Trash2, X, ChevronLeft, RefreshCw, Scale, Shield, TrendingUp, Eye, ArrowRight,
   Bell, Home, PlusCircle, Loader2, Database, Upload, Download, Settings, BarChart3,
   Search, Edit, FolderOpen, File, LayoutTemplate, Menu, User, AlertTriangle,
-  Mail, Phone, Clock, DollarSign, Users
+  Mail, Phone, Clock, DollarSign, Users, Printer, PieChart, Activity
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -600,20 +600,24 @@ export default function AdminPage() {
                 <StatCard title="咨询记录" value={stats.consultations} icon={MessageSquare} color="orange" />
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-2">
-                <Card>
+              <div className="grid gap-6 lg:grid-cols-3">
+                <Card className="lg:col-span-2">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
                       <BarChart3 className="h-4 w-4 text-primary" />月度案件趋势
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-48 flex items-end justify-between gap-3">
+                    <div className="h-48 flex items-end justify-between gap-2">
                       {['1月', '2月', '3月', '4月', '5月', '6月'].map((m, i) => {
                         const heights = [50, 70, 45, 80, 65, 55];
+                        const values = [12, 18, 9, 22, 16, 14];
                         return (
                           <div key={m} className="flex-1 flex flex-col items-center gap-2">
-                            <div className="w-full bg-primary rounded-t transition-all hover:bg-primary/80" style={{ height: `${heights[i]}%` }} />
+                            <span className="text-xs font-medium text-primary">{values[i]}</span>
+                            <div className="w-full bg-primary/20 rounded-t relative" style={{ height: `${heights[i]}%` }}>
+                              <div className="absolute inset-0 bg-primary rounded-t transition-all hover:bg-primary/80" style={{ height: '100%' }} />
+                            </div>
                             <span className="text-xs text-muted-foreground">{m}</span>
                           </div>
                         );
@@ -625,64 +629,111 @@ export default function AdminPage() {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-primary" />核心指标
+                      <PieChart className="h-4 w-4 text-primary" />案件类型分布
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground flex items-center gap-2"><DollarSign className="h-4 w-4" />涉案金额总计</span>
-                        <span className="font-semibold text-primary">¥{(stats.totalAmount || 0).toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" />帮助劳动者人数</span>
-                        <span className="font-semibold">2,458+</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground flex items-center gap-2"><Clock className="h-4 w-4" />平均处理天数</span>
-                        <span className="font-semibold">7 天</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground flex items-center gap-2"><CheckCircle className="h-4 w-4" />成功维权率</span>
-                        <span className="font-semibold text-green-600">98.6%</span>
-                      </div>
+                    <div className="space-y-3">
+                      {[
+                        { label: '欠薪纠纷', percent: 45, color: 'bg-blue-500' },
+                        { label: '集体欠薪', percent: 25, color: 'bg-green-500' },
+                        { label: '工伤赔偿', percent: 18, color: 'bg-orange-500' },
+                        { label: '劳动合同', percent: 12, color: 'bg-purple-500' },
+                      ].map((item) => (
+                        <div key={item.label}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span>{item.label}</span>
+                            <span className="text-muted-foreground">{item.percent}%</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full">
+                            <div className={`h-2 ${item.color} rounded-full`} style={{ width: `${item.percent}%` }} />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">最近案件</CardTitle>
-                    <Button variant="ghost" size="sm" onClick={() => setActiveTab('cases')} className="text-primary text-xs">
-                      查看全部 <ArrowRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {cases.slice(0, 5).map((c) => (
-                      <div key={c.id} className="flex items-center justify-between rounded-lg border border-border/50 p-3 hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
-                            <Database className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">{c.plaintiff_name} vs {c.defendant_name}</p>
-                            <p className="text-xs text-muted-foreground">{c.case_number}</p>
-                          </div>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-primary" />核心指标
+                      </CardTitle>
+                      <Button variant="ghost" size="sm" onClick={() => window.print()} className="text-xs gap-1">
+                        <Printer className="h-3 w-3" />打印报表
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
+                        <div className="flex items-center gap-2 text-blue-600 mb-1">
+                          <DollarSign className="h-4 w-4" />
+                          <span className="text-xs">涉案金额总计</span>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-primary">¥{Number(c.amount).toLocaleString()}</span>
-                          {getStatusBadge(c.status)}
-                        </div>
+                        <p className="text-xl font-bold text-blue-700">¥{(stats.totalAmount || 443000).toLocaleString()}</p>
                       </div>
-                    ))}
-                    {cases.length === 0 && <div className="text-center py-8 text-muted-foreground">暂无案件数据</div>}
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="p-3 rounded-lg bg-green-50 border border-green-100">
+                        <div className="flex items-center gap-2 text-green-600 mb-1">
+                          <Users className="h-4 w-4" />
+                          <span className="text-xs">帮助劳动者</span>
+                        </div>
+                        <p className="text-xl font-bold text-green-700">2,458+</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-orange-50 border border-orange-100">
+                        <div className="flex items-center gap-2 text-orange-600 mb-1">
+                          <Clock className="h-4 w-4" />
+                          <span className="text-xs">平均处理天数</span>
+                        </div>
+                        <p className="text-xl font-bold text-orange-700">7 天</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-purple-50 border border-purple-100">
+                        <div className="flex items-center gap-2 text-purple-600 mb-1">
+                          <CheckCircle className="h-4 w-4" />
+                          <span className="text-xs">成功维权率</span>
+                        </div>
+                        <p className="text-xl font-bold text-purple-700">98.6%</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">最近案件</CardTitle>
+                      <Button variant="ghost" size="sm" onClick={() => setActiveTab('cases')} className="text-primary text-xs">
+                        查看全部 <ArrowRight className="ml-1 h-3 w-3" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {cases.slice(0, 4).map((c) => (
+                        <div key={c.id} className="flex items-center justify-between rounded-lg border border-border/50 p-2.5 hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                              <Database className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{c.plaintiff_name} vs {c.defendant_name}</p>
+                              <p className="text-xs text-muted-foreground">{c.case_number}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-primary">¥{Number(c.amount).toLocaleString()}</span>
+                            {getStatusBadge(c.status)}
+                          </div>
+                        </div>
+                      ))}
+                      {cases.length === 0 && <div className="text-center py-8 text-muted-foreground">暂无案件数据</div>}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           )}
 
@@ -834,6 +885,7 @@ export default function AdminPage() {
                   <option value="completed">已完成</option>
                 </select>
                 <Button variant="outline" size="sm" onClick={() => handleExportData('案件数据', cases)} className="gap-1.5"><Download className="h-4 w-4" />导出</Button>
+                <Button variant="outline" size="sm" onClick={() => handleExportCSV('案件数据', cases as unknown as Record<string, unknown>[], ['case_number', 'plaintiff_name', 'plaintiff_phone', 'defendant_name', 'case_type', 'amount', 'status', 'handler'])} className="gap-1.5"><File className="h-4 w-4" />CSV</Button>
                 <Button size="sm" onClick={() => setShowModal('newCase')} className="gap-1.5"><PlusCircle className="h-4 w-4" />新建案件</Button>
               </div>
               <DataTable
@@ -850,7 +902,13 @@ export default function AdminPage() {
                     <td className="px-4 py-3"><Badge variant="outline" className="text-xs">{c.case_type}</Badge></td>
                     <td className="px-4 py-3 text-sm font-medium text-primary">¥{Number(c.amount).toLocaleString()}</td>
                     <td className="px-4 py-3">{getStatusBadge(c.status)}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{c.handler || '-'}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {c.handler ? (
+                        <Badge variant="secondary" className="text-xs">{c.handler}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">未分配</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
                         <Button variant="ghost" size="sm" onClick={() => { setSelectedItem(c); setShowModal('detail'); }}><Eye className="h-4 w-4" /></Button>
@@ -1013,26 +1071,92 @@ export default function AdminPage() {
 
           {/* ============ 系统设置 ============ */}
           {activeTab === 'settings' && (
-            <Card>
-              <CardHeader><CardTitle className="text-base">基础设置</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                {settings.map((s) => (
-                  <div key={s.key} className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
-                    <div><p className="font-medium text-sm">{s.description}</p><p className="text-xs text-muted-foreground">{s.key}</p></div>
-                    {['auto_assign', 'sms_notification', 'email_notification'].includes(s.key) ? (
-                      <button onClick={() => setSettings((prev) => prev.map((x) => x.key === s.key ? { ...x, value: x.value === 'true' ? 'false' : 'true' } : x))} className={cn('relative h-6 w-11 rounded-full transition-colors', s.value === 'true' ? 'bg-primary' : 'bg-muted')}>
-                        <span className={cn('absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', s.value === 'true' && 'translate-x-5')} />
-                      </button>
-                    ) : (
-                      <input type="text" value={s.value} onChange={(e) => setSettings((prev) => prev.map((x) => x.key === s.key ? { ...x, value: e.target.value } : x))} className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm w-48" />
-                    )}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader><CardTitle className="text-base">基础设置</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  {settings.map((s) => (
+                    <div key={s.key} className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
+                      <div><p className="font-medium text-sm">{s.description}</p><p className="text-xs text-muted-foreground">{s.key}</p></div>
+                      {['auto_assign', 'sms_notification', 'email_notification'].includes(s.key) ? (
+                        <button onClick={() => setSettings((prev) => prev.map((x) => x.key === s.key ? { ...x, value: x.value === 'true' ? 'false' : 'true' } : x))} className={cn('relative h-6 w-11 rounded-full transition-colors', s.value === 'true' ? 'bg-primary' : 'bg-muted')}>
+                          <span className={cn('absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', s.value === 'true' && 'translate-x-5')} />
+                        </button>
+                      ) : (
+                        <input type="text" value={s.value} onChange={(e) => setSettings((prev) => prev.map((x) => x.key === s.key ? { ...x, value: e.target.value } : x))} className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm w-48" />
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={handleSaveSettings} className="gap-1.5"><CheckCircle className="h-4 w-4" />保存设置</Button>
                   </div>
-                ))}
-                <div className="flex justify-end pt-4">
-                  <Button onClick={handleSaveSettings} className="gap-1.5"><CheckCircle className="h-4 w-4" />保存设置</Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle className="text-base">快捷操作</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => { setActiveTab('reports'); }}>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600"><FileText className="h-4 w-4" /></div>
+                      <div className="text-left">
+                        <p className="font-medium text-sm">处理线索</p>
+                        <p className="text-xs text-muted-foreground">{stats?.pendingReports || 0} 条待处理</p>
+                      </div>
+                    </Button>
+                    <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => { setActiveTab('applications'); }}>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 text-green-600"><Send className="h-4 w-4" /></div>
+                      <div className="text-left">
+                        <p className="font-medium text-sm">处理申请</p>
+                        <p className="text-xs text-muted-foreground">{stats?.pendingApplications || 0} 条待处理</p>
+                      </div>
+                    </Button>
+                    <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => { setShowModal('newCase'); }}>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-600"><PlusCircle className="h-4 w-4" /></div>
+                      <div className="text-left">
+                        <p className="font-medium text-sm">新建案件</p>
+                        <p className="text-xs text-muted-foreground">录入案件信息</p>
+                      </div>
+                    </Button>
+                    <Button variant="outline" className="justify-start gap-2 h-auto py-3" onClick={() => { setActiveTab('announcements'); }}>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-600"><Bell className="h-4 w-4" /></div>
+                      <div className="text-left">
+                        <p className="font-medium text-sm">发布公告</p>
+                        <p className="text-xs text-muted-foreground">通知公告管理</p>
+                      </div>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle className="text-base">最近操作记录</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {[
+                      { time: '刚刚', action: '管理员登录系统', type: 'login' },
+                      { time: '5分钟前', action: '更新案件 AJ20260001 状态为处理中', type: 'update' },
+                      { time: '10分钟前', action: '新增案件 AJ20260003', type: 'create' },
+                      { time: '30分钟前', action: '导出线索填报数据', type: 'export' },
+                      { time: '1小时前', action: '发布公告《专项检查通知》', type: 'publish' },
+                    ].map((log, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
+                        <div className="flex items-center gap-2">
+                          <div className={cn('h-2 w-2 rounded-full', 
+                            log.type === 'login' ? 'bg-green-500' :
+                            log.type === 'update' ? 'bg-blue-500' :
+                            log.type === 'create' ? 'bg-purple-500' :
+                            log.type === 'export' ? 'bg-orange-500' : 'bg-gray-500'
+                          )} />
+                          <span className="text-sm">{log.action}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{log.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
       </main>
