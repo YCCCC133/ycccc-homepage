@@ -22,6 +22,10 @@ interface Stats {
   reports: number; applications: number; documents: number; consultations: number;
   pendingReports: number; pendingApplications: number; totalAmount: number;
   caseTypeDistribution?: Record<string, number>;
+  monthlyTrend?: { month: string; count: number }[];
+  avgProcessingDays?: number;
+  successRate?: number;
+  helpedWorkers?: number;
 }
 
 interface Announcement {
@@ -84,6 +88,14 @@ const navItems = [
   { key: 'settings' as TabType, label: '系统设置', icon: Settings, group: '系统' },
 ];
 
+// 分组配置
+const navGroups = [
+  { name: '核心', keys: ['dashboard'] },
+  { name: '业务', keys: ['reports', 'applications', 'cases', 'documents', 'consultations'] },
+  { name: '运营', keys: ['announcements', 'files'] },
+  { name: '系统', keys: ['settings'] },
+];
+
 // ============ 主组件 ============
 export default function AdminPage() {
   const router = useRouter();
@@ -93,6 +105,7 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(['核心', '业务', '运营', '系统']);
 
   // 数据状态
   const [stats, setStats] = useState<Stats | null>(null);
@@ -108,11 +121,11 @@ export default function AdminPage() {
   const [operationLogs, setOperationLogs] = useState<OperationLog[]>([]);
 
   // UI状态
-  const [selectedItem, setSelectedItem] = useState<Report | Application | Document | Consultation | Announcement | CaseItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Report | Application | Document | Consultation | Announcement | CaseItem | Template | null>(null);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showModal, setShowModal] = useState<'detail' | 'form' | 'newCase' | null>(null);
+  const [showModal, setShowModal] = useState<'detail' | 'form' | 'newCase' | 'newTemplate' | 'editTemplate' | null>(null);
   const [editingItem, setEditingItem] = useState<Announcement | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -125,6 +138,10 @@ export default function AdminPage() {
   const [globalSearch, setGlobalSearch] = useState('');
   const [searchResults, setSearchResults] = useState<{ type: string; items: unknown[] }[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
+  
+  // 承办人列表
+  const handlers = ['李检察官', '王检察官', '张检察官', '赵检察官', '刘检察官'];
 
   // ============ 初始化 ============
   useEffect(() => { checkAuth(); }, []);
@@ -448,6 +465,23 @@ export default function AdminPage() {
 
   const totalPending = (stats?.pendingReports || 0) + (stats?.pendingApplications || 0);
 
+  // 分配承办人
+  const handleAssignHandler = async (caseId: number, handler: string) => {
+    try {
+      const res = await fetch('/api/admin/cases/' + caseId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handler }),
+      });
+      if (res.ok) {
+        fetchData();
+        setShowModal(null);
+      }
+    } catch (error) {
+      console.error('分配失败:', error);
+    }
+  };
+
   // 过滤咨询记录
   const filteredConsultations = consultations.filter(c =>
     !consultationSearch || c.user_question.toLowerCase().includes(consultationSearch.toLowerCase())
@@ -567,24 +601,54 @@ export default function AdminPage() {
         </div>
 
         <nav className="p-2 space-y-1">
-          {navItems.map((item) => {
-            const isActive = activeTab === item.key;
+          {navGroups.map((group) => {
+            const groupItems = navItems.filter(item => group.keys.includes(item.key));
+            const isExpanded = expandedGroups.includes(group.name);
+            const pendingCount = group.keys.reduce((sum, k) => {
+              if (k === 'reports') return sum + (stats?.pendingReports || 0);
+              if (k === 'applications') return sum + (stats?.pendingApplications || 0);
+              return sum;
+            }, 0);
+            
             return (
-              <button
-                key={item.key}
-                onClick={() => { setActiveTab(item.key); setPage(1); setStatusFilter(''); setSearchQuery(''); setSelectedIds([]); }}
-                className={cn('flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                  isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground hover:text-foreground')}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {sidebarOpen && <span>{item.label}</span>}
-                {sidebarOpen && item.key === 'reports' && stats?.pendingReports ? (
-                  <span className={cn('ml-auto text-xs px-1.5 py-0.5 rounded', isActive ? 'bg-primary-foreground/20' : 'bg-yellow-100 text-yellow-700')}>{stats.pendingReports}</span>
-                ) : null}
-                {sidebarOpen && item.key === 'applications' && stats?.pendingApplications ? (
-                  <span className={cn('ml-auto text-xs px-1.5 py-0.5 rounded', isActive ? 'bg-primary-foreground/20' : 'bg-yellow-100 text-yellow-700')}>{stats.pendingApplications}</span>
-                ) : null}
-              </button>
+              <div key={group.name}>
+                {sidebarOpen && (
+                  <button
+                    onClick={() => setExpandedGroups(prev => 
+                      prev.includes(group.name) ? prev.filter(g => g !== group.name) : [...prev, group.name]
+                    )}
+                    className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <span>{group.name}</span>
+                    <div className="flex items-center gap-1">
+                      {pendingCount > 0 && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700">{pendingCount}</span>
+                      )}
+                      <ChevronLeft className={cn('h-3 w-3 transition-transform', isExpanded ? '' : '-rotate-90')} />
+                    </div>
+                  </button>
+                )}
+                {(isExpanded || !sidebarOpen) && groupItems.map((item) => {
+                  const isActive = activeTab === item.key;
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => { setActiveTab(item.key); setPage(1); setStatusFilter(''); setSearchQuery(''); setSelectedIds([]); }}
+                      className={cn('flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                        isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground hover:text-foreground')}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {sidebarOpen && <span>{item.label}</span>}
+                      {sidebarOpen && item.key === 'reports' && stats?.pendingReports ? (
+                        <span className={cn('ml-auto text-xs px-1.5 py-0.5 rounded', isActive ? 'bg-primary-foreground/20' : 'bg-yellow-100 text-yellow-700')}>{stats.pendingReports}</span>
+                      ) : null}
+                      {sidebarOpen && item.key === 'applications' && stats?.pendingApplications ? (
+                        <span className={cn('ml-auto text-xs px-1.5 py-0.5 rounded', isActive ? 'bg-primary-foreground/20' : 'bg-yellow-100 text-yellow-700')}>{stats.pendingApplications}</span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
@@ -663,6 +727,36 @@ export default function AdminPage() {
           {/* ============ 数据概览 ============ */}
           {activeTab === 'dashboard' && stats && (
             <div className="space-y-6">
+              {/* 时间筛选和快捷操作 */}
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">统计周期：</span>
+                  <div className="flex rounded-lg border border-input overflow-hidden">
+                    {[
+                      { key: '7d', label: '近7天' },
+                      { key: '30d', label: '近30天' },
+                      { key: '90d', label: '近90天' },
+                      { key: 'all', label: '全部' },
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        onClick={() => setDateRange(item.key as typeof dateRange)}
+                        className={cn('px-3 py-1.5 text-sm transition-colors',
+                          dateRange === item.key ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                        )}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5">
+                    <Printer className="h-4 w-4" />打印报表
+                  </Button>
+                </div>
+              </div>
+
               {totalPending > 0 && (
                 <Card className="border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50">
                   <CardContent className="flex items-center justify-between p-4">
@@ -703,16 +797,23 @@ export default function AdminPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="h-48 flex items-end justify-between gap-2">
-                      {['1月', '2月', '3月', '4月', '5月', '6月'].map((m, i) => {
-                        const heights = [50, 70, 45, 80, 65, 55];
-                        const values = [12, 18, 9, 22, 16, 14];
+                      {(stats.monthlyTrend || [
+                        { month: '1月', count: 12 },
+                        { month: '2月', count: 18 },
+                        { month: '3月', count: 9 },
+                        { month: '4月', count: 22 },
+                        { month: '5月', count: 16 },
+                        { month: '6月', count: 14 },
+                      ]).map((item, i) => {
+                        const maxCount = Math.max(...(stats.monthlyTrend || []).map(m => m.count), 22);
+                        const height = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
                         return (
-                          <div key={m} className="flex-1 flex flex-col items-center gap-2">
-                            <span className="text-xs font-medium text-primary">{values[i]}</span>
-                            <div className="w-full bg-primary/20 rounded-t relative" style={{ height: `${heights[i]}%` }}>
+                          <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                            <span className="text-xs font-medium text-primary">{item.count}</span>
+                            <div className="w-full bg-primary/20 rounded-t relative" style={{ height: `${Math.max(height, 10)}%` }}>
                               <div className="absolute inset-0 bg-primary rounded-t transition-all hover:bg-primary/80" style={{ height: '100%' }} />
                             </div>
-                            <span className="text-xs text-muted-foreground">{m}</span>
+                            <span className="text-xs text-muted-foreground">{item.month}</span>
                           </div>
                         );
                       })}
@@ -735,14 +836,9 @@ export default function AdminPage() {
               <div className="grid gap-6 lg:grid-cols-2">
                 <Card>
                   <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Activity className="h-4 w-4 text-primary" />核心指标
-                      </CardTitle>
-                      <Button variant="ghost" size="sm" onClick={() => window.print()} className="text-xs gap-1">
-                        <Printer className="h-3 w-3" />打印报表
-                      </Button>
-                    </div>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-primary" />核心指标
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-4">
@@ -751,28 +847,28 @@ export default function AdminPage() {
                           <DollarSign className="h-4 w-4" />
                           <span className="text-xs">涉案金额总计</span>
                         </div>
-                        <p className="text-xl font-bold text-blue-700">¥{(stats.totalAmount || 443000).toLocaleString()}</p>
+                        <p className="text-xl font-bold text-blue-700">¥{(stats.totalAmount || 0).toLocaleString()}</p>
                       </div>
                       <div className="p-3 rounded-lg bg-green-50 border border-green-100">
                         <div className="flex items-center gap-2 text-green-600 mb-1">
                           <Users className="h-4 w-4" />
                           <span className="text-xs">帮助劳动者</span>
                         </div>
-                        <p className="text-xl font-bold text-green-700">2,458+</p>
+                        <p className="text-xl font-bold text-green-700">{(stats.helpedWorkers || 0).toLocaleString()}+</p>
                       </div>
                       <div className="p-3 rounded-lg bg-orange-50 border border-orange-100">
                         <div className="flex items-center gap-2 text-orange-600 mb-1">
                           <Clock className="h-4 w-4" />
                           <span className="text-xs">平均处理天数</span>
                         </div>
-                        <p className="text-xl font-bold text-orange-700">7 天</p>
+                        <p className="text-xl font-bold text-orange-700">{stats.avgProcessingDays || 7} 天</p>
                       </div>
                       <div className="p-3 rounded-lg bg-purple-50 border border-purple-100">
                         <div className="flex items-center gap-2 text-purple-600 mb-1">
                           <CheckCircle className="h-4 w-4" />
                           <span className="text-xs">成功维权率</span>
                         </div>
-                        <p className="text-xl font-bold text-purple-700">98.6%</p>
+                        <p className="text-xl font-bold text-purple-700">{stats.successRate || 98.6}%</p>
                       </div>
                     </div>
                   </CardContent>
@@ -1019,17 +1115,40 @@ export default function AdminPage() {
           {/* ============ 文书管理 ============ */}
           {activeTab === 'documents' && (
             <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold">文书管理</h3>
+                  <p className="text-sm text-muted-foreground">管理文书模板和已生成文书</p>
+                </div>
+                <Button size="sm" onClick={() => setShowModal('newTemplate')} className="gap-1.5">
+                  <PlusCircle className="h-4 w-4" />新建模板
+                </Button>
+              </div>
+              
               <Card>
                 <CardHeader className="pb-2"><CardTitle className="text-base">文书模板</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {templates.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between rounded-lg border border-border/50 p-3 hover:bg-muted/50">
+                      <div key={t.id} className="flex items-center justify-between rounded-lg border border-border/50 p-3 hover:bg-muted/50 group">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100 text-purple-600"><LayoutTemplate className="h-4 w-4" /></div>
-                          <div><p className="font-medium text-sm">{t.name}</p><p className="text-xs text-muted-foreground">{t.variables.length} 个变量</p></div>
+                          <div>
+                            <p className="font-medium text-sm">{t.name}</p>
+                            <p className="text-xs text-muted-foreground">{t.variables?.length || 0} 个变量 · {t.type || '通用'}</p>
+                          </div>
                         </div>
-                        <Badge variant={t.is_active ? 'default' : 'secondary'} className="text-xs">{t.is_active ? '启用' : '禁用'}</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={t.is_active ? 'default' : 'secondary'} className="text-xs">{t.is_active ? '启用' : '禁用'}</Badge>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="opacity-0 group-hover:opacity-100"
+                            onClick={() => { setSelectedItem(t); setShowModal('editTemplate'); }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1037,7 +1156,14 @@ export default function AdminPage() {
               </Card>
 
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-base">已生成文书</CardTitle></CardHeader>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">已生成文书</CardTitle>
+                    <Button variant="outline" size="sm" onClick={() => handleExportData('已生成文书', documents)} className="gap-1.5">
+                      <Download className="h-4 w-4" />导出
+                    </Button>
+                  </div>
+                </CardHeader>
                 <CardContent className="p-0">
                   <table className="w-full">
                     <thead><tr className="border-b bg-muted/30">
@@ -1052,7 +1178,12 @@ export default function AdminPage() {
                           <td className="px-4 py-3 text-sm">{d.document_type}</td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">{d.applicant_name || '-'}</td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(d.created_at)}</td>
-                          <td className="px-4 py-3 text-right"><Button variant="ghost" size="sm"><Download className="h-4 w-4" /></Button></td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" title="预览"><Eye className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="sm" title="下载"><Download className="h-4 w-4" /></Button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1227,6 +1358,58 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
+              {/* 待处理事项快捷处理 */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-yellow-500" />待处理事项
+                    </CardTitle>
+                    <Badge variant="outline" className="text-yellow-600 border-yellow-300">{totalPending} 项</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {reports.filter(r => r.status === 'pending').slice(0, 2).map((r) => (
+                      <div key={r.id} className="flex items-center justify-between rounded-lg border border-yellow-200 bg-yellow-50/50 p-2.5">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <FileText className="h-4 w-4 text-yellow-600 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{r.name} - 线索填报</p>
+                            <p className="text-xs text-muted-foreground truncate">{r.company_name || '无公司信息'}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <Button size="sm" variant="ghost" onClick={() => handleUpdateStatus('report', r.id, 'processing')} className="text-xs text-yellow-700">处理</Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleUpdateStatus('report', r.id, 'completed')} className="text-xs text-green-700">完成</Button>
+                        </div>
+                      </div>
+                    ))}
+                    {applications.filter(a => a.status === 'pending').slice(0, 2).map((a) => (
+                      <div key={a.id} className="flex items-center justify-between rounded-lg border border-yellow-200 bg-yellow-50/50 p-2.5">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Send className="h-4 w-4 text-yellow-600 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{a.applicant_name} - 在线申请</p>
+                            <p className="text-xs text-muted-foreground">{a.application_type === 'support' ? '支持起诉申请' : '法律援助申请'}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <Button size="sm" variant="ghost" onClick={() => handleUpdateStatus('application', a.id, 'processing')} className="text-xs text-yellow-700">处理</Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleUpdateStatus('application', a.id, 'completed')} className="text-xs text-green-700">完成</Button>
+                        </div>
+                      </div>
+                    ))}
+                    {totalPending === 0 && (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                        <p className="text-sm">暂无待处理事项</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader><CardTitle className="text-base">最近操作记录</CardTitle></CardHeader>
                 <CardContent>
@@ -1281,6 +1464,30 @@ export default function AdminPage() {
                   {'user_question' in selectedItem && <DetailRow label="用户问题" value={selectedItem.user_question} />}
                   {'ai_response' in selectedItem && <DetailRow label="AI回复" value={selectedItem.ai_response || '暂无回复'} />}
                   {'status' in selectedItem && <div><span className="text-xs text-muted-foreground">状态</span><div className="mt-1">{getStatusBadge(selectedItem.status as string)}</div></div>}
+                  
+                  {/* 案件承办人分配 */}
+                  {'handler' in selectedItem && (
+                    <div>
+                      <span className="text-xs text-muted-foreground">承办人</span>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {handlers.map((h) => (
+                          <button
+                            key={h}
+                            onClick={() => handleAssignHandler(selectedItem.id as number, h)}
+                            className={cn(
+                              'px-3 py-1.5 rounded-full text-sm transition-colors',
+                              selectedItem.handler === h
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted hover:bg-muted/80'
+                            )}
+                          >
+                            {h}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   {'status' in selectedItem && (selectedItem.status === 'pending' || selectedItem.status === 'processing') && (
                     <div className="flex gap-2 pt-4">
                       {selectedItem.status === 'pending' && <Button size="sm" onClick={() => { handleUpdateStatus('case' in selectedItem ? 'case' : 'report', selectedItem.id, 'processing'); setShowModal(null); }}>开始处理</Button>}
