@@ -21,13 +21,17 @@ import {
   Scale,
   Shield,
   TrendingUp,
-  Search,
   Filter,
   Eye,
   Building2,
   Phone,
   CreditCard,
   Calendar,
+  ArrowRight,
+  Bell,
+  Activity,
+  Inbox,
+  Home,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -119,7 +123,6 @@ export default function AdminPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     checkAuth();
@@ -266,11 +269,18 @@ export default function AdminPage() {
     });
   };
 
+  const totalPending = (stats?.pendingReports || 0) + (stats?.pendingApplications || 0);
+
   // Loading state
   if (isLoading && !isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/3">
-        <div className="text-center">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-primary/3 to-transparent">
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 h-96 w-96 rounded-full bg-[var(--gold)]/10 blur-3xl" />
+        </div>
+        <div className="relative text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
             <RefreshCw className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -283,7 +293,7 @@ export default function AdminPage() {
   // Login page
   if (!isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/3 p-4">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-primary/3 to-transparent p-4">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
@@ -349,9 +359,15 @@ export default function AdminPage() {
 
   // Main admin interface
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/3">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-primary/3 to-transparent">
+      {/* Background decoration */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-20 -left-20 h-96 w-96 rounded-full bg-[var(--gold)]/10 blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border/40 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+      <header className="sticky top-0 z-40 border-b border-border/40 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
@@ -363,6 +379,22 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* 待处理提醒 */}
+            {totalPending > 0 && (
+              <Badge variant="outline" className="hidden gap-1.5 border-yellow-300 bg-yellow-50 text-yellow-700 sm:inline-flex">
+                <Bell className="h-3.5 w-3.5" />
+                {totalPending} 条待处理
+              </Badge>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push('/')}
+              className="gap-2"
+            >
+              <Home className="h-4 w-4" />
+              首页
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -401,39 +433,144 @@ export default function AdminPage() {
             >
               <tab.icon className="h-4 w-4" />
               {tab.label}
+              {tab.key === 'reports' && stats && stats.pendingReports > 0 && activeTab !== tab.key && (
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-yellow-100 px-1.5 text-[10px] font-semibold text-yellow-700">
+                  {stats.pendingReports}
+                </span>
+              )}
+              {tab.key === 'applications' && stats && stats.pendingApplications > 0 && activeTab !== tab.key && (
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-yellow-100 px-1.5 text-[10px] font-semibold text-yellow-700">
+                  {stats.pendingApplications}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
         {/* Dashboard */}
         {activeTab === 'dashboard' && stats && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatsCard
-              title="线索填报"
-              value={stats.reports}
-              pending={stats.pendingReports}
-              icon={FileText}
-              color="blue"
-            />
-            <StatsCard
-              title="在线申请"
-              value={stats.applications}
-              pending={stats.pendingApplications}
-              icon={Send}
-              color="green"
-            />
-            <StatsCard
-              title="文书生成"
-              value={stats.documents}
-              icon={PenTool}
-              color="purple"
-            />
-            <StatsCard
-              title="咨询记录"
-              value={stats.consultations}
-              icon={MessageSquare}
-              color="orange"
-            />
+          <div className="space-y-6">
+            {/* 待处理提醒卡片 */}
+            {totalPending > 0 && (
+              <Card className="border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50">
+                <CardContent className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-100">
+                      <Bell className="h-5 w-5 text-yellow-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-yellow-800">您有 {totalPending} 条待处理事项</p>
+                      <p className="text-sm text-yellow-600">
+                        线索 {stats.pendingReports} 条 · 申请 {stats.pendingApplications} 条
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {stats.pendingReports > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setActiveTab('reports')}
+                        className="border-yellow-300 bg-white text-yellow-700 hover:bg-yellow-50"
+                      >
+                        处理线索
+                        <ArrowRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    )}
+                    {stats.pendingApplications > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setActiveTab('applications')}
+                        className="border-yellow-300 bg-white text-yellow-700 hover:bg-yellow-50"
+                      >
+                        处理申请
+                        <ArrowRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 统计卡片 */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatsCard
+                title="线索填报"
+                value={stats.reports}
+                pending={stats.pendingReports}
+                icon={FileText}
+                color="blue"
+                onClick={() => setActiveTab('reports')}
+              />
+              <StatsCard
+                title="在线申请"
+                value={stats.applications}
+                pending={stats.pendingApplications}
+                icon={Send}
+                color="green"
+                onClick={() => setActiveTab('applications')}
+              />
+              <StatsCard
+                title="文书生成"
+                value={stats.documents}
+                icon={PenTool}
+                color="purple"
+                onClick={() => setActiveTab('documents')}
+              />
+              <StatsCard
+                title="咨询记录"
+                value={stats.consultations}
+                icon={MessageSquare}
+                color="orange"
+                onClick={() => setActiveTab('consultations')}
+              />
+            </div>
+
+            {/* 快捷操作 */}
+            <Card className="border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">快捷操作</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <QuickAction
+                    icon={Inbox}
+                    label="待处理线索"
+                    value={stats.pendingReports}
+                    color="blue"
+                    onClick={() => {
+                      setActiveTab('reports');
+                      setStatusFilter('pending');
+                    }}
+                  />
+                  <QuickAction
+                    icon={Clock}
+                    label="处理中申请"
+                    value={stats.applications}
+                    color="green"
+                    onClick={() => {
+                      setActiveTab('applications');
+                      setStatusFilter('processing');
+                    }}
+                  />
+                  <QuickAction
+                    icon={Activity}
+                    label="今日咨询"
+                    value={0}
+                    color="orange"
+                    onClick={() => setActiveTab('consultations')}
+                  />
+                  <QuickAction
+                    icon={FileText}
+                    label="文书生成"
+                    value={stats.documents}
+                    color="purple"
+                    onClick={() => setActiveTab('documents')}
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -648,23 +785,32 @@ function StatsCard({
   pending,
   icon: Icon,
   color,
+  onClick,
 }: {
   title: string;
   value: number;
   pending?: number;
   icon: React.ComponentType<{ className?: string }>;
   color: string;
+  onClick?: () => void;
 }) {
-  const colors: Record<string, { bg: string; icon: string; text: string }> = {
-    blue: { bg: 'bg-blue-50', icon: 'text-blue-600', text: 'text-blue-600' },
-    green: { bg: 'bg-green-50', icon: 'text-green-600', text: 'text-green-600' },
-    purple: { bg: 'bg-purple-50', icon: 'text-purple-600', text: 'text-purple-600' },
-    orange: { bg: 'bg-orange-50', icon: 'text-orange-600', text: 'text-orange-600' },
+  const colors: Record<string, { bg: string; icon: string; text: string; ring: string }> = {
+    blue: { bg: 'bg-blue-50', icon: 'text-blue-600', text: 'text-blue-600', ring: 'hover:ring-blue-200' },
+    green: { bg: 'bg-green-50', icon: 'text-green-600', text: 'text-green-600', ring: 'hover:ring-green-200' },
+    purple: { bg: 'bg-purple-50', icon: 'text-purple-600', text: 'text-purple-600', ring: 'hover:ring-purple-200' },
+    orange: { bg: 'bg-orange-50', icon: 'text-orange-600', text: 'text-orange-600', ring: 'hover:ring-orange-200' },
   };
   const c = colors[color] || colors.blue;
 
   return (
-    <Card className="border-border/50 shadow-sm transition-shadow hover:shadow-md">
+    <Card
+      className={cn(
+        'border-border/50 shadow-sm transition-all',
+        onClick && 'cursor-pointer hover:shadow-md hover:ring-2',
+        onClick && c.ring
+      )}
+      onClick={onClick}
+    >
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -683,6 +829,47 @@ function StatsCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Quick Action Component
+function QuickAction({
+  icon: Icon,
+  label,
+  value,
+  color,
+  onClick,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  color: string;
+  onClick: () => void;
+}) {
+  const colors: Record<string, { bg: string; icon: string }> = {
+    blue: { bg: 'bg-blue-50 hover:bg-blue-100', icon: 'text-blue-600' },
+    green: { bg: 'bg-green-50 hover:bg-green-100', icon: 'text-green-600' },
+    purple: { bg: 'bg-purple-50 hover:bg-purple-100', icon: 'text-purple-600' },
+    orange: { bg: 'bg-orange-50 hover:bg-orange-100', icon: 'text-orange-600' },
+  };
+  const c = colors[color] || colors.blue;
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-3 rounded-xl p-3 transition-colors',
+        c.bg
+      )}
+    >
+      <div className={cn('rounded-lg p-2 bg-white/80', c.icon)}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="text-left">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="text-lg font-semibold">{value}</p>
+      </div>
+    </button>
   );
 }
 
@@ -712,7 +899,7 @@ function DataTable<T>({
     return (
       <Card className="border-border/50 shadow-sm">
         <CardContent className="flex h-48 flex-col items-center justify-center text-muted-foreground">
-          <FileText className="mb-2 h-12 w-12 opacity-20" />
+          <Inbox className="mb-2 h-12 w-12 opacity-20" />
           <p>暂无数据</p>
         </CardContent>
       </Card>
@@ -764,10 +951,10 @@ function DetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={onClose}>
       <Card
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto"
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b bg-muted/30">
           <CardTitle className="text-lg">详细信息</CardTitle>
           <button onClick={onClose} className="rounded-lg p-2 hover:bg-muted">
             <X className="h-5 w-5" />
