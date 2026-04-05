@@ -131,7 +131,7 @@ export default function HomePage() {
               className="mb-6 border-primary/30 bg-primary/5 px-4 py-1.5 text-primary"
             >
               <Scale className="mr-2 h-3.5 w-3.5" />
-              北京市西城区人民检察院倾力打造
+              参赛作品
             </Badge>
 
             {/* Title */}
