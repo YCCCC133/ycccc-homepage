@@ -54,7 +54,7 @@ export default function RootLayout({
 
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-      <head>
+      <head suppressHydrationWarning>
         {/* DNS 预连接优化 */}
         <link rel="preconnect" href="https://fonts.googleapis.cn" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.gstatic.cn" crossOrigin="anonymous" />
