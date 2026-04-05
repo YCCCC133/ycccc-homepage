@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Send,
@@ -46,25 +46,45 @@ export default function ConsultPage() {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // 自动滚动到底部
+  // 自动滚动到底部 - 使用节流优化
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      });
     }
   }, [messages]);
 
+  // 组件卸载时取消请求
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   // 快捷提问
-  const handleQuickQuestion = (question: string) => {
+  const handleQuickQuestion = useCallback((question: string) => {
     setInput(question);
     if (inputRef.current) {
       inputRef.current.focus();
     }
-  };
+  }, []);
 
   // 发送消息
-  const sendMessage = async () => {
+  const sendMessage = useCallback(async () => {
     if (!input.trim() || isLoading) return;
+
+    // 取消之前的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
 
     const userMessage: Message = {
       role: 'user',
@@ -93,6 +113,7 @@ export default function ConsultPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ messages: conversationHistory }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) throw new Error('请求失败');
@@ -155,6 +176,10 @@ export default function ConsultPage() {
         return newMessages;
       });
     } catch (error) {
+      // 忽略取消请求的错误
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
       console.error('Error:', error);
       setMessages((prev) => [
         ...prev,
@@ -168,7 +193,7 @@ export default function ConsultPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [input, isLoading, messages]);
 
   // 处理键盘事件
   const handleKeyDown = (e: React.KeyboardEvent) => {

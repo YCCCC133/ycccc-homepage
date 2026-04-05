@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
 
-export const runtime = 'edge';
+// 使用 Node.js runtime 以支持 coze-coding-dev-sdk
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {

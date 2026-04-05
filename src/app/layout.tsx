@@ -1,8 +1,16 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inspector } from 'react-dev-inspector';
 import './globals.css';
 import { Navigation } from '@/components/navigation';
 import { Footer } from '@/components/footer';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#1e40af' },
+  ],
+};
 
 export const metadata: Metadata = {
   title: {
@@ -45,7 +53,12 @@ export default function RootLayout({
   const isDev = process.env.COZE_PROJECT_ENV === 'DEV';
 
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        {/* DNS 预连接优化 */}
+        <link rel="preconnect" href="https://fonts.googleapis.cn" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.gstatic.cn" crossOrigin="anonymous" />
+      </head>
       <body className={`antialiased`}>
         {isDev && <Inspector />}
         <div className="flex min-h-screen flex-col">
