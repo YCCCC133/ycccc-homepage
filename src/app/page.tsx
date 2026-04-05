@@ -282,7 +282,7 @@ export default function HomePage() {
       </section>
 
       {/* Help & Resources */}
-      <section className="py-16 md:py-20">
+      <section className="bg-gradient-to-b from-transparent via-primary/3 to-primary/5 py-16 md:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <div className="grid gap-8 lg:grid-cols-2">
             {/* Notice Board */}

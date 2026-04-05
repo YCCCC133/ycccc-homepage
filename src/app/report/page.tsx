@@ -182,7 +182,7 @@ export default function ReportPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
+    <div className="mx-auto min-h-[calc(100vh-10rem)] max-w-5xl px-4 py-8">
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold text-foreground">线索填报</h1>

@@ -204,7 +204,7 @@ export default function ConsultPage() {
   };
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-6rem)] max-w-6xl flex-col px-4 py-6 md:h-[calc(100vh-8rem)]">
+    <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-6xl flex-col px-4 py-6 md:min-h-[calc(100vh-8rem)]">
       {/* Header */}
       <div className="mb-6">
         <h1 className="mb-2 text-3xl font-bold text-foreground">智能法律咨询</h1>

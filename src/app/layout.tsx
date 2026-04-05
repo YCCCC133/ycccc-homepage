@@ -59,11 +59,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.cn" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.gstatic.cn" crossOrigin="anonymous" />
       </head>
-      <body className={`antialiased`}>
+      <body className="antialiased bg-background">
         {isDev && <Inspector />}
-        <div className="flex min-h-screen flex-col">
+        <div className="flex min-h-screen flex-col bg-background">
           <Navigation />
-          <main className="flex-1 pt-24 md:pt-32">{children}</main>
+          <main className="flex-1 pt-24 md:pt-32 bg-background">{children}</main>
           <Footer />
         </div>
       </body>
