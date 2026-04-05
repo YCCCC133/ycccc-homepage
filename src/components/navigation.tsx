@@ -73,8 +73,11 @@ export function Navigation() {
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 shadow-lg">
               <Scale className="h-6 w-6 text-white" />
             </div>
-            <div className="hidden sm:block">
-              <div className="flex items-center gap-2 whitespace-nowrap">
+            {/* 中等屏幕只显示平台名称 */}
+            <span className="hidden text-lg font-bold text-primary md:block lg:hidden">护薪平台</span>
+            {/* 大屏幕显示完整信息 */}
+            <div className="hidden min-w-0 lg:block">
+              <div className="flex items-center gap-2">
                 <span className="text-lg font-bold text-primary">护薪平台</span>
                 <span className="shrink-0 whitespace-nowrap rounded-full bg-[var(--gold)] px-2 py-0.5 text-xs font-medium text-[var(--gold-foreground)]">
                   检察支持起诉
