@@ -43,7 +43,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 
 const formSchema = z.object({
@@ -87,6 +86,7 @@ export default function ReportPage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   
   const form = useForm<FormData>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
       name: '',
