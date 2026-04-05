@@ -9,7 +9,6 @@ import {
   Send,
   PenTool,
   MessageSquare,
-  Users,
   CheckCircle,
   AlertCircle,
   Trash2,
@@ -35,19 +34,9 @@ import {
   FolderOpen,
   File,
   LayoutTemplate,
-  Plus,
-  ChevronRight,
   Menu,
-  DollarSign,
-  Clock,
-  Calendar,
   User,
-  MoreHorizontal,
   AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  FileDown,
-  Activity,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
