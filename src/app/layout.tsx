@@ -63,7 +63,7 @@ export default function RootLayout({
         {isDev && <Inspector />}
         <div className="flex min-h-screen flex-col bg-background">
           <Navigation />
-          <main className="flex-1 pt-24 md:pt-32 bg-background">{children}</main>
+          <main className="flex-1 pt-16 md:pt-24">{children}</main>
           <Footer />
         </div>
       </body>
