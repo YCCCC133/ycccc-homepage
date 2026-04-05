@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import Link from 'next/link';
 import {
   Send,
   CheckCircle2,
@@ -128,7 +129,9 @@ export default function ApplyPage() {
               <Button variant="outline" onClick={() => window.location.reload()}>
                 继续申请
               </Button>
-              <Button>查看申请进度</Button>
+              <Link href="/cases">
+                <Button>查看申请进度</Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

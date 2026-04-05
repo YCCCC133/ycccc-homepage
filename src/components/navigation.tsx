@@ -126,12 +126,14 @@ export function Navigation() {
               <Phone className="h-4 w-4" />
               <span className="hidden lg:inline">紧急求助</span>
             </Button>
-            <Button
-              size="sm"
-              className="gap-1.5 bg-gradient-to-r from-primary to-primary/90 px-3 shadow-md hover:shadow-lg lg:gap-2 lg:px-4"
-            >
-              <span>立即填报</span>
-            </Button>
+            <Link href="/report">
+              <Button
+                size="sm"
+                className="gap-1.5 bg-gradient-to-r from-primary to-primary/90 px-3 shadow-md hover:shadow-lg lg:gap-2 lg:px-4"
+              >
+                <span>立即填报</span>
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile menu button */}
@@ -178,7 +180,9 @@ export function Navigation() {
                 <Phone className="h-4 w-4" />
                 紧急求助
               </Button>
-              <Button className="flex-1 gap-2">立即填报</Button>
+              <Link href="/report" className="flex-1">
+                <Button className="w-full gap-2">立即填报</Button>
+              </Link>
             </div>
           </div>
         </div>
