@@ -300,7 +300,7 @@ export default function AdminPage() {
           <div className="absolute -bottom-20 -left-20 h-96 w-96 rounded-full bg-[var(--gold)]/10 blur-3xl" />
         </div>
 
-        <Card className="relative w-full max-w-md border-border/50 shadow-2xl">
+        <Card className="relative w-full max-w-md border-border/50 bg-white/95 backdrop-blur-sm shadow-2xl">
           <CardHeader className="space-y-4 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
               <Scale className="h-8 w-8 text-white" />
@@ -329,7 +329,7 @@ export default function AdminPage() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full bg-gradient-to-r from-primary to-primary/90 shadow-lg hover:shadow-xl" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
@@ -452,7 +452,7 @@ export default function AdminPage() {
           <div className="space-y-6">
             {/* 待处理提醒卡片 */}
             {totalPending > 0 && (
-              <Card className="border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50">
+              <Card className="border-yellow-200/50 bg-gradient-to-r from-yellow-50/80 to-orange-50/80 backdrop-blur-sm">
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-100">
@@ -528,7 +528,7 @@ export default function AdminPage() {
             </div>
 
             {/* 快捷操作 */}
-            <Card className="border-border/50">
+            <Card className="border-border/50 bg-white/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">快捷操作</CardTitle>
               </CardHeader>
@@ -805,7 +805,7 @@ function StatsCard({
   return (
     <Card
       className={cn(
-        'border-border/50 shadow-sm transition-all',
+        'border-border/50 bg-white/80 backdrop-blur-sm shadow-sm transition-all',
         onClick && 'cursor-pointer hover:shadow-md hover:ring-2',
         onClick && c.ring
       )}
@@ -887,7 +887,7 @@ function DataTable<T>({
 }) {
   if (isLoading) {
     return (
-      <Card className="border-border/50 shadow-sm">
+      <Card className="border-border/50 bg-white/80 backdrop-blur-sm shadow-sm">
         <CardContent className="flex h-48 items-center justify-center">
           <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
@@ -897,7 +897,7 @@ function DataTable<T>({
 
   if (data.length === 0) {
     return (
-      <Card className="border-border/50 shadow-sm">
+      <Card className="border-border/50 bg-white/80 backdrop-blur-sm shadow-sm">
         <CardContent className="flex h-48 flex-col items-center justify-center text-muted-foreground">
           <Inbox className="mb-2 h-12 w-12 opacity-20" />
           <p>暂无数据</p>
@@ -907,7 +907,7 @@ function DataTable<T>({
   }
 
   return (
-    <Card className="overflow-hidden border-border/50 shadow-sm">
+    <Card className="overflow-hidden border-border/50 bg-white/80 backdrop-blur-sm shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-muted/50">
@@ -951,7 +951,7 @@ function DetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={onClose}>
       <Card
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto shadow-2xl"
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-white/95 backdrop-blur-sm shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b bg-muted/30">
