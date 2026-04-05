@@ -228,10 +228,10 @@ export default function ConsultPage() {
                 <Button
                   key={index}
                   variant="ghost"
-                  className="w-full justify-start text-left text-sm"
+                  className="h-auto w-full justify-start whitespace-normal text-left text-sm"
                   onClick={() => handleQuickQuestion(question)}
                 >
-                  <MessageCircle className="mr-2 h-3.5 w-3.5 text-primary" />
+                  <MessageCircle className="mr-2 h-3.5 w-3.5 shrink-0 text-primary" />
                   {question}
                 </Button>
               ))}
