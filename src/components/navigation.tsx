@@ -87,7 +87,7 @@ export function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex md:items-center md:gap-1">
+          <div className="hidden items-center gap-0.5 md:flex lg:gap-1">
             {navigation.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -95,7 +95,7 @@ export function Navigation() {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    'group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium outline-none transition-all',
+                    'group relative flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium outline-none transition-all lg:gap-2 lg:px-4',
                     isActive
                       ? 'bg-primary text-primary-foreground shadow-md'
                       : 'text-foreground/70 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground'
@@ -103,11 +103,12 @@ export function Navigation() {
                 >
                   <item.icon
                     className={cn(
-                      'h-4 w-4 transition-transform',
+                      'h-4 w-4 shrink-0 transition-transform',
                       isActive ? 'scale-110' : 'group-hover:scale-110'
                     )}
                   />
-                  {item.name}
+                  <span className="hidden lg:inline">{item.name}</span>
+                  <span className="lg:hidden">{item.name.slice(0, 2)}</span>
                   {isActive && (
                     <span className="absolute -bottom-0.5 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-[var(--gold)]" />
                   )}
