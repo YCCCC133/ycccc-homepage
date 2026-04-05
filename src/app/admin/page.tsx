@@ -14,13 +14,24 @@ import {
   CheckCircle,
   AlertCircle,
   Trash2,
-  Eye,
   X,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
+  Scale,
+  Shield,
+  TrendingUp,
+  Search,
+  Filter,
+  Eye,
+  Building2,
+  Phone,
+  CreditCard,
+  Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 type TabType = 'dashboard' | 'reports' | 'applications' | 'documents' | 'consultations';
@@ -84,6 +95,14 @@ interface Consultation {
   created_at: string;
 }
 
+const tabs = [
+  { key: 'dashboard' as TabType, label: '数据概览', icon: TrendingUp, color: 'text-primary', bgColor: 'bg-primary/10' },
+  { key: 'reports' as TabType, label: '线索填报', icon: FileText, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+  { key: 'applications' as TabType, label: '在线申请', icon: Send, color: 'text-green-600', bgColor: 'bg-green-50' },
+  { key: 'documents' as TabType, label: '文书生成', icon: PenTool, color: 'text-purple-600', bgColor: 'bg-purple-50' },
+  { key: 'consultations' as TabType, label: '咨询记录', icon: MessageSquare, color: 'text-orange-600', bgColor: 'bg-orange-50' },
+];
+
 export default function AdminPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -100,13 +119,12 @@ export default function AdminPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // 检查登录状态
   useEffect(() => {
     checkAuth();
   }, []);
 
-  // 获取数据
   useEffect(() => {
     if (isAuthenticated) {
       fetchData();
@@ -151,7 +169,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     setIsAuthenticated(false);
   };
@@ -163,7 +181,7 @@ export default function AdminPage() {
       const params = new URLSearchParams({
         type,
         page: page.toString(),
-        pageSize: '20',
+        pageSize: '10',
         ...(statusFilter && { status: statusFilter }),
       });
 
@@ -173,19 +191,19 @@ export default function AdminPage() {
       if (data.stats) setStats(data.stats);
       if (data.reports) {
         setReports(data.reports);
-        setTotalPages(Math.ceil((data.reportsTotal || 0) / 20));
+        setTotalPages(Math.ceil((data.reportsTotal || 0) / 10));
       }
       if (data.applications) {
         setApplications(data.applications);
-        setTotalPages(Math.ceil((data.applicationsTotal || 0) / 20));
+        setTotalPages(Math.ceil((data.applicationsTotal || 0) / 10));
       }
       if (data.documents) {
         setDocuments(data.documents);
-        setTotalPages(Math.ceil((data.documentsTotal || 0) / 20));
+        setTotalPages(Math.ceil((data.documentsTotal || 0) / 10));
       }
       if (data.consultations) {
         setConsultations(data.consultations);
-        setTotalPages(Math.ceil((data.consultationsTotal || 0) / 20));
+        setTotalPages(Math.ceil((data.consultationsTotal || 0) / 10));
       }
     } catch (error) {
       console.error('获取数据失败:', error);
@@ -211,7 +229,7 @@ export default function AdminPage() {
   };
 
   const handleDelete = async (type: string, id: number) => {
-    if (!confirm('确定要删除这条记录吗？')) return;
+    if (!confirm('确定要删除这条记录吗？此操作不可恢复。')) return;
 
     try {
       const res = await fetch(`/api/admin/data?type=${type}&id=${id}`, {
@@ -228,23 +246,14 @@ export default function AdminPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      processing: 'bg-blue-100 text-blue-800',
-      completed: 'bg-green-100 text-green-800',
-      rejected: 'bg-red-100 text-red-800',
+    const config: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string; className: string }> = {
+      pending: { variant: 'outline', label: '待处理', className: 'border-yellow-300 bg-yellow-50 text-yellow-700' },
+      processing: { variant: 'outline', label: '处理中', className: 'border-blue-300 bg-blue-50 text-blue-700' },
+      completed: { variant: 'outline', label: '已完成', className: 'border-green-300 bg-green-50 text-green-700' },
+      rejected: { variant: 'outline', label: '已驳回', className: 'border-red-300 bg-red-50 text-red-700' },
     };
-    const labels: Record<string, string> = {
-      pending: '待处理',
-      processing: '处理中',
-      completed: '已完成',
-      rejected: '已驳回',
-    };
-    return (
-      <span className={cn('rounded-full px-2 py-1 text-xs font-medium', styles[status] || styles.pending)}>
-        {labels[status] || status}
-      </span>
-    );
+    const { variant, label, className } = config[status] || config.pending;
+    return <Badge variant={variant} className={className}>{label}</Badge>;
   };
 
   const formatDate = (dateStr: string) => {
@@ -257,88 +266,114 @@ export default function AdminPage() {
     });
   };
 
+  // Loading state
   if (isLoading && !isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // 登录界面
-  if (!isAuthenticated) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <LogIn className="h-8 w-8 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">后台管理系统</h1>
-            <p className="mt-2 text-sm text-gray-500">请输入管理员密码</p>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/3">
+        <div className="text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
           </div>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="请输入密码"
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-
-            {loginError && (
-              <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-600">
-                <AlertCircle className="h-4 w-4" />
-                {loginError}
-              </div>
-            )}
-
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? '登录中...' : '登 录'}
-            </Button>
-          </form>
-
-          <button
-            type="button"
-            onClick={() => router.push('/')}
-            className="mt-4 w-full text-center text-sm text-gray-500 hover:text-primary"
-          >
-            返回首页
-          </button>
+          <p className="text-muted-foreground">加载中...</p>
         </div>
       </div>
     );
   }
 
-  // 管理界面
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 顶部导航 */}
-      <header className="sticky top-0 z-40 border-b bg-white shadow-sm">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white">
-              <FileText className="h-5 w-5" />
+  // Login page
+  if (!isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/3 p-4">
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 h-96 w-96 rounded-full bg-[var(--gold)]/10 blur-3xl" />
+        </div>
+
+        <Card className="relative w-full max-w-md border-border/50 shadow-2xl">
+          <CardHeader className="space-y-4 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+              <Scale className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-gray-900">护薪平台 · 后台管理</h1>
-              <p className="text-xs text-gray-500">数据管理中心</p>
+              <CardTitle className="text-2xl">后台管理系统</CardTitle>
+              <CardDescription className="mt-2">护薪平台 · 数据管理中心</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="relative">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="请输入管理员密码"
+                  className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                />
+              </div>
+
+              {loginError && (
+                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  {loginError}
+                </div>
+              )}
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    登录中...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    登录
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <button
+              type="button"
+              onClick={() => router.push('/')}
+              className="mt-4 w-full text-center text-sm text-muted-foreground transition-colors hover:text-primary"
+            >
+              返回首页
+            </button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Main admin interface
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/3">
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-border/40 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+              <Shield className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-foreground">护薪平台 · 后台管理</h1>
+              <p className="text-xs text-muted-foreground">数据管理中心</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={fetchData}
               disabled={isLoading}
+              className="gap-2"
             >
               <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
               刷新
             </Button>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
               <LogOut className="h-4 w-4" />
               退出
             </Button>
@@ -346,28 +381,22 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl p-4">
-        {/* 标签导航 */}
-        <div className="mb-6 flex gap-2 overflow-x-auto rounded-xl bg-white p-2 shadow-sm">
-          {[
-            { key: 'dashboard', label: '概览', icon: Users },
-            { key: 'reports', label: '线索填报', icon: FileText },
-            { key: 'applications', label: '在线申请', icon: Send },
-            { key: 'documents', label: '文书生成', icon: PenTool },
-            { key: 'consultations', label: '咨询记录', icon: MessageSquare },
-          ].map((tab) => (
+      <main className="mx-auto max-w-7xl p-4 md:p-6">
+        {/* Tab Navigation */}
+        <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
+          {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => {
-                setActiveTab(tab.key as TabType);
+                setActiveTab(tab.key);
                 setPage(1);
                 setStatusFilter('');
               }}
               className={cn(
-                'flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                'flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all',
                 activeTab === tab.key
-                  ? 'bg-primary text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-primary text-primary-foreground shadow-md'
+                  : 'bg-white text-muted-foreground hover:bg-accent hover:text-foreground border border-border/50'
               )}
             >
               <tab.icon className="h-4 w-4" />
@@ -376,30 +405,30 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* 内容区域 */}
+        {/* Dashboard */}
         {activeTab === 'dashboard' && stats && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <StatCard
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatsCard
               title="线索填报"
               value={stats.reports}
               pending={stats.pendingReports}
               icon={FileText}
               color="blue"
             />
-            <StatCard
+            <StatsCard
               title="在线申请"
               value={stats.applications}
               pending={stats.pendingApplications}
               icon={Send}
               color="green"
             />
-            <StatCard
+            <StatsCard
               title="文书生成"
               value={stats.documents}
               icon={PenTool}
               color="purple"
             />
-            <StatCard
+            <StatsCard
               title="咨询记录"
               value={stats.consultations}
               icon={MessageSquare}
@@ -408,110 +437,171 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* Filters for reports/applications */}
         {(activeTab === 'reports' || activeTab === 'applications') && (
-          <div className="mb-4 flex gap-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            >
-              <option value="">全部状态</option>
-              <option value="pending">待处理</option>
-              <option value="processing">处理中</option>
-              <option value="completed">已完成</option>
-              <option value="rejected">已驳回</option>
-            </select>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <option value="">全部状态</option>
+                <option value="pending">待处理</option>
+                <option value="processing">处理中</option>
+                <option value="completed">已完成</option>
+                <option value="rejected">已驳回</option>
+              </select>
+            </div>
+            {stats && activeTab === 'reports' && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>共 {stats.reports} 条记录</span>
+                {stats.pendingReports > 0 && (
+                  <Badge variant="outline" className="border-yellow-300 bg-yellow-50 text-yellow-700">
+                    {stats.pendingReports} 条待处理
+                  </Badge>
+                )}
+              </div>
+            )}
+            {stats && activeTab === 'applications' && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>共 {stats.applications} 条记录</span>
+                {stats.pendingApplications > 0 && (
+                  <Badge variant="outline" className="border-yellow-300 bg-yellow-50 text-yellow-700">
+                    {stats.pendingApplications} 条待处理
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
         )}
 
+        {/* Data Tables */}
         {activeTab === 'reports' && (
-          <DataTable
+          <DataTable<Report>
             data={reports}
+            isLoading={isLoading}
             columns={['姓名', '电话', '公司', '欠薪金额', '状态', '提交时间']}
             renderRow={(item) => (
               <tr
                 key={item.id}
-                className="cursor-pointer border-b hover:bg-gray-50"
+                className="cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/50"
                 onClick={() => setSelectedItem(item)}
               >
-                <td className="whitespace-nowrap px-4 py-3">{item.name}</td>
-                <td className="whitespace-nowrap px-4 py-3">{item.phone}</td>
-                <td className="max-w-[150px] truncate px-4 py-3">{item.company_name || '-'}</td>
-                <td className="whitespace-nowrap px-4 py-3">{item.owed_amount ? `¥${item.owed_amount}` : '-'}</td>
-                <td className="whitespace-nowrap px-4 py-3">{getStatusBadge(item.status)}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(item.created_at)}</td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-medium text-blue-600">
+                      {item.name.charAt(0)}
+                    </div>
+                    <span className="font-medium">{item.name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{item.phone}</td>
+                <td className="max-w-[150px] truncate px-4 py-3 text-muted-foreground">{item.company_name || '-'}</td>
+                <td className="px-4 py-3 font-medium text-primary">{item.owed_amount ? `¥${item.owed_amount}` : '-'}</td>
+                <td className="px-4 py-3">{getStatusBadge(item.status)}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatDate(item.created_at)}</td>
               </tr>
             )}
           />
         )}
 
         {activeTab === 'applications' && (
-          <DataTable
+          <DataTable<Application>
             data={applications}
+            isLoading={isLoading}
             columns={['申请人', '电话', '申请类型', '欠薪金额', '状态', '提交时间']}
             renderRow={(item) => (
               <tr
                 key={item.id}
-                className="cursor-pointer border-b hover:bg-gray-50"
+                className="cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/50"
                 onClick={() => setSelectedItem(item)}
               >
-                <td className="whitespace-nowrap px-4 py-3">{item.applicant_name}</td>
-                <td className="whitespace-nowrap px-4 py-3">{item.applicant_phone}</td>
-                <td className="whitespace-nowrap px-4 py-3">
-                  {item.application_type === 'support_prosecution' ? '支持起诉' : '法律援助'}
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-sm font-medium text-green-600">
+                      {item.applicant_name.charAt(0)}
+                    </div>
+                    <span className="font-medium">{item.applicant_name}</span>
+                  </div>
                 </td>
-                <td className="whitespace-nowrap px-4 py-3">{item.owed_amount ? `¥${item.owed_amount}` : '-'}</td>
-                <td className="whitespace-nowrap px-4 py-3">{getStatusBadge(item.status)}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(item.created_at)}</td>
+                <td className="px-4 py-3 text-muted-foreground">{item.applicant_phone}</td>
+                <td className="px-4 py-3">
+                  <Badge variant="outline" className={item.application_type === 'support_prosecution' ? 'border-green-300 bg-green-50 text-green-700' : 'border-blue-300 bg-blue-50 text-blue-700'}>
+                    {item.application_type === 'support_prosecution' ? '支持起诉' : '法律援助'}
+                  </Badge>
+                </td>
+                <td className="px-4 py-3 font-medium text-primary">{item.owed_amount ? `¥${item.owed_amount}` : '-'}</td>
+                <td className="px-4 py-3">{getStatusBadge(item.status)}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatDate(item.created_at)}</td>
               </tr>
             )}
           />
         )}
 
         {activeTab === 'documents' && (
-          <DataTable
+          <DataTable<Document>
             data={documents}
+            isLoading={isLoading}
             columns={['文书类型', '申请人', '电话', '模板', '生成时间']}
             renderRow={(item) => (
               <tr
                 key={item.id}
-                className="cursor-pointer border-b hover:bg-gray-50"
+                className="cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/50"
                 onClick={() => setSelectedItem(item)}
               >
-                <td className="whitespace-nowrap px-4 py-3">{item.document_type}</td>
-                <td className="whitespace-nowrap px-4 py-3">{item.applicant_name || '-'}</td>
-                <td className="whitespace-nowrap px-4 py-3">{item.applicant_phone || '-'}</td>
-                <td className="whitespace-nowrap px-4 py-3">{item.template_used || '-'}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(item.created_at)}</td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+                      <PenTool className="h-4 w-4" />
+                    </div>
+                    <span className="font-medium">{item.document_type}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{item.applicant_name || '-'}</td>
+                <td className="px-4 py-3 text-muted-foreground">{item.applicant_phone || '-'}</td>
+                <td className="px-4 py-3 text-muted-foreground">{item.template_used || '-'}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatDate(item.created_at)}</td>
               </tr>
             )}
           />
         )}
 
         {activeTab === 'consultations' && (
-          <DataTable
+          <DataTable<Consultation>
             data={consultations}
+            isLoading={isLoading}
             columns={['用户问题', 'AI回复', '咨询时间']}
             renderRow={(item) => (
               <tr
                 key={item.id}
-                className="cursor-pointer border-b hover:bg-gray-50"
+                className="cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/50"
                 onClick={() => setSelectedItem(item)}
               >
-                <td className="max-w-[300px] truncate px-4 py-3">{item.user_question}</td>
-                <td className="max-w-[300px] truncate px-4 py-3">{item.ai_response || '-'}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(item.created_at)}</td>
+                <td className="max-w-[300px] px-4 py-3">
+                  <div className="flex items-start gap-2">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                      <MessageSquare className="h-4 w-4" />
+                    </div>
+                    <p className="line-clamp-2 text-sm">{item.user_question}</p>
+                  </div>
+                </td>
+                <td className="max-w-[300px] px-4 py-3">
+                  <p className="line-clamp-2 text-sm text-muted-foreground">{item.ai_response || '-'}</p>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">{formatDate(item.created_at)}</td>
               </tr>
             )}
           />
         )}
 
-        {/* 分页 */}
+        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="mt-4 flex items-center justify-center gap-2">
+          <div className="mt-6 flex items-center justify-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -520,7 +610,7 @@ export default function AdminPage() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm text-gray-600">
+            <span className="min-w-[80px] text-center text-sm text-muted-foreground">
               {page} / {totalPages}
             </span>
             <Button
@@ -533,9 +623,9 @@ export default function AdminPage() {
             </Button>
           </div>
         )}
-      </div>
+      </main>
 
-      {/* 详情弹窗 */}
+      {/* Detail Modal */}
       {selectedItem && (
         <DetailModal
           item={selectedItem}
@@ -551,8 +641,8 @@ export default function AdminPage() {
   );
 }
 
-// 统计卡片组件
-function StatCard({
+// Stats Card Component
+function StatsCard({
   title,
   value,
   pending,
@@ -565,71 +655,91 @@ function StatCard({
   icon: React.ComponentType<{ className?: string }>;
   color: string;
 }) {
-  const colors: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    purple: 'bg-purple-50 text-purple-600',
-    orange: 'bg-orange-50 text-orange-600',
+  const colors: Record<string, { bg: string; icon: string; text: string }> = {
+    blue: { bg: 'bg-blue-50', icon: 'text-blue-600', text: 'text-blue-600' },
+    green: { bg: 'bg-green-50', icon: 'text-green-600', text: 'text-green-600' },
+    purple: { bg: 'bg-purple-50', icon: 'text-purple-600', text: 'text-purple-600' },
+    orange: { bg: 'bg-orange-50', icon: 'text-orange-600', text: 'text-orange-600' },
   };
+  const c = colors[color] || colors.blue;
 
   return (
-    <div className="rounded-xl bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500">{title}</p>
-          <p className="mt-1 text-3xl font-bold text-gray-900">{value}</p>
-          {pending !== undefined && pending > 0 && (
-            <p className="mt-2 flex items-center gap-1 text-sm text-yellow-600">
-              <Clock className="h-4 w-4" />
-              {pending} 条待处理
-            </p>
-          )}
+    <Card className="border-border/50 shadow-sm transition-shadow hover:shadow-md">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">{title}</p>
+            <p className="mt-1 text-3xl font-bold text-foreground">{value}</p>
+            {pending !== undefined && pending > 0 && (
+              <div className="mt-2 flex items-center gap-1 text-sm text-yellow-600">
+                <Clock className="h-4 w-4" />
+                <span>{pending} 条待处理</span>
+              </div>
+            )}
+          </div>
+          <div className={cn('rounded-xl p-3', c.bg)}>
+            <Icon className={cn('h-6 w-6', c.icon)} />
+          </div>
         </div>
-        <div className={cn('rounded-lg p-3', colors[color])}>
-          <Icon className="h-6 w-6" />
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
-// 数据表格组件
+// Data Table Component
 function DataTable<T>({
   data,
+  isLoading,
   columns,
   renderRow,
 }: {
   data: T[];
+  isLoading: boolean;
   columns: string[];
   renderRow: (item: T) => React.ReactNode;
 }) {
+  if (isLoading) {
+    return (
+      <Card className="border-border/50 shadow-sm">
+        <CardContent className="flex h-48 items-center justify-center">
+          <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (data.length === 0) {
     return (
-      <div className="rounded-xl bg-white p-12 text-center text-gray-500">
-        暂无数据
-      </div>
+      <Card className="border-border/50 shadow-sm">
+        <CardContent className="flex h-48 flex-col items-center justify-center text-muted-foreground">
+          <FileText className="mb-2 h-12 w-12 opacity-20" />
+          <p>暂无数据</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-      <table className="w-full">
-        <thead className="bg-gray-50">
-          <tr>
-            {columns.map((col) => (
-              <th key={col} className="px-4 py-3 text-left text-sm font-medium text-gray-600">
-                {col}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>{data.map(renderRow)}</tbody>
-      </table>
-    </div>
+    <Card className="overflow-hidden border-border/50 shadow-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-muted/50">
+            <tr>
+              {columns.map((col) => (
+                <th key={col} className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>{data.map(renderRow)}</tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
 
-// 详情弹窗组件
+// Detail Modal Component
 function DetailModal({
   item,
   type,
@@ -652,142 +762,159 @@ function DetailModal({
   const isConsultation = (i: typeof item): i is Consultation => 'user_question' in i;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold">详细信息</h2>
-          <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={onClose}>
+      <Card
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
+          <CardTitle className="text-lg">详细信息</CardTitle>
+          <button onClick={onClose} className="rounded-lg p-2 hover:bg-muted">
             <X className="h-5 w-5" />
           </button>
-        </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            {isReport(item) && (
+              <>
+                <InfoRow icon={Users} label="姓名" value={item.name} />
+                <InfoRow icon={Phone} label="电话" value={item.phone} />
+                <InfoRow icon={CreditCard} label="身份证号" value={item.id_card || '-'} />
+                <InfoRow icon={Building2} label="公司名称" value={item.company_name || '-'} />
+                <InfoRow icon={Building2} label="公司地址" value={item.company_address || '-'} />
+                <InfoRow icon={TrendingUp} label="欠薪金额" value={item.owed_amount ? `¥${item.owed_amount}` : '-'} highlight />
+                <InfoRow icon={Clock} label="欠薪月数" value={item.owed_months ? `${item.owed_months} 个月` : '-'} />
+                <InfoRow icon={Users} label="涉及人数" value={item.worker_count ? `${item.worker_count} 人` : '-'} />
+                <InfoRow icon={FileText} label="问题描述" value={item.description || '-'} />
+                <InfoRow icon={Shield} label="状态" value={getStatusBadge(item.status)} />
+                <InfoRow icon={Calendar} label="提交时间" value={formatDate(item.created_at)} />
+              </>
+            )}
 
-        <div className="space-y-4">
-          {isReport(item) && (
-            <>
-              <InfoRow label="姓名" value={item.name} />
-              <InfoRow label="电话" value={item.phone} />
-              <InfoRow label="身份证号" value={item.id_card || '-'} />
-              <InfoRow label="公司名称" value={item.company_name || '-'} />
-              <InfoRow label="公司地址" value={item.company_address || '-'} />
-              <InfoRow label="欠薪金额" value={item.owed_amount ? `¥${item.owed_amount}` : '-'} />
-              <InfoRow label="欠薪月数" value={item.owed_months ? `${item.owed_months}个月` : '-'} />
-              <InfoRow label="涉及人数" value={item.worker_count ? `${item.worker_count}人` : '-'} />
-              <InfoRow label="问题描述" value={item.description || '-'} />
-              <div className="flex items-center justify-between">
-                <InfoRow label="状态" value={getStatusBadge(item.status)} />
-              </div>
-              <InfoRow label="提交时间" value={formatDate(item.created_at)} />
-            </>
-          )}
+            {isApplication(item) && (
+              <>
+                <InfoRow icon={Users} label="申请人" value={item.applicant_name} />
+                <InfoRow icon={Phone} label="电话" value={item.applicant_phone} />
+                <InfoRow icon={CreditCard} label="身份证号" value={item.applicant_id_card || '-'} />
+                <InfoRow icon={FileText} label="申请类型" value={item.application_type === 'support_prosecution' ? '支持起诉' : '法律援助'} />
+                <InfoRow icon={TrendingUp} label="欠薪金额" value={item.owed_amount ? `¥${item.owed_amount}` : '-'} highlight />
+                <InfoRow icon={FileText} label="案件简介" value={item.case_brief || '-'} />
+                <InfoRow icon={Shield} label="状态" value={getStatusBadge(item.status)} />
+                <InfoRow icon={Calendar} label="提交时间" value={formatDate(item.created_at)} />
+                {item.reviewer_notes && <InfoRow icon={FileText} label="备注" value={item.reviewer_notes} />}
+              </>
+            )}
 
-          {isApplication(item) && (
-            <>
-              <InfoRow label="申请人" value={item.applicant_name} />
-              <InfoRow label="电话" value={item.applicant_phone} />
-              <InfoRow label="身份证号" value={item.applicant_id_card || '-'} />
-              <InfoRow label="申请类型" value={item.application_type === 'support_prosecution' ? '支持起诉' : '法律援助'} />
-              <InfoRow label="欠薪金额" value={item.owed_amount ? `¥${item.owed_amount}` : '-'} />
-              <InfoRow label="案件简介" value={item.case_brief || '-'} />
-              <div className="flex items-center justify-between">
-                <InfoRow label="状态" value={getStatusBadge(item.status)} />
-              </div>
-              <InfoRow label="提交时间" value={formatDate(item.created_at)} />
-              {item.reviewer_notes && <InfoRow label="备注" value={item.reviewer_notes} />}
-            </>
-          )}
+            {!isReport(item) && !isApplication(item) && !isConsultation(item) && (
+              <>
+                <InfoRow icon={FileText} label="文书类型" value={(item as Document).document_type} />
+                <InfoRow icon={Users} label="申请人" value={(item as Document).applicant_name || '-'} />
+                <InfoRow icon={Phone} label="电话" value={(item as Document).applicant_phone || '-'} />
+                <InfoRow icon={FileText} label="使用模板" value={(item as Document).template_used || '-'} />
+                <InfoRow icon={Calendar} label="生成时间" value={formatDate((item as Document).created_at)} />
+              </>
+            )}
 
-          {!isReport(item) && !isApplication(item) && !isConsultation(item) && (
-            <>
-              <InfoRow label="文书类型" value={(item as Document).document_type} />
-              <InfoRow label="申请人" value={(item as Document).applicant_name || '-'} />
-              <InfoRow label="电话" value={(item as Document).applicant_phone || '-'} />
-              <InfoRow label="使用模板" value={(item as Document).template_used || '-'} />
-              <InfoRow label="生成时间" value={formatDate((item as Document).created_at)} />
-            </>
-          )}
-
-          {isConsultation(item) && (
-            <>
-              <InfoRow label="用户问题" value={item.user_question} />
-              <InfoRow label="AI回复" value={item.ai_response || '-'} />
-              <InfoRow label="咨询时间" value={formatDate(item.created_at)} />
-            </>
-          )}
-        </div>
-
-        {/* 操作按钮 */}
-        {(isReport(item) || isApplication(item)) && (
-          <div className="mt-6 flex flex-wrap gap-2 border-t pt-4">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onUpdateStatus(isReport(item) ? 'report' : 'application', item.id, 'processing')}
-              disabled={item.status === 'processing'}
-            >
-              <Clock className="h-4 w-4" />
-              处理中
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-green-600"
-              onClick={() => onUpdateStatus(isReport(item) ? 'report' : 'application', item.id, 'completed')}
-              disabled={item.status === 'completed'}
-            >
-              <CheckCircle className="h-4 w-4" />
-              已完成
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-red-600"
-              onClick={() => onUpdateStatus(isReport(item) ? 'report' : 'application', item.id, 'rejected')}
-              disabled={item.status === 'rejected'}
-            >
-              <X className="h-4 w-4" />
-              驳回
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => onDelete(isReport(item) ? 'report' : 'application', item.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-              删除
-            </Button>
+            {isConsultation(item) && (
+              <>
+                <InfoRow icon={MessageSquare} label="用户问题" value={item.user_question} />
+                <InfoRow icon={MessageSquare} label="AI回复" value={item.ai_response || '-'} />
+                <InfoRow icon={Calendar} label="咨询时间" value={formatDate(item.created_at)} />
+              </>
+            )}
           </div>
-        )}
 
-        {!isReport(item) && !isApplication(item) && (
-          <div className="mt-6 flex gap-2 border-t pt-4">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onClose}
-            >
-              <Eye className="h-4 w-4" />
-              关闭
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => onDelete(isConsultation(item) ? 'consultation' : 'document', item.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-              删除
-            </Button>
-          </div>
-        )}
-      </div>
+          {/* Action Buttons */}
+          {(isReport(item) || isApplication(item)) && (
+            <div className="mt-6 flex flex-wrap gap-2 border-t pt-6">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onUpdateStatus(isReport(item) ? 'report' : 'application', item.id, 'processing')}
+                disabled={item.status === 'processing'}
+                className="gap-2"
+              >
+                <Clock className="h-4 w-4" />
+                处理中
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onUpdateStatus(isReport(item) ? 'report' : 'application', item.id, 'completed')}
+                disabled={item.status === 'completed'}
+                className="gap-2 border-green-300 text-green-600 hover:bg-green-50"
+              >
+                <CheckCircle className="h-4 w-4" />
+                已完成
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onUpdateStatus(isReport(item) ? 'report' : 'application', item.id, 'rejected')}
+                disabled={item.status === 'rejected'}
+                className="gap-2 border-red-300 text-red-600 hover:bg-red-50"
+              >
+                <X className="h-4 w-4" />
+                驳回
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => onDelete(isReport(item) ? 'report' : 'application', item.id)}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                删除
+              </Button>
+            </div>
+          )}
+
+          {!isReport(item) && !isApplication(item) && (
+            <div className="mt-6 flex gap-2 border-t pt-6">
+              <Button size="sm" variant="outline" onClick={onClose} className="gap-2">
+                <Eye className="h-4 w-4" />
+                关闭
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => onDelete(isConsultation(item) ? 'consultation' : 'document', item.id)}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                删除
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+// Info Row Component
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+  highlight,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: React.ReactNode;
+  highlight?: boolean;
+}) {
   return (
-    <div className="flex gap-4 border-b border-gray-100 py-2">
-      <span className="w-24 shrink-0 text-sm text-gray-500">{label}</span>
-      <span className="text-sm text-gray-900">{value}</span>
+    <div className="flex items-start gap-3 py-2">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/50">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className={cn('mt-0.5 text-sm', highlight && 'font-semibold text-primary')}>
+          {value}
+        </p>
+      </div>
     </div>
   );
 }
