@@ -86,8 +86,40 @@
 
 ## API 接口
 
+### 前端接口
 | 接口路径 | 方法 | 描述 |
 |---------|------|------|
 | `/api/consult` | POST | 智能法律咨询 (SSE 流式输出) |
+| `/api/announcements` | GET, POST | 公告列表查询、创建公告 |
+| `/api/announcements/[id]` | GET, PUT, DELETE | 公告详情、更新、删除 |
+
+### 后台管理接口
+| 接口路径 | 方法 | 描述 |
+|---------|------|------|
+| `/api/admin/login` | GET, POST | 登录状态检查、管理员登录 |
+| `/api/admin/data` | GET, PUT, DELETE | 数据统计、线索/申请管理 |
+| `/api/admin/cases` | GET, POST | 案件库列表、创建案件 |
+| `/api/admin/cases/[id]` | GET, PUT, DELETE | 案件详情、更新、删除 |
+| `/api/admin/files` | GET, POST | 文件列表、上传文件 |
+| `/api/admin/files/[id]` | DELETE | 删除文件 |
+| `/api/admin/templates` | GET, POST | 文书模板列表、创建模板 |
+| `/api/admin/templates/[id]` | GET, PUT, DELETE | 模板详情、更新、删除 |
+| `/api/admin/settings` | GET, PUT | 系统设置查询、更新 |
+| `/api/admin/notifications` | GET, POST | 通知记录、发送通知 |
+
+### 数据库表结构
+| 表名 | 描述 |
+|------|------|
+| `admins` | 管理员账号 |
+| `announcements` | 公告 |
+| `reports` | 线索填报 |
+| `applications` | 在线申请 |
+| `documents` | 生成的文书 |
+| `consultations` | 咨询记录 |
+| `cases` | 案件库 |
+| `files` | 文件管理 |
+| `templates` | 文书模板 |
+| `settings` | 系统设置 |
+| `notifications` | 通知记录 |
 
 

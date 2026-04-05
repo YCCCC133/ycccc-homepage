@@ -335,7 +335,54 @@ export default function AdminPage() {
         return;
       }
 
-      if (activeTab === 'caseDatabase' || activeTab === 'files' || activeTab === 'templates' || activeTab === 'statistics' || activeTab === 'settings') {
+      if (activeTab === 'caseDatabase') {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          pageSize: '20',
+          ...(statusFilter && { status: statusFilter }),
+          ...(searchQuery && { search: searchQuery }),
+        });
+        const res = await fetch(`/api/admin/cases?${params}`);
+        const data = await res.json();
+        if (data.success) {
+          setCases(data.data);
+          setTotalPages(data.totalPages || 1);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (activeTab === 'files') {
+        const res = await fetch('/api/admin/files');
+        const data = await res.json();
+        if (data.success) {
+          setFiles(data.data);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (activeTab === 'templates') {
+        const res = await fetch('/api/admin/templates');
+        const data = await res.json();
+        if (data.success) {
+          setTemplates(data.data);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (activeTab === 'settings') {
+        const res = await fetch('/api/admin/settings');
+        const data = await res.json();
+        if (data.success) {
+          setSettings(data.data);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (activeTab === 'statistics') {
         setIsLoading(false);
         return;
       }
@@ -567,17 +614,41 @@ export default function AdminPage() {
       return;
     }
 
-    // 模拟发送
-    alert('通知发送成功！');
-    setShowNotificationForm(false);
-    setNotificationForm({ title: '', content: '', type: 'system', recipients: 'all' });
+    try {
+      const res = await fetch('/api/admin/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notificationForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('通知发送成功！');
+        setShowNotificationForm(false);
+        setNotificationForm({ title: '', content: '', type: 'system', recipients: 'all' });
+      }
+    } catch (error) {
+      console.error('发送通知失败:', error);
+      alert('发送通知失败');
+    }
   };
 
   // 更新案件状态
-  const handleUpdateCaseStatus = (caseId: number, newStatus: string) => {
-    setCases((prev) =>
-      prev.map((c) => (c.id === caseId ? { ...c, status: newStatus } : c))
-    );
+  const handleUpdateCaseStatus = async (caseId: number, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/admin/cases/${caseId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCases((prev) =>
+          prev.map((c) => (c.id === caseId ? { ...c, status: newStatus } : c))
+        );
+      }
+    } catch (error) {
+      console.error('更新案件状态失败:', error);
+    }
   };
 
   // 更新设置
@@ -588,8 +659,21 @@ export default function AdminPage() {
   };
 
   // 保存设置
-  const handleSaveSettings = () => {
-    alert('设置保存成功！');
+  const handleSaveSettings = async () => {
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('设置保存成功！');
+      }
+    } catch (error) {
+      console.error('保存设置失败:', error);
+      alert('保存设置失败');
+    }
   };
 
   // 模板管理
