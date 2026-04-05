@@ -39,6 +39,16 @@ export async function GET(request: NextRequest) {
         client.from('applications').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       ]);
 
+      // 获取案件统计
+      const { data: casesData } = await client.from('cases').select('amount, case_type');
+      const totalAmount = casesData?.reduce((sum, c) => sum + parseFloat(c.amount || '0'), 0) || 0;
+      
+      // 案件类型分布
+      const caseTypeDistribution: Record<string, number> = {};
+      casesData?.forEach(c => {
+        caseTypeDistribution[c.case_type] = (caseTypeDistribution[c.case_type] || 0) + 1;
+      });
+
       result.stats = {
         reports: reportsCount.count || 0,
         applications: applicationsCount.count || 0,
@@ -46,6 +56,8 @@ export async function GET(request: NextRequest) {
         consultations: consultationsCount.count || 0,
         pendingReports: pendingReports.count || 0,
         pendingApplications: pendingApplications.count || 0,
+        totalAmount,
+        caseTypeDistribution,
       };
     }
 

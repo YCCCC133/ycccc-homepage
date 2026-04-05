@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   LogIn, LogOut, FileText, Send, PenTool, MessageSquare, CheckCircle, AlertCircle,
-  Trash2, X, ChevronLeft, RefreshCw, Scale, Shield, TrendingUp, Eye, ArrowRight,
+  Trash2, X, ChevronLeft, RefreshCw, Scale, Shield, Eye, ArrowRight,
   Bell, Home, PlusCircle, Loader2, Database, Upload, Download, Settings, BarChart3,
   Search, Edit, FolderOpen, File, LayoutTemplate, Menu, User, AlertTriangle,
   Mail, Phone, Clock, DollarSign, Users, Printer, PieChart, Activity
@@ -21,6 +21,7 @@ type TabType = 'dashboard' | 'reports' | 'applications' | 'cases' | 'documents' 
 interface Stats {
   reports: number; applications: number; documents: number; consultations: number;
   pendingReports: number; pendingApplications: number; totalAmount: number;
+  caseTypeDistribution?: Record<string, number>;
 }
 
 interface Announcement {
@@ -66,6 +67,10 @@ interface SystemSetting {
   key: string; value: string; description: string;
 }
 
+interface OperationLog {
+  id: number; action: string; type: string; operator: string; created_at: string;
+}
+
 // ============ 导航配置 ============
 const navItems = [
   { key: 'dashboard' as TabType, label: '数据概览', icon: BarChart3, group: '核心' },
@@ -100,6 +105,7 @@ export default function AdminPage() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [settings, setSettings] = useState<SystemSetting[]>([]);
+  const [operationLogs, setOperationLogs] = useState<OperationLog[]>([]);
 
   // UI状态
   const [selectedItem, setSelectedItem] = useState<Report | Application | Document | Consultation | Announcement | CaseItem | null>(null);
@@ -116,6 +122,9 @@ export default function AdminPage() {
   const [notificationForm, setNotificationForm] = useState<{ type: 'sms' | 'email' | null; recipients: string[]; message: string }>({ type: null, recipients: [], message: '' });
   const [newCase, setNewCase] = useState({ plaintiff_name: '', plaintiff_phone: '', defendant_name: '', case_type: '欠薪纠纷', amount: '', notes: '' });
   const [consultationSearch, setConsultationSearch] = useState('');
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<{ type: string; items: unknown[] }[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // ============ 初始化 ============
   useEffect(() => { checkAuth(); }, []);
@@ -216,7 +225,10 @@ export default function AdminPage() {
       if (activeTab === 'settings') {
         const res = await fetch('/api/admin/settings');
         const data = await res.json();
-        if (data.success) setSettings(data.data);
+        if (data.success) {
+          setSettings(data.data);
+          setOperationLogs(data.logs || []);
+        }
         setIsLoading(false);
         return;
       }
@@ -441,6 +453,53 @@ export default function AdminPage() {
     !consultationSearch || c.user_question.toLowerCase().includes(consultationSearch.toLowerCase())
   );
 
+  // 全局搜索
+  const handleGlobalSearch = useCallback((query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+    
+    const q = query.toLowerCase();
+    const results: { type: string; items: unknown[] }[] = [];
+    
+    // 搜索线索
+    const reportResults = reports.filter(r => 
+      r.name?.toLowerCase().includes(q) || 
+      r.phone?.includes(q) || 
+      r.company_name?.toLowerCase().includes(q)
+    );
+    if (reportResults.length > 0) results.push({ type: '线索填报', items: reportResults });
+    
+    // 搜索申请
+    const appResults = applications.filter(a => 
+      a.applicant_name?.toLowerCase().includes(q) || 
+      a.applicant_phone?.includes(q)
+    );
+    if (appResults.length > 0) results.push({ type: '在线申请', items: appResults });
+    
+    // 搜索案件
+    const caseResults = cases.filter(c => 
+      c.case_number?.toLowerCase().includes(q) ||
+      c.plaintiff_name?.toLowerCase().includes(q) ||
+      c.defendant_name?.toLowerCase().includes(q)
+    );
+    if (caseResults.length > 0) results.push({ type: '案件', items: caseResults });
+    
+    setSearchResults(results);
+    setShowSearchResults(true);
+  }, [reports, applications, cases]);
+
+  // 点击搜索结果跳转
+  const handleSearchResultClick = (type: string) => {
+    setShowSearchResults(false);
+    setGlobalSearch('');
+    if (type === '线索填报') setActiveTab('reports');
+    else if (type === '在线申请') setActiveTab('applications');
+    else if (type === '案件') setActiveTab('cases');
+  };
+
   // ============ 加载状态 ============
   if (isLoading && !isAuthenticated) {
     return (
@@ -553,6 +612,41 @@ export default function AdminPage() {
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/50 bg-white/95 backdrop-blur px-6">
           <h1 className="text-lg font-semibold">{navItems.find(n => n.key === activeTab)?.label || '后台管理'}</h1>
           <div className="flex items-center gap-3">
+            {/* 全局搜索 */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="全局搜索..."
+                value={globalSearch}
+                onChange={(e) => { setGlobalSearch(e.target.value); handleGlobalSearch(e.target.value); }}
+                className="w-48 rounded-lg border border-input bg-background pl-10 pr-4 py-1.5 text-sm focus:w-64 transition-all"
+              />
+              {showSearchResults && searchResults.length > 0 && (
+                <Card className="absolute top-full right-0 mt-2 w-80 max-h-96 overflow-y-auto shadow-lg z-50">
+                  <CardContent className="p-2">
+                    {searchResults.map((group) => (
+                      <div key={group.type}>
+                        <p className="text-xs font-medium text-muted-foreground px-2 py-1">{group.type} ({group.items.length})</p>
+                        <button
+                          onClick={() => handleSearchResultClick(group.type)}
+                          className="w-full text-left px-2 py-1.5 rounded hover:bg-muted text-sm"
+                        >
+                          点击查看全部结果
+                        </button>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+              {showSearchResults && globalSearch && searchResults.length === 0 && (
+                <Card className="absolute top-full right-0 mt-2 w-80 shadow-lg z-50">
+                  <CardContent className="p-4 text-center text-sm text-muted-foreground">
+                    未找到相关结果
+                  </CardContent>
+                </Card>
+              )}
+            </div>
             {totalPending > 0 && (
               <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
                 <Bell className="h-3 w-3 mr-1" />{totalPending} 条待处理
@@ -633,24 +727,7 @@ export default function AdminPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {[
-                        { label: '欠薪纠纷', percent: 45, color: 'bg-blue-500' },
-                        { label: '集体欠薪', percent: 25, color: 'bg-green-500' },
-                        { label: '工伤赔偿', percent: 18, color: 'bg-orange-500' },
-                        { label: '劳动合同', percent: 12, color: 'bg-purple-500' },
-                      ].map((item) => (
-                        <div key={item.label}>
-                          <div className="flex justify-between text-sm mb-1">
-                            <span>{item.label}</span>
-                            <span className="text-muted-foreground">{item.percent}%</span>
-                          </div>
-                          <div className="h-2 bg-muted rounded-full">
-                            <div className={`h-2 ${item.color} rounded-full`} style={{ width: `${item.percent}%` }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <CaseTypeDistribution distribution={stats.caseTypeDistribution || {}} />
                   </CardContent>
                 </Card>
               </div>
@@ -873,6 +950,19 @@ export default function AdminPage() {
           {/* ============ 案件管理 ============ */}
           {activeTab === 'cases' && (
             <div className="space-y-4">
+              {selectedIds.length > 0 && (
+                <Card className="bg-primary/5 border-primary/30">
+                  <CardContent className="flex items-center justify-between p-3">
+                    <span className="text-sm">已选择 {selectedIds.length} 项</span>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleBatchStatus('case', 'processing')}>批量处理</Button>
+                      <Button size="sm" variant="outline" onClick={() => handleBatchStatus('case', 'completed')}>批量完成</Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleBatchDelete('cases')}>批量删除</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>取消</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               <div className="flex gap-3 flex-wrap">
                 <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -889,11 +979,16 @@ export default function AdminPage() {
                 <Button size="sm" onClick={() => setShowModal('newCase')} className="gap-1.5"><PlusCircle className="h-4 w-4" />新建案件</Button>
               </div>
               <DataTable
-                columns={['案件编号', '原告', '被告', '类型', '金额', '状态', '承办人', '操作']}
+                columns={['', '案件编号', '原告', '被告', '类型', '金额', '状态', '承办人', '操作']}
                 data={cases}
                 isLoading={isLoading}
+                selectedIds={selectedIds}
+                onSelectAll={(ids) => handleSelectAll(ids)}
                 renderRow={(c) => (
                   <tr key={c.id} className="border-b border-border/50 hover:bg-muted/50">
+                    <td className="px-4 py-3">
+                      <Checkbox checked={selectedIds.includes(c.id)} onCheckedChange={() => handleSelectItem(c.id)} className="h-4 w-4" />
+                    </td>
                     <td className="px-4 py-3 font-mono text-sm">{c.case_number}</td>
                     <td className="px-4 py-3">
                       <div><p className="font-medium text-sm">{c.plaintiff_name}</p><p className="text-xs text-muted-foreground">{c.plaintiff_phone}</p></div>
@@ -978,7 +1073,7 @@ export default function AdminPage() {
                 <Button variant="outline" size="sm" onClick={() => handleExportData('咨询记录', consultations)} className="gap-1.5"><Download className="h-4 w-4" />导出</Button>
               </div>
               <DataTable
-                columns={['用户问题', 'AI回复', '时间']}
+                columns={['用户问题', 'AI回复', '时间', '操作']}
                 data={filteredConsultations}
                 isLoading={isLoading}
                 renderRow={(c) => (
@@ -986,6 +1081,9 @@ export default function AdminPage() {
                     <td className="px-4 py-3 max-w-[300px]"><p className="text-sm line-clamp-2">{c.user_question}</p></td>
                     <td className="px-4 py-3 max-w-[400px]"><p className="text-sm text-muted-foreground line-clamp-3">{c.ai_response || '-'}</p></td>
                     <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{formatDate(c.created_at)}</td>
+                    <td className="px-4 py-3">
+                      <Button variant="ghost" size="sm" onClick={() => { setSelectedItem(c); setShowModal('detail'); }}><Eye className="h-4 w-4" /></Button>
+                    </td>
                   </tr>
                 )}
               />
@@ -1133,14 +1231,8 @@ export default function AdminPage() {
                 <CardHeader><CardTitle className="text-base">最近操作记录</CardTitle></CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {[
-                      { time: '刚刚', action: '管理员登录系统', type: 'login' },
-                      { time: '5分钟前', action: '更新案件 AJ20260001 状态为处理中', type: 'update' },
-                      { time: '10分钟前', action: '新增案件 AJ20260003', type: 'create' },
-                      { time: '30分钟前', action: '导出线索填报数据', type: 'export' },
-                      { time: '1小时前', action: '发布公告《专项检查通知》', type: 'publish' },
-                    ].map((log, i) => (
-                      <div key={i} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
+                    {operationLogs.length > 0 ? operationLogs.map((log) => (
+                      <div key={log.id} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
                         <div className="flex items-center gap-2">
                           <div className={cn('h-2 w-2 rounded-full', 
                             log.type === 'login' ? 'bg-green-500' :
@@ -1150,9 +1242,11 @@ export default function AdminPage() {
                           )} />
                           <span className="text-sm">{log.action}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">{log.time}</span>
+                        <span className="text-xs text-muted-foreground">{formatDate(log.created_at)}</span>
                       </div>
-                    ))}
+                    )) : (
+                      <div className="text-center py-4 text-muted-foreground text-sm">暂无操作记录</div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1184,6 +1278,8 @@ export default function AdminPage() {
                   {'defendant_name' in selectedItem && <DetailRow label="被告" value={selectedItem.defendant_name} />}
                   {'amount' in selectedItem && <DetailRow label="涉案金额" value={`¥${Number(selectedItem.amount).toLocaleString()}`} highlight />}
                   {'notes' in selectedItem && selectedItem.notes && <DetailRow label="备注" value={selectedItem.notes} />}
+                  {'user_question' in selectedItem && <DetailRow label="用户问题" value={selectedItem.user_question} />}
+                  {'ai_response' in selectedItem && <DetailRow label="AI回复" value={selectedItem.ai_response || '暂无回复'} />}
                   {'status' in selectedItem && <div><span className="text-xs text-muted-foreground">状态</span><div className="mt-1">{getStatusBadge(selectedItem.status as string)}</div></div>}
                   {'status' in selectedItem && (selectedItem.status === 'pending' || selectedItem.status === 'processing') && (
                     <div className="flex gap-2 pt-4">
@@ -1290,4 +1386,34 @@ function DataTable<T>({ columns, data, isLoading, selectedIds, onSelectAll, rend
 
 function DetailRow({ label, value, highlight, mono }: { label: string; value: string; highlight?: boolean; mono?: boolean }) {
   return <div><span className="text-xs text-muted-foreground">{label}</span><p className={cn('font-medium', highlight && 'text-primary', mono && 'font-mono')}>{value}</p></div>;
+}
+
+// 案件类型分布组件
+function CaseTypeDistribution({ distribution }: { distribution: Record<string, number> }) {
+  const colors = ['bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-purple-500', 'bg-pink-500'];
+  const entries = Object.entries(distribution);
+  const total = entries.reduce((sum, [, count]) => sum + count, 0);
+  
+  if (entries.length === 0) {
+    return <div className="text-center py-8 text-muted-foreground text-sm">暂无案件数据</div>;
+  }
+  
+  return (
+    <div className="space-y-3">
+      {entries.map(([label, count], i) => {
+        const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+        return (
+          <div key={label}>
+            <div className="flex justify-between text-sm mb-1">
+              <span>{label}</span>
+              <span className="text-muted-foreground">{percent}% ({count}件)</span>
+            </div>
+            <div className="h-2 bg-muted rounded-full">
+              <div className={cn('h-2 rounded-full', colors[i % colors.length])} style={{ width: `${percent}%` }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }

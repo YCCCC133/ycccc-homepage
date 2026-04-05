@@ -7,7 +7,7 @@ function isAuthenticated(request: NextRequest): boolean {
   return !!token;
 }
 
-// GET - 获取所有设置
+// GET - 获取所有设置和操作日志
 export async function GET(request: NextRequest) {
   if (!isAuthenticated(request)) {
     return NextResponse.json({ error: '未授权' }, { status: 401 });
@@ -17,8 +17,18 @@ export async function GET(request: NextRequest) {
     const client = await pool.connect();
     
     try {
-      const result = await client.query('SELECT * FROM settings ORDER BY key');
-      return NextResponse.json({ success: true, data: result.rows });
+      const settingsResult = await client.query('SELECT * FROM settings ORDER BY key');
+      
+      // 获取最近10条操作日志
+      const logsResult = await client.query(
+        'SELECT * FROM operation_logs ORDER BY created_at DESC LIMIT 10'
+      );
+      
+      return NextResponse.json({ 
+        success: true, 
+        data: settingsResult.rows,
+        logs: logsResult.rows 
+      });
     } finally {
       client.release();
     }
@@ -56,6 +66,12 @@ export async function PUT(request: NextRequest) {
           [setting.key, setting.value]
         );
       }
+
+      // 记录操作日志
+      await client.query(
+        'INSERT INTO operation_logs (action, type) VALUES ($1, $2)',
+        ['更新系统设置', 'update']
+      );
 
       await client.query('COMMIT');
       return NextResponse.json({ success: true });
