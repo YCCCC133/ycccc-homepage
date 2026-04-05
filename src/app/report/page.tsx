@@ -163,10 +163,10 @@ export default function ReportPage() {
             </p>
             <div className="mb-6 rounded-lg bg-white p-4 text-left">
               <div className="mb-2 text-sm text-muted-foreground">
-                线索编号：<span className="font-mono font-medium text-foreground">XC20250115001</span>
+                线索编号：<span className="font-mono font-medium text-foreground">XC20260115001</span>
               </div>
               <div className="text-sm text-muted-foreground">
-                提交时间：2025-01-15 14:30:25
+                提交时间：2026-01-15 14:30:25
               </div>
             </div>
             <div className="flex gap-4 justify-center">

@@ -4,7 +4,7 @@ import crypto from 'crypto';
 
 // 简单的密码哈希函数
 function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password + 'huxin_salt_2025').digest('hex');
+  return crypto.createHash('sha256').update(password + 'huxin_salt_2026').digest('hex');
 }
 
 // 生成会话token
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 如果管理员不存在，使用默认密码
-    const defaultPassword = 'huxin2025';
+    const defaultPassword = 'huxin2026';
     const hashedPassword = hashPassword(password);
     
     if (!admin) {

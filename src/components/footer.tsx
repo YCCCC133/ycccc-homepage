@@ -140,7 +140,7 @@ export function Footer() {
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <div className="flex flex-col items-center gap-2 md:flex-row md:gap-4">
               <p className="text-center text-xs text-muted-foreground md:text-left">
-                © 2025 北京市西城区人民检察院 · 护薪检察支持起诉智能平台
+                © 2026 北京市西城区人民检察院 · 护薪检察支持起诉智能平台
               </p>
               {/* 后台管理入口 - 隐蔽但可点击 */}
               <button
@@ -169,7 +169,7 @@ export function Footer() {
           {/* 技术支持 */}
           <div className="mt-4 text-center">
             <p className="text-[10px] text-muted-foreground/50">
-              Technical Support by <span className="font-medium">ycccc</span> © 2025
+              Technical Support by <span className="font-medium">ycccc</span> © 2026
             </p>
           </div>
         </div>

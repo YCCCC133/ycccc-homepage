@@ -118,7 +118,7 @@ export default function ApplyPage() {
             </p>
             <div className="mb-6 rounded-lg bg-white p-4 text-left">
               <div className="mb-2 text-sm text-muted-foreground">
-                申请编号：<span className="font-mono font-medium text-foreground">SQ20250115001</span>
+                申请编号：<span className="font-mono font-medium text-foreground">SQ20260115001</span>
               </div>
               <div className="text-sm text-muted-foreground">
                 提交时间：{new Date().toLocaleString('zh-CN')}
