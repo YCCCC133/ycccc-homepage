@@ -142,6 +142,11 @@ export default function AdminPage() {
   
   // 承办人列表
   const handlers = ['李检察官', '王检察官', '张检察官', '赵检察官', '刘检察官'];
+  
+  // 密码修改状态
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordError, setPasswordError] = useState('');
 
   // ============ 初始化 ============
   useEffect(() => { checkAuth(); }, []);
@@ -534,6 +539,48 @@ export default function AdminPage() {
     else if (type === '案件') setActiveTab('cases');
   };
 
+  // 修改密码
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    
+    if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordError('请填写所有字段');
+      return;
+    }
+    
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('两次输入的新密码不一致');
+      return;
+    }
+    
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('新密码长度不能少于6位');
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          oldPassword: passwordForm.oldPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('密码修改成功，请重新登录');
+        setShowPasswordModal(false);
+        setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+        handleLogout();
+      } else {
+        setPasswordError(data.error || '密码修改失败');
+      }
+    } catch {
+      setPasswordError('网络错误');
+    }
+  };
+
   // ============ 加载状态 ============
   if (isLoading && !isAuthenticated) {
     return (
@@ -549,34 +596,85 @@ export default function AdminPage() {
   // ============ 登录页面 ============
   if (!isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 to-background p-4">
-        <Card className="w-full max-w-md shadow-xl">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80">
-              <Scale className="h-7 w-7 text-white" />
+      <div className="flex min-h-screen">
+        {/* 左侧品牌区域 */}
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-8 flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
+                <Scale className="h-6 w-6 text-white" />
+              </div>
+              <span className="text-2xl font-bold text-white">护薪平台</span>
             </div>
-            <CardTitle className="text-xl">后台管理系统</CardTitle>
-            <CardDescription>护薪平台 · 数据管理中心</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <input
-                type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder="请输入管理员密码"
-                className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
-              />
-              {loginError && (
-                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4" />{loginError}
+            <h1 className="text-4xl font-bold text-white mb-4">检察支持起诉智能平台</h1>
+            <p className="text-white/80 text-lg mb-8">为农民工群体提供薪酬权益保障服务</p>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur">
+                <Users className="h-8 w-8 text-white/80 mb-2" />
+                <p className="text-2xl font-bold text-white">2,458+</p>
+                <p className="text-white/60 text-sm">帮助劳动者</p>
+              </div>
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur">
+                <Database className="h-8 w-8 text-white/80 mb-2" />
+                <p className="text-2xl font-bold text-white">1,200+</p>
+                <p className="text-white/60 text-sm">成功案例</p>
+              </div>
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur">
+                <DollarSign className="h-8 w-8 text-white/80 mb-2" />
+                <p className="text-2xl font-bold text-white">¥860万+</p>
+                <p className="text-white/60 text-sm">追回金额</p>
+              </div>
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur">
+                <CheckCircle className="h-8 w-8 text-white/80 mb-2" />
+                <p className="text-2xl font-bold text-white">98.6%</p>
+                <p className="text-white/60 text-sm">成功维权率</p>
+              </div>
+            </div>
+          </div>
+          
+          <p className="text-white/50 text-sm">© 2026 护薪平台 · 检察支持起诉智能平台</p>
+        </div>
+        
+        {/* 右侧登录区域 */}
+        <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-muted/50 to-background">
+          <Card className="w-full max-w-md shadow-xl border-border/50">
+            <CardHeader className="text-center pb-2">
+              <div className="lg:hidden mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80">
+                <Scale className="h-7 w-7 text-white" />
+              </div>
+              <CardTitle className="text-xl">管理员登录</CardTitle>
+              <CardDescription>请输入密码进入后台管理系统</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">管理员密码</label>
+                  <input
+                    type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                    placeholder="请输入管理员密码"
+                    className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
+                  />
                 </div>
-              )}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}登录
-              </Button>
-            </form>
-            <button onClick={() => router.push('/')} className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-primary">返回首页</button>
-          </CardContent>
-        </Card>
+                {loginError && (
+                  <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4" />{loginError}
+                  </div>
+                )}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}登录系统
+                </Button>
+              </form>
+              <div className="mt-6 pt-4 border-t border-border/50">
+                <button onClick={() => router.push('/')} className="w-full text-center text-sm text-muted-foreground hover:text-primary flex items-center justify-center gap-2">
+                  <Home className="h-4 w-4" />返回首页
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -1433,6 +1531,22 @@ export default function AdminPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* 安全设置 */}
+              <Card>
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><Shield className="h-4 w-4" />安全设置</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <p className="font-medium text-sm">管理员密码</p>
+                      <p className="text-xs text-muted-foreground">定期修改密码可以提高账户安全性</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setShowPasswordModal(true)} className="gap-1.5">
+                      <Edit className="h-4 w-4" />修改密码
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>
@@ -1537,6 +1651,61 @@ export default function AdminPage() {
               <div><label className="text-sm font-medium">接收人数</label><p className="text-sm text-muted-foreground">{notificationForm.recipients.length} 人</p></div>
               <div><label className="text-sm font-medium">通知内容</label><textarea value={notificationForm.message} onChange={(e) => setNotificationForm(prev => ({ ...prev, message: e.target.value }))} placeholder="请输入通知内容..." className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[100px]" /></div>
               <div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setNotificationForm({ type: null, recipients: [], message: '' })}>取消</Button><Button onClick={handleSendNotification}>发送</Button></div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ============ 密码修改弹窗 ============ */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowPasswordModal(false)}>
+          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2"><Shield className="h-4 w-4" />修改密码</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setShowPasswordModal(false)}><X className="h-4 w-4" /></Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">原密码</label>
+                <input
+                  type="password"
+                  value={passwordForm.oldPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, oldPassword: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="请输入原密码"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">新密码</label>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="请输入新密码（至少6位）"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">确认新密码</label>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="请再次输入新密码"
+                />
+              </div>
+              {passwordError && (
+                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4" />{passwordError}
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => { setShowPasswordModal(false); setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' }); setPasswordError(''); }}>取消</Button>
+                <Button onClick={handleChangePassword}>确认修改</Button>
+              </div>
             </CardContent>
           </Card>
         </div>

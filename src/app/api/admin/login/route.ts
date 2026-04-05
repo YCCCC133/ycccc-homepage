@@ -107,3 +107,54 @@ export async function GET(request: NextRequest) {
   }
   return NextResponse.json({ authenticated: false });
 }
+
+// 修改密码
+export async function PUT(request: NextRequest) {
+  try {
+    const { oldPassword, newPassword } = await request.json();
+
+    if (!oldPassword || !newPassword) {
+      return NextResponse.json({ error: '请填写所有字段' }, { status: 400 });
+    }
+
+    if (newPassword.length < 6) {
+      return NextResponse.json({ error: '新密码长度不能少于6位' }, { status: 400 });
+    }
+
+    const client = getSupabaseClient();
+    
+    // 查询管理员
+    const { data: admin, error } = await client
+      .from('admins')
+      .select('id, password_hash')
+      .eq('username', 'admin')
+      .single();
+
+    if (error || !admin) {
+      return NextResponse.json({ error: '管理员账号不存在' }, { status: 404 });
+    }
+
+    // 验证旧密码
+    const hashedOldPassword = hashPassword(oldPassword);
+    if (admin.password_hash !== hashedOldPassword) {
+      return NextResponse.json({ error: '原密码错误' }, { status: 401 });
+    }
+
+    // 更新密码
+    const hashedNewPassword = hashPassword(newPassword);
+    const { error: updateError } = await client
+      .from('admins')
+      .update({ password_hash: hashedNewPassword })
+      .eq('id', admin.id);
+
+    if (updateError) {
+      console.error('更新密码失败:', updateError);
+      return NextResponse.json({ error: '密码修改失败' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: '密码修改成功' });
+  } catch (error) {
+    console.error('修改密码错误:', error);
+    return NextResponse.json({ error: '服务器错误' }, { status: 500 });
+  }
+}
