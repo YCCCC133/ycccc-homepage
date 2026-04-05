@@ -114,9 +114,9 @@ const notices = [
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col bg-background">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-primary/3 to-transparent py-16 md:py-24">
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-primary/3 to-background py-16 md:py-24">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
@@ -193,7 +193,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 md:py-20">
+      <section className="bg-background py-16 md:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
@@ -236,7 +236,7 @@ export default function HomePage() {
       </section>
 
       {/* Process Section */}
-      <section className="bg-gradient-to-b from-primary/5 to-transparent py-16 md:py-20">
+      <section className="bg-gradient-to-b from-primary/5 to-background py-16 md:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
@@ -282,7 +282,7 @@ export default function HomePage() {
       </section>
 
       {/* Help & Resources */}
-      <section className="bg-gradient-to-b from-transparent via-primary/3 to-primary/5 py-16 md:py-20">
+      <section className="bg-gradient-to-b from-background via-primary/3 to-background py-16 md:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <div className="grid gap-8 lg:grid-cols-2">
             {/* Notice Board */}

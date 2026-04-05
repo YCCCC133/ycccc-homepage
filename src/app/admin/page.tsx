@@ -274,7 +274,7 @@ export default function AdminPage() {
   // Loading state
   if (isLoading && !isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-primary/3 to-transparent">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-primary/3 to-background">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
@@ -293,7 +293,7 @@ export default function AdminPage() {
   // Login page
   if (!isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-primary/3 to-transparent p-4">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-primary/3 to-background p-4">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
@@ -359,7 +359,7 @@ export default function AdminPage() {
 
   // Main admin interface
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-primary/3 to-transparent">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-primary/3 to-background">
       {/* Background decoration */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
