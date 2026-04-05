@@ -355,7 +355,7 @@ export default function ConsultPage() {
               <Badge
                 key={index}
                 variant="secondary"
-                className="cursor-pointer whitespace-nowrap"
+                className="cursor-pointer whitespace-nowrap transition-colors hover:bg-primary hover:text-primary-foreground active:scale-95"
                 onClick={() => handleQuickQuestion(question)}
               >
                 {question}
@@ -365,7 +365,7 @@ export default function ConsultPage() {
 
           {/* Input Area */}
           <div className="mt-4">
-            <Card className="border-2 border-primary/20">
+            <Card className="border-2 border-primary/20 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
               <CardContent className="p-3">
                 <div className="flex gap-3">
                   <textarea
@@ -374,15 +374,17 @@ export default function ConsultPage() {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="输入您的问题，例如：老板拖欠工资怎么办？"
-                    className="flex-1 resize-none border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                    className="flex-1 resize-none border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground focus:ring-0"
                     rows={2}
                     disabled={isLoading}
+                    aria-label="输入您的问题"
                   />
                   <Button
                     size="icon"
-                    className="h-10 w-10 shrink-0"
+                    className="h-10 w-10 shrink-0 transition-transform active:scale-95"
                     onClick={sendMessage}
                     disabled={!input.trim() || isLoading}
+                    aria-label="发送消息"
                   >
                     {isLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />

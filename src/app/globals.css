@@ -139,3 +139,58 @@
 body {
   @apply font-sans;
 }
+
+/* 表单优化样式 */
+@layer components {
+  /* 表单标签样式优化 */
+  label {
+    @apply font-medium text-foreground;
+  }
+  
+  /* 必填字段标记 */
+  .required::after {
+    content: " *";
+    @apply text-destructive;
+  }
+  
+  /* 表单错误提示动画 */
+  .form-error {
+    @apply text-destructive text-sm mt-1 animate-in slide-in-from-top-1 duration-200;
+  }
+  
+  /* 加载状态优化 */
+  .loading-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      oklch(1 0 0 / 20%),
+      transparent
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+  
+  /* 按钮点击反馈 */
+  .btn-press {
+    @apply transition-transform active:scale-[0.98];
+  }
+  
+  /* 卡片悬浮效果优化 */
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+  }
+  
+  /* Focus可见性优化 */
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  }
+}

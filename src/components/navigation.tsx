@@ -95,10 +95,10 @@ export function Navigation() {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    'group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
+                    'group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium outline-none transition-all',
                     isActive
                       ? 'bg-primary text-primary-foreground shadow-md'
-                      : 'text-foreground/70 hover:bg-accent hover:text-foreground'
+                      : 'text-foreground/70 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground'
                   )}
                 >
                   <item.icon
@@ -132,8 +132,10 @@ export function Navigation() {
 
           {/* Mobile menu button */}
           <button
-            className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-accent md:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? '关闭菜单' : '打开菜单'}
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? (
               <X className="h-5 w-5" />
@@ -146,7 +148,7 @@ export function Navigation() {
 
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
-        <div className="border-t border-border/40 bg-white md:hidden">
+        <div className="border-t border-border/40 bg-white md:hidden animate-in slide-in-from-top-2 duration-200">
           <div className="space-y-1 p-4">
             {navigation.map((item) => {
               const isActive = pathname === item.href;
@@ -156,10 +158,10 @@ export function Navigation() {
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-colors',
+                    'flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium outline-none transition-colors',
                     isActive
                       ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-accent'
+                      : 'text-foreground hover:bg-accent focus-visible:bg-accent'
                   )}
                 >
                   <item.icon className="h-5 w-5" />

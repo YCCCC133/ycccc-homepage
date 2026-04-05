@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   Phone,
   MapPin,
+  Loader2,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -804,12 +806,28 @@ export default function ReportPage() {
                 type="button"
                 onClick={() => setStep(step + 1)}
                 disabled={isSubmitting}
+                className="gap-2"
               >
                 下一步
+                <ArrowRight className="h-4 w-4" />
               </Button>
             ) : (
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? '提交中...' : '提交线索'}
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="gap-2 min-w-[120px]"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    提交中...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    提交线索
+                  </>
+                )}
               </Button>
             )}
           </div>

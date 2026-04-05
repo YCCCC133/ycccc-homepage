@@ -142,21 +142,21 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-8 border-t border-border/40 pt-8">
+        <div className="mt-8 border-t border-border/40 pt-6 md:pt-8">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-center text-xs text-muted-foreground md:text-left">
               © 2025 北京市西城区人民检察院 · 护薪检察支持起诉智能平台
             </p>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <Link href="/privacy" className="hover:text-primary">
+            <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground md:gap-4">
+              <Link href="/privacy" className="rounded outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">
                 隐私政策
               </Link>
-              <span>|</span>
-              <Link href="/terms" className="hover:text-primary">
+              <span className="hidden md:inline">|</span>
+              <Link href="/terms" className="rounded outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">
                 使用条款
               </Link>
-              <span>|</span>
-              <Link href="/sitemap" className="hover:text-primary">
+              <span className="hidden md:inline">|</span>
+              <Link href="/sitemap" className="rounded outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">
                 网站地图
               </Link>
             </div>

@@ -171,16 +171,16 @@ export default function HomePage() {
             </div>
 
             {/* Quick Stats */}
-            <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               {stats.map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-xl border border-border/50 bg-white/80 p-4 backdrop-blur-sm"
+                  className="rounded-xl border border-border/50 bg-white/80 p-3 backdrop-blur-sm transition-all hover:shadow-md sm:p-4"
                 >
-                  <stat.icon className="mb-2 h-5 w-5 text-primary" />
-                  <div className="text-2xl font-bold text-foreground">
+                  <stat.icon className="mb-2 h-4 w-4 text-primary sm:h-5 sm:w-5" />
+                  <div className="text-xl font-bold text-foreground sm:text-2xl">
                     {stat.value}
-                    <span className="text-sm font-normal text-muted-foreground">
+                    <span className="text-xs font-normal text-muted-foreground sm:text-sm">
                       {stat.suffix}
                     </span>
                   </div>
@@ -206,8 +206,12 @@ export default function HomePage() {
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {features.map((feature) => (
-              <Link key={feature.title} href={feature.href}>
-                <Card className="group h-full cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1">
+              <Link 
+                key={feature.title} 
+                href={feature.href}
+                className="outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl"
+              >
+                <Card className="group h-full cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 focus-within:ring-2 focus-within:ring-primary">
                   <CardHeader>
                     <div
                       className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${feature.bgColor}`}
@@ -216,7 +220,7 @@ export default function HomePage() {
                     </div>
                     <CardTitle className="flex items-center justify-between">
                       {feature.title}
-                      <ArrowRight className="h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100" />
+                      <ArrowRight className="h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -326,8 +330,11 @@ export default function HomePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
-                <Link href="/tel:12345">
-                  <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-white/80 p-4 transition-all hover:shadow-md">
+                <Link 
+                  href="tel:12345"
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                >
+                  <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-white/80 p-4 transition-all duration-200 hover:shadow-md hover:border-primary/40">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                       <Phone className="h-5 w-5 text-primary" />
                     </div>
@@ -340,8 +347,11 @@ export default function HomePage() {
                   </div>
                 </Link>
 
-                <Link href="/help">
-                  <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-white/80 p-4 transition-all hover:shadow-md">
+                <Link 
+                  href="/help"
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                >
+                  <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-white/80 p-4 transition-all duration-200 hover:shadow-md hover:border-primary/40">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                       <Shield className="h-5 w-5 text-primary" />
                     </div>
