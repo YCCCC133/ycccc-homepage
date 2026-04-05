@@ -166,6 +166,12 @@ export function Footer() {
               </Link>
             </div>
           </div>
+          {/* 技术支持 */}
+          <div className="mt-4 text-center">
+            <p className="text-[10px] text-muted-foreground/50">
+              Technical Support by <span className="font-medium">ycccc</span> © 2025
+            </p>
+          </div>
         </div>
       </div>
     </footer>

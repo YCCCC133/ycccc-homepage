@@ -762,6 +762,15 @@ export default function AdminPage() {
         )}
       </main>
 
+      {/* Footer */}
+      <footer className="border-t border-border/40 bg-white/50 backdrop-blur-sm py-4">
+        <div className="mx-auto max-w-7xl px-4 text-center">
+          <p className="text-[10px] text-muted-foreground/50">
+            Technical Support by <span className="font-medium">ycccc</span> © 2025
+          </p>
+        </div>
+      </footer>
+
       {/* Detail Modal */}
       {selectedItem && (
         <DetailModal
