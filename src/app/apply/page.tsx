@@ -243,7 +243,7 @@ export default function ApplyPage() {
                 </button>
               ))}
               {form.formState.errors.applicationType && (
-                <p className="text-sm text-red-500">
+                <p className="text-sm text-destructive">
                   {form.formState.errors.applicationType.message}
                 </p>
               )}

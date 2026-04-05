@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   Search,
   FolderOpen,
@@ -182,10 +183,15 @@ export default function CasesPage() {
                   <FolderOpen className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <h3 className="mb-2 text-lg font-medium">暂无案件记录</h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="mb-4 text-sm text-muted-foreground">
                   您还没有提交任何案件，立即开始维权吧
                 </p>
-                <Button className="mt-4">立即填报线索</Button>
+                <Link href="/report">
+                  <Button className="gap-2">
+                    <FileText className="h-4 w-4" />
+                    立即填报线索
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           ) : (

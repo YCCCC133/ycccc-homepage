@@ -261,7 +261,7 @@ export default function ReportPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          姓名 <span className="text-red-500">*</span>
+                          姓名 <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input placeholder="请输入您的姓名" {...field} />
@@ -277,7 +277,7 @@ export default function ReportPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          手机号码 <span className="text-red-500">*</span>
+                          手机号码 <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
@@ -301,7 +301,7 @@ export default function ReportPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        身份证号 <span className="text-red-500">*</span>
+                        身份证号 <span className="text-destructive">*</span>
                       </FormLabel>
                       <FormControl>
                         <Input placeholder="请输入18位身份证号码" {...field} />
@@ -320,7 +320,7 @@ export default function ReportPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        现居住地址 <span className="text-red-500">*</span>
+                        现居住地址 <span className="text-destructive">*</span>
                       </FormLabel>
                       <FormControl>
                         <div className="relative">
@@ -359,7 +359,7 @@ export default function ReportPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        用人单位名称 <span className="text-red-500">*</span>
+                        用人单位名称 <span className="text-destructive">*</span>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -378,7 +378,7 @@ export default function ReportPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        用人单位地址 <span className="text-red-500">*</span>
+                        用人单位地址 <span className="text-destructive">*</span>
                       </FormLabel>
                       <FormControl>
                         <div className="relative">
@@ -419,7 +419,7 @@ export default function ReportPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          工种类型 <span className="text-red-500">*</span>
+                          工种类型 <span className="text-destructive">*</span>
                         </FormLabel>
                         <Select
                           onValueChange={field.onChange}
@@ -451,7 +451,7 @@ export default function ReportPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          入职时间 <span className="text-red-500">*</span>
+                          入职时间 <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
@@ -515,7 +515,7 @@ export default function ReportPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            薪资类型 <span className="text-red-500">*</span>
+                            薪资类型 <span className="text-destructive">*</span>
                           </FormLabel>
                           <Select
                             onValueChange={field.onChange}
@@ -545,7 +545,7 @@ export default function ReportPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            约定薪资（元/月） <span className="text-red-500">*</span>
+                            约定薪资（元/月） <span className="text-destructive">*</span>
                           </FormLabel>
                           <FormControl>
                             <div className="relative">
@@ -573,7 +573,7 @@ export default function ReportPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            欠薪月数 <span className="text-red-500">*</span>
+                            欠薪月数 <span className="text-destructive">*</span>
                           </FormLabel>
                           <FormControl>
                             <div className="relative">
@@ -598,7 +598,7 @@ export default function ReportPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            欠薪总额 <span className="text-red-500">*</span>
+                            欠薪总额 <span className="text-destructive">*</span>
                           </FormLabel>
                           <FormControl>
                             <div className="relative">
@@ -625,7 +625,7 @@ export default function ReportPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          欠薪时间段 <span className="text-red-500">*</span>
+                          欠薪时间段 <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -644,7 +644,7 @@ export default function ReportPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          情况描述 <span className="text-red-500">*</span>
+                          情况描述 <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Textarea
