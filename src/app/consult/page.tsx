@@ -204,7 +204,7 @@ export default function ConsultPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-6xl flex-col px-4 py-6 md:min-h-[calc(100vh-8rem)]">
+    <div className="mx-auto max-w-6xl px-4 py-6">
       {/* Header */}
       <div className="mb-6">
         <h1 className="mb-2 text-3xl font-bold text-foreground">智能法律咨询</h1>
@@ -213,7 +213,7 @@ export default function ConsultPage() {
         </p>
       </div>
 
-      <div className="grid flex-1 gap-6 lg:grid-cols-4">
+      <div className="grid gap-6 lg:grid-cols-4">
         {/* Sidebar - Quick Actions */}
         <div className="hidden lg:block">
           <Card className="sticky top-28 md:top-36">
@@ -277,10 +277,10 @@ export default function ConsultPage() {
         </div>
 
         {/* Main Chat Area */}
-        <div className="flex flex-1 flex-col lg:col-span-3">
+        <div className="flex flex-col lg:col-span-3">
           {/* Messages */}
-          <Card className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full p-6" ref={scrollRef}>
+          <Card className="flex flex-col overflow-hidden">
+            <ScrollArea className="h-[400px] lg:h-[500px] p-6" ref={scrollRef}>
               <div className="space-y-4">
                 {messages.map((message, index) => (
                   <div
