@@ -1547,6 +1547,42 @@ export default function AdminPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* 数据管理 */}
+              <Card>
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><Database className="h-4 w-4" />数据管理</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="text-center p-3 rounded-lg bg-blue-50 border border-blue-100">
+                      <p className="text-2xl font-bold text-blue-700">{stats?.reports || 0}</p>
+                      <p className="text-xs text-blue-600">线索填报</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-green-50 border border-green-100">
+                      <p className="text-2xl font-bold text-green-700">{stats?.applications || 0}</p>
+                      <p className="text-xs text-green-600">在线申请</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-purple-50 border border-purple-100">
+                      <p className="text-2xl font-bold text-purple-700">{cases.length}</p>
+                      <p className="text-xs text-purple-600">案件总数</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-orange-50 border border-orange-100">
+                      <p className="text-2xl font-bold text-orange-700">{stats?.documents || 0}</p>
+                      <p className="text-xs text-orange-600">生成文书</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button variant="outline" size="sm" onClick={() => { const data = { reports, applications, cases, documents, consultations }; const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `全部数据_${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url); }} className="gap-1.5">
+                      <Download className="h-4 w-4" />导出全部数据(JSON)
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleExportCSV('线索数据', reports as unknown as Record<string, unknown>[], ['id', 'name', 'phone', 'company_name', 'owed_amount', 'status', 'created_at'])} className="gap-1.5">
+                      <File className="h-4 w-4" />导出线索(CSV)
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleExportCSV('案件数据', cases as unknown as Record<string, unknown>[], ['case_number', 'plaintiff_name', 'defendant_name', 'case_type', 'amount', 'status', 'handler'])} className="gap-1.5">
+                      <File className="h-4 w-4" />导出案件(CSV)
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>
