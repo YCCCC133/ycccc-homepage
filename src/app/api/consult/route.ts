@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
+import { LLMClient, Config, HeaderUtils, Message } from 'coze-coding-dev-sdk';
 
 // 使用 Node.js runtime 以支持 coze-coding-dev-sdk
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages: conversationHistory } = await request.json();
+    const body = await request.json();
+    
+    // 支持两种格式：{ message: string } 或 { messages: array }
+    let conversationHistory: Message[] = [];
+    
+    if (body.messages && Array.isArray(body.messages)) {
+      conversationHistory = body.messages;
+    } else if (body.message) {
+      // 单条消息格式，转换为对话历史
+      conversationHistory = [{ role: 'user', content: body.message }];
+    }
 
     const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
     const config = new Config();
@@ -40,7 +50,7 @@ export async function POST(request: NextRequest) {
 
 请根据以上原则，为用户提供专业、贴心的法律咨询服务。`;
 
-    const messages = [
+    const messages: Message[] = [
       { role: 'system', content: systemPrompt },
       ...conversationHistory,
     ];
