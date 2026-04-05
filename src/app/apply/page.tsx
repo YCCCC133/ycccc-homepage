@@ -104,7 +104,7 @@ export default function ApplyPage() {
 
   if (submitSuccess) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16">
+      <div className="mx-auto min-h-[calc(100vh-10rem)] max-w-3xl px-4 py-16">
         <Card className="border-green-200 bg-green-50">
           <CardContent className="pt-8 text-center">
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">

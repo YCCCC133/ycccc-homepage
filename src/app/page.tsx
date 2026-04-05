@@ -114,7 +114,7 @@ const notices = [
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col">
+    <div className="flex min-h-[calc(100vh-10rem)] flex-col">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-primary/3 to-transparent py-16 md:py-24">
         {/* Background decoration */}
