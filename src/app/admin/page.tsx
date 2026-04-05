@@ -32,13 +32,15 @@ import {
   Activity,
   Inbox,
   Home,
+  PlusCircle,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-type TabType = 'dashboard' | 'reports' | 'applications' | 'documents' | 'consultations';
+type TabType = 'dashboard' | 'reports' | 'applications' | 'documents' | 'consultations' | 'announcements';
 
 interface Stats {
   reports: number;
@@ -47,6 +49,16 @@ interface Stats {
   consultations: number;
   pendingReports: number;
   pendingApplications: number;
+}
+
+interface Announcement {
+  id: number;
+  title: string;
+  content: string;
+  category: string;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Report {
@@ -105,6 +117,7 @@ const tabs = [
   { key: 'applications' as TabType, label: '在线申请', icon: Send, color: 'text-green-600', bgColor: 'bg-green-50' },
   { key: 'documents' as TabType, label: '文书生成', icon: PenTool, color: 'text-purple-600', bgColor: 'bg-purple-50' },
   { key: 'consultations' as TabType, label: '咨询记录', icon: MessageSquare, color: 'text-orange-600', bgColor: 'bg-orange-50' },
+  { key: 'announcements' as TabType, label: '公告管理', icon: AlertCircle, color: 'text-cyan-600', bgColor: 'bg-cyan-50' },
 ];
 
 export default function AdminPage() {
@@ -119,7 +132,9 @@ export default function AdminPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
-  const [selectedItem, setSelectedItem] = useState<Report | Application | Document | Consultation | null>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [selectedItem, setSelectedItem] = useState<Report | Application | Document | Consultation | Announcement | null>(null);
+  const [selectedItemType, setSelectedItemType] = useState<'report' | 'application' | 'document' | 'consultation' | 'announcement' | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -174,6 +189,17 @@ export default function AdminPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
+      if (activeTab === 'announcements') {
+        // 获取公告列表
+        const res = await fetch('/api/announcements?limit=50');
+        const data = await res.json();
+        if (data.success) {
+          setAnnouncements(data.data);
+        }
+        setIsLoading(false);
+        return;
+      }
+
       const type = activeTab === 'dashboard' ? 'stats' : activeTab;
       const params = new URLSearchParams({
         type,
@@ -242,9 +268,80 @@ export default function AdminPage() {
       if (data.success) {
         fetchData();
         setSelectedItem(null);
+      setSelectedItemType(null);
       }
     } catch (error) {
       console.error('删除失败:', error);
+    }
+  };
+
+  // 公告管理功能
+  const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [announcementForm, setAnnouncementForm] = useState({
+    title: '',
+    content: '',
+    category: '通知',
+    is_published: true,
+  });
+
+  const handleCreateAnnouncement = () => {
+    setEditingAnnouncement(null);
+    setAnnouncementForm({ title: '', content: '', category: '通知', is_published: true });
+    setShowAnnouncementForm(true);
+  };
+
+  const handleEditAnnouncement = (announcement: Announcement) => {
+    setEditingAnnouncement(announcement);
+    setAnnouncementForm({
+      title: announcement.title,
+      content: announcement.content,
+      category: announcement.category,
+      is_published: announcement.is_published,
+    });
+    setShowAnnouncementForm(true);
+  };
+
+  const handleSaveAnnouncement = async () => {
+    if (!announcementForm.title || !announcementForm.content) {
+      alert('请填写标题和内容');
+      return;
+    }
+
+    try {
+      const url = editingAnnouncement 
+        ? `/api/announcements/${editingAnnouncement.id}`
+        : '/api/announcements';
+      const method = editingAnnouncement ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(announcementForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAnnouncementForm(false);
+        fetchData();
+      }
+    } catch (error) {
+      console.error('保存公告失败:', error);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id: number) => {
+    if (!confirm('确定要删除这条公告吗？此操作不可恢复。')) return;
+
+    try {
+      const res = await fetch(`/api/announcements/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+      }
+    } catch (error) {
+      console.error('删除公告失败:', error);
     }
   };
 
@@ -627,7 +724,7 @@ export default function AdminPage() {
               <tr
                 key={item.id}
                 className="cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/50"
-                onClick={() => setSelectedItem(item)}
+                onClick={() => { setSelectedItem(item); setSelectedItemType('document'); }}
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -656,7 +753,7 @@ export default function AdminPage() {
               <tr
                 key={item.id}
                 className="cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/50"
-                onClick={() => setSelectedItem(item)}
+                onClick={() => { setSelectedItem(item); setSelectedItemType('consultation'); }}
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -689,7 +786,7 @@ export default function AdminPage() {
               <tr
                 key={item.id}
                 className="cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/50"
-                onClick={() => setSelectedItem(item)}
+                onClick={() => { setSelectedItem(item); setSelectedItemType('application'); }}
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -717,7 +814,7 @@ export default function AdminPage() {
               <tr
                 key={item.id}
                 className="cursor-pointer border-b border-border/50 transition-colors hover:bg-muted/50"
-                onClick={() => setSelectedItem(item)}
+                onClick={() => { setSelectedItem(item); setSelectedItemType('application'); }}
               >
                 <td className="max-w-[300px] px-4 py-3">
                   <div className="flex items-start gap-2">
@@ -734,6 +831,142 @@ export default function AdminPage() {
               </tr>
             )}
           />
+        )}
+
+        {/* 公告管理 */}
+        {activeTab === 'announcements' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">公告列表</h3>
+              <Button onClick={handleCreateAnnouncement} className="gap-2">
+                <PlusCircle className="h-4 w-4" />
+                新建公告
+              </Button>
+            </div>
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="px-4 py-3 text-left text-sm font-medium">标题</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">分类</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">状态</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">创建时间</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {isLoading ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                            <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                          </td>
+                        </tr>
+                      ) : announcements.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                            暂无公告
+                          </td>
+                        </tr>
+                      ) : (
+                        announcements.map((item) => (
+                          <tr key={item.id} className="border-b border-border/50 hover:bg-muted/30" onClick={() => { setSelectedItem(item); setSelectedItemType('announcement'); }}>
+                            <td className="px-4 py-3 text-sm">{item.title}</td>
+                            <td className="px-4 py-3">
+                              <Badge variant="outline" className="text-xs">{item.category}</Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge variant={item.is_published ? 'default' : 'secondary'} className="text-xs">
+                                {item.is_published ? '已发布' : '草稿'}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(item.created_at)}</td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => handleEditAnnouncement(item)}>
+                                  编辑
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => handleDeleteAnnouncement(item.id)}
+                                >
+                                  删除
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* 公告表单弹窗 */}
+        {showAnnouncementForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <CardHeader>
+                <CardTitle>{editingAnnouncement ? '编辑公告' : '新建公告'}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">标题</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={announcementForm.title}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
+                    placeholder="请输入公告标题"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">分类</label>
+                  <select
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={announcementForm.category}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, category: e.target.value })}
+                  >
+                    <option value="通知">通知</option>
+                    <option value="指南">指南</option>
+                    <option value="案例">案例</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">内容</label>
+                  <textarea
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[200px]"
+                    value={announcementForm.content}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
+                    placeholder="请输入公告内容"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="is_published"
+                    checked={announcementForm.is_published}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, is_published: e.target.checked })}
+                  />
+                  <label htmlFor="is_published" className="text-sm">立即发布</label>
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setShowAnnouncementForm(false)}>
+                    取消
+                  </Button>
+                  <Button onClick={handleSaveAnnouncement}>
+                    保存
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Pagination */}

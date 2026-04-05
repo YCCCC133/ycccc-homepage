@@ -11,7 +11,6 @@ import {
   TrendingUp,
   Clock,
   CheckCircle2,
-  AlertCircle,
   Phone,
   Scale,
   BookOpen,
@@ -20,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AnnouncementList } from '@/components/announcement-list';
 
 const features = [
   {
@@ -91,24 +91,6 @@ const steps = [
     step: '04',
     title: '提交申请',
     description: '在线提交支持起诉申请',
-  },
-];
-
-const notices = [
-  {
-    title: '关于开展农民工工资支付专项检查的通知',
-    date: '2026-01-15',
-    type: '通知',
-  },
-  {
-    title: '护薪平台使用指南（农民工版）',
-    date: '2026-01-12',
-    type: '指南',
-  },
-  {
-    title: '成功案例：张某等32人追讨欠薪案',
-    date: '2026-01-10',
-    type: '案例',
   },
 ];
 
@@ -286,40 +268,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4">
           <div className="grid gap-8 lg:grid-cols-2">
             {/* Notice Board */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-primary" />
-                  新闻公告
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {notices.map((notice) => (
-                    <div
-                      key={notice.title}
-                      className="flex items-start justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0 cursor-pointer group"
-                    >
-                      <div className="flex-1">
-                        <Badge variant="outline" className="mb-2 text-xs">
-                          {notice.type}
-                        </Badge>
-                        <h4 className="mb-1 font-medium text-foreground group-hover:text-primary transition-colors">
-                          {notice.title}
-                        </h4>
-                        <p className="text-xs text-muted-foreground">
-                          {notice.date}
-                        </p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                    </div>
-                  ))}
-                </div>
-                <Button variant="link" className="mt-4 w-full">
-                  查看全部公告
-                </Button>
-              </CardContent>
-            </Card>
+            <AnnouncementList />
 
             {/* Quick Actions */}
             <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
