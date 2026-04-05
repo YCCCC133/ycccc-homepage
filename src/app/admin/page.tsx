@@ -3,43 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  LogIn,
-  LogOut,
-  FileText,
-  Send,
-  PenTool,
-  MessageSquare,
-  CheckCircle,
-  AlertCircle,
-  Trash2,
-  X,
-  ChevronLeft,
-  RefreshCw,
-  Scale,
-  Shield,
-  TrendingUp,
-  Eye,
-  ArrowRight,
-  Bell,
-  Home,
-  PlusCircle,
-  Loader2,
-  Database,
-  Upload,
-  Download,
-  Settings,
-  BarChart3,
-  Search,
-  Edit,
-  FolderOpen,
-  File,
-  LayoutTemplate,
-  Menu,
-  User,
-  AlertTriangle,
-  CheckSquare,
-  Mail,
-  Phone,
+  LogIn, LogOut, FileText, Send, PenTool, MessageSquare, CheckCircle, AlertCircle,
+  Trash2, X, ChevronLeft, RefreshCw, Scale, Shield, TrendingUp, Eye, ArrowRight,
+  Bell, Home, PlusCircle, Loader2, Database, Upload, Download, Settings, BarChart3,
+  Search, Edit, FolderOpen, File, LayoutTemplate, Menu, User, AlertTriangle,
+  Mail, Phone, Clock, DollarSign, Users
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -51,95 +19,51 @@ import { cn } from '@/lib/utils';
 type TabType = 'dashboard' | 'reports' | 'applications' | 'cases' | 'documents' | 'consultations' | 'announcements' | 'files' | 'settings';
 
 interface Stats {
-  reports: number;
-  applications: number;
-  documents: number;
-  consultations: number;
-  pendingReports: number;
-  pendingApplications: number;
-  totalAmount: number;
+  reports: number; applications: number; documents: number; consultations: number;
+  pendingReports: number; pendingApplications: number; totalAmount: number;
 }
 
 interface Announcement {
-  id: number;
-  title: string;
-  content: string;
-  category: string;
-  is_published: boolean;
-  created_at: string;
-  updated_at: string;
+  id: number; title: string; content: string; category: string; is_published: boolean;
+  created_at: string; updated_at: string;
 }
 
 interface Report {
-  id: number;
-  name: string;
-  phone: string;
-  company_name: string | null;
-  owed_amount: string | null;
-  description: string | null;
-  status: string;
-  created_at: string;
+  id: number; name: string; phone: string; company_name: string | null; owed_amount: string | null;
+  description: string | null; status: string; created_at: string; id_card?: string;
+  company_address?: string; owed_months?: number; worker_count?: number; evidence?: string;
 }
 
 interface Application {
-  id: number;
-  applicant_name: string;
-  applicant_phone: string;
-  application_type: string;
-  owed_amount: string | null;
-  status: string;
-  created_at: string;
+  id: number; applicant_name: string; applicant_phone: string; application_type: string;
+  owed_amount: string | null; status: string; created_at: string; case_brief?: string;
+  applicant_id_card?: string;
 }
 
 interface Document {
-  id: number;
-  document_type: string;
-  applicant_name: string | null;
-  created_at: string;
+  id: number; document_type: string; applicant_name: string | null; created_at: string;
 }
 
 interface Consultation {
-  id: number;
-  user_question: string;
-  ai_response: string | null;
-  created_at: string;
+  id: number; user_question: string; ai_response: string | null; created_at: string; session_id?: string;
 }
 
 interface CaseItem {
-  id: number;
-  case_number: string;
-  plaintiff_name: string;
-  plaintiff_phone: string;
-  defendant_name: string;
-  case_type: string;
-  amount: number;
-  status: string;
-  filing_date: string;
-  handler: string | null;
+  id: number; case_number: string; plaintiff_name: string; plaintiff_phone: string;
+  defendant_name: string; case_type: string; amount: number; status: string;
+  filing_date: string; handler: string | null; notes?: string;
 }
 
 interface FileItem {
-  id: number;
-  name: string;
-  type: string;
-  size: number;
-  case_id: number | null;
-  created_at: string;
+  id: number; name: string; type: string; size: number; case_id: number | null; created_at: string;
 }
 
 interface Template {
-  id: number;
-  name: string;
-  type: string;
-  content: string;
-  variables: string[];
-  is_active: boolean;
+  id: number; name: string; type: string; content: string; variables: string[]; is_active: boolean;
 }
 
 interface SystemSetting {
-  key: string;
-  value: string;
-  description: string;
+  key: string; value: string; description: string;
 }
 
 // ============ 导航配置 ============
@@ -182,20 +106,19 @@ export default function AdminPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showModal, setShowModal] = useState<'detail' | 'form' | null>(null);
+  const [showModal, setShowModal] = useState<'detail' | 'form' | 'newCase' | null>(null);
   const [editingItem, setEditingItem] = useState<Announcement | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [showBatchActions, setShowBatchActions] = useState(false);
   const [notificationForm, setNotificationForm] = useState<{ type: 'sms' | 'email' | null; recipients: string[]; message: string }>({ type: null, recipients: [], message: '' });
+  const [newCase, setNewCase] = useState({ plaintiff_name: '', plaintiff_phone: '', defendant_name: '', case_type: '欠薪纠纷', amount: '', notes: '' });
+  const [consultationSearch, setConsultationSearch] = useState('');
 
   // ============ 初始化 ============
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  useEffect(() => { checkAuth(); }, []);
 
   const checkAuth = async () => {
     try {
@@ -213,7 +136,6 @@ export default function AdminPage() {
     e.preventDefault();
     setLoginError('');
     setIsLoading(true);
-
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
@@ -221,17 +143,11 @@ export default function AdminPage() {
         body: JSON.stringify({ password }),
       });
       const data = await res.json();
-      if (data.success) {
-        setIsAuthenticated(true);
-        setPassword('');
-      } else {
-        setLoginError(data.error || '登录失败');
-      }
+      if (data.success) { setIsAuthenticated(true); setPassword(''); }
+      else { setLoginError(data.error || '登录失败'); }
     } catch {
       setLoginError('网络错误');
-    } finally {
-      setIsLoading(false);
-    }
+    } finally { setIsLoading(false); }
   };
 
   const handleLogout = () => {
@@ -243,7 +159,20 @@ export default function AdminPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 公告
+      // 数据概览页面同时获取stats和cases
+      if (activeTab === 'dashboard') {
+        const [statsRes, casesRes] = await Promise.all([
+          fetch('/api/admin/data?type=stats'),
+          fetch('/api/admin/cases?pageSize=5'),
+        ]);
+        const statsData = await statsRes.json();
+        const casesData = await casesRes.json();
+        if (statsData.stats) setStats(statsData.stats);
+        if (casesData.success) setCases(casesData.data);
+        setIsLoading(false);
+        return;
+      }
+
       if (activeTab === 'announcements') {
         const res = await fetch('/api/announcements?limit=50');
         const data = await res.json();
@@ -252,7 +181,6 @@ export default function AdminPage() {
         return;
       }
 
-      // 案件库
       if (activeTab === 'cases') {
         const params = new URLSearchParams({ page: page.toString(), pageSize: '20' });
         if (statusFilter) params.set('status', statusFilter);
@@ -264,7 +192,6 @@ export default function AdminPage() {
         return;
       }
 
-      // 文件
       if (activeTab === 'files') {
         const res = await fetch('/api/admin/files');
         const data = await res.json();
@@ -273,7 +200,6 @@ export default function AdminPage() {
         return;
       }
 
-      // 模板和设置
       if (activeTab === 'documents') {
         const [docsRes, templatesRes] = await Promise.all([
           fetch(`/api/admin/data?type=documents&page=${page}&pageSize=10`),
@@ -296,28 +222,22 @@ export default function AdminPage() {
       }
 
       // 其他数据
-      const type = activeTab === 'dashboard' ? 'stats' : activeTab;
-      const params = new URLSearchParams({ type, page: page.toString(), pageSize: '10' });
+      const type = activeTab;
+      const params = new URLSearchParams({ type, page: page.toString(), pageSize: '20' });
       if (statusFilter) params.set('status', statusFilter);
 
       const res = await fetch(`/api/admin/data?${params}`);
       const data = await res.json();
 
-      if (data.stats) setStats(data.stats);
       if (data.reports) setReports(data.reports);
       if (data.applications) setApplications(data.applications);
-      if (data.documents) setDocuments(data.documents);
       if (data.consultations) setConsultations(data.consultations);
     } catch (error) {
       console.error('获取数据失败:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    } finally { setIsLoading(false); }
   }, [activeTab, page, statusFilter, searchQuery]);
 
-  useEffect(() => {
-    if (isAuthenticated) fetchData();
-  }, [isAuthenticated, fetchData]);
+  useEffect(() => { if (isAuthenticated) fetchData(); }, [isAuthenticated, fetchData]);
 
   // ============ 操作处理 ============
   const handleUpdateStatus = async (type: 'report' | 'application' | 'case', id: number, status: string) => {
@@ -329,43 +249,31 @@ export default function AdminPage() {
         body: JSON.stringify(type === 'case' ? { status } : { type, id, data: { status } }),
       });
       if ((await res.json()).success) fetchData();
-    } catch (error) {
-      console.error('更新状态失败:', error);
-    }
+    } catch (error) { console.error('更新状态失败:', error); }
   };
 
   const handleDelete = async (type: string, id: number) => {
     if (!confirm('确定删除？此操作不可恢复。')) return;
-    const endpoint = type === 'announcement' ? `/api/announcements/${id}` : 
+    const endpoint = type === 'announcement' ? `/api/announcements/${id}` :
                      type === 'case' ? `/api/admin/cases/${id}` :
                      `/api/admin/data?type=${type}&id=${id}`;
     try {
       const res = await fetch(endpoint, { method: 'DELETE' });
-      if ((await res.json()).success) {
-        fetchData();
-        setSelectedItem(null);
-      }
-    } catch (error) {
-      console.error('删除失败:', error);
-    }
+      if ((await res.json()).success) { fetchData(); setSelectedItem(null); }
+    } catch (error) { console.error('删除失败:', error); }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (!fileList?.length) return;
-
     setIsUploading(true);
     setUploadProgress(0);
 
     const interval = setInterval(() => {
-      setUploadProgress((p) => (p >= 100 ? (clearInterval(interval), 100) : p + 10));
+      setUploadProgress((p) => (p >= 90 ? 90 : p + 10));
     }, 200);
 
-    setTimeout(async () => {
-      clearInterval(interval);
-      setUploadProgress(100);
-      setIsUploading(false);
-
+    try {
       await fetch('/api/admin/files', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -376,8 +284,14 @@ export default function AdminPage() {
           uploaded_by: '管理员',
         }),
       });
+      clearInterval(interval);
+      setUploadProgress(100);
       fetchData();
-    }, 2000);
+    } catch (error) {
+      console.error('上传失败:', error);
+    } finally {
+      setTimeout(() => { setIsUploading(false); setUploadProgress(0); }, 500);
+    }
   };
 
   const handleExportData = (type: string, data: unknown[]) => {
@@ -390,40 +304,67 @@ export default function AdminPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportCSV = (type: string, data: Record<string, unknown>[], columns: string[]) => {
+    const headers = columns.join(',');
+    const rows = data.map(item =>
+      columns.map(col => {
+        const value = item[col] ?? item[col.toLowerCase()] ?? '';
+        return typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value;
+      }).join(',')
+    ).join('\n');
+    const blob = new Blob(['\ufeff' + headers + '\n' + rows], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${type}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleSaveAnnouncement = async () => {
-    if (!editingItem?.title || !editingItem?.content) {
-      alert('请填写标题和内容');
-      return;
-    }
+    if (!editingItem?.title || !editingItem?.content) { alert('请填写标题和内容'); return; }
     const url = editingItem.id ? `/api/announcements/${editingItem.id}` : '/api/announcements';
     const method = editingItem.id ? 'PUT' : 'POST';
     try {
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingItem),
-      });
-      if ((await res.json()).success) {
-        setShowModal(null);
-        setEditingItem(null);
-        fetchData();
-      }
-    } catch (error) {
-      console.error('保存失败:', error);
-    }
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editingItem) });
+      if ((await res.json()).success) { setShowModal(null); setEditingItem(null); fetchData(); }
+    } catch (error) { console.error('保存失败:', error); }
   };
 
   const handleSaveSettings = async () => {
     try {
-      const res = await fetch('/api/admin/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings }),
-      });
+      const res = await fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings }) });
       if ((await res.json()).success) alert('设置已保存');
-    } catch (error) {
-      console.error('保存设置失败:', error);
+    } catch (error) { console.error('保存设置失败:', error); }
+  };
+
+  const handleCreateCase = async () => {
+    if (!newCase.plaintiff_name || !newCase.defendant_name || !newCase.amount) {
+      alert('请填写完整信息');
+      return;
     }
+    try {
+      const caseNumber = `AJ${new Date().getFullYear()}${String(Date.now()).slice(-4)}`;
+      const res = await fetch('/api/admin/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          case_number: caseNumber,
+          plaintiff_name: newCase.plaintiff_name,
+          plaintiff_phone: newCase.plaintiff_phone,
+          defendant_name: newCase.defendant_name,
+          case_type: newCase.case_type,
+          amount: parseFloat(newCase.amount),
+          notes: newCase.notes,
+          status: 'pending',
+        }),
+      });
+      if ((await res.json()).success) {
+        setShowModal(null);
+        setNewCase({ plaintiff_name: '', plaintiff_phone: '', defendant_name: '', case_type: '欠薪纠纷', amount: '', notes: '' });
+        fetchData();
+      }
+    } catch (error) { console.error('创建案件失败:', error); }
   };
 
   // 批量操作
@@ -431,34 +372,28 @@ export default function AdminPage() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  const handleSelectAll = (ids: number[]) => {
+    setSelectedIds(prev => prev.length === ids.length ? [] : ids);
+  };
+
   const handleBatchDelete = async (type: string) => {
     if (selectedIds.length === 0) return;
     if (!confirm(`确定删除选中的 ${selectedIds.length} 条记录？`)) return;
-    
-    for (const id of selectedIds) {
-      await handleDelete(type, id);
-    }
+    for (const id of selectedIds) { await handleDelete(type, id); }
     setSelectedIds([]);
-    setShowBatchActions(false);
   };
 
   const handleBatchStatus = async (type: 'report' | 'application' | 'case', status: string) => {
     if (selectedIds.length === 0) return;
-    
-    for (const id of selectedIds) {
-      await handleUpdateStatus(type, id, status);
-    }
+    for (const id of selectedIds) { await handleUpdateStatus(type, id, status); }
     setSelectedIds([]);
-    setShowBatchActions(false);
   };
 
   // 发送通知
   const handleSendNotification = async () => {
     if (!notificationForm.type || !notificationForm.message || notificationForm.recipients.length === 0) {
-      alert('请填写完整信息');
-      return;
+      alert('请填写完整信息'); return;
     }
-    
     try {
       const res = await fetch('/api/admin/notifications', {
         method: 'POST',
@@ -474,28 +409,7 @@ export default function AdminPage() {
         alert('通知发送成功');
         setNotificationForm({ type: null, recipients: [], message: '' });
       }
-    } catch (error) {
-      console.error('发送通知失败:', error);
-    }
-  };
-
-  // 导出CSV
-  const handleExportCSV = (type: string, data: Record<string, unknown>[], columns: string[]) => {
-    const headers = columns.join(',');
-    const rows = data.map(item => 
-      columns.map(col => {
-        const value = item[col.toLowerCase().replace(/[^a-z_]/g, '_')] ?? '';
-        return typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value;
-      }).join(',')
-    ).join('\n');
-    
-    const blob = new Blob(['\ufeff' + headers + '\n' + rows], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${type}_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    } catch (error) { console.error('发送通知失败:', error); }
   };
 
   // ============ 工具函数 ============
@@ -521,6 +435,11 @@ export default function AdminPage() {
   };
 
   const totalPending = (stats?.pendingReports || 0) + (stats?.pendingApplications || 0);
+
+  // 过滤咨询记录
+  const filteredConsultations = consultations.filter(c =>
+    !consultationSearch || c.user_question.toLowerCase().includes(consultationSearch.toLowerCase())
+  );
 
   // ============ 加载状态 ============
   if (isLoading && !isAuthenticated) {
@@ -549,26 +468,20 @@ export default function AdminPage() {
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                 placeholder="请输入管理员密码"
                 className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
               />
               {loginError && (
                 <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  {loginError}
+                  <AlertCircle className="h-4 w-4" />{loginError}
                 </div>
               )}
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
-                登录
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}登录
               </Button>
             </form>
-            <button onClick={() => router.push('/')} className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-primary">
-              返回首页
-            </button>
+            <button onClick={() => router.push('/')} className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-primary">返回首页</button>
           </CardContent>
         </Card>
       </div>
@@ -579,10 +492,7 @@ export default function AdminPage() {
   return (
     <div className="flex min-h-screen bg-muted/30">
       {/* 侧边栏 */}
-      <aside className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-white border-r border-border/50 transition-all duration-300',
-        sidebarOpen ? 'w-56' : 'w-16'
-      )}>
+      <aside className={cn('fixed left-0 top-0 z-40 h-screen bg-white border-r border-border/50 transition-all duration-300', sidebarOpen ? 'w-56' : 'w-16')}>
         <div className="flex h-16 items-center justify-between border-b border-border/50 px-4">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
@@ -603,23 +513,17 @@ export default function AdminPage() {
             return (
               <button
                 key={item.key}
-                onClick={() => { setActiveTab(item.key); setPage(1); setStatusFilter(''); setSearchQuery(''); }}
-                className={cn(
-                  'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                  isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                )}
+                onClick={() => { setActiveTab(item.key); setPage(1); setStatusFilter(''); setSearchQuery(''); setSelectedIds([]); }}
+                className={cn('flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                  isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground hover:text-foreground')}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
                 {sidebarOpen && <span>{item.label}</span>}
                 {sidebarOpen && item.key === 'reports' && stats?.pendingReports ? (
-                  <span className={cn('ml-auto text-xs px-1.5 py-0.5 rounded', isActive ? 'bg-primary-foreground/20' : 'bg-yellow-100 text-yellow-700')}>
-                    {stats.pendingReports}
-                  </span>
+                  <span className={cn('ml-auto text-xs px-1.5 py-0.5 rounded', isActive ? 'bg-primary-foreground/20' : 'bg-yellow-100 text-yellow-700')}>{stats.pendingReports}</span>
                 ) : null}
                 {sidebarOpen && item.key === 'applications' && stats?.pendingApplications ? (
-                  <span className={cn('ml-auto text-xs px-1.5 py-0.5 rounded', isActive ? 'bg-primary-foreground/20' : 'bg-yellow-100 text-yellow-700')}>
-                    {stats.pendingApplications}
-                  </span>
+                  <span className={cn('ml-auto text-xs px-1.5 py-0.5 rounded', isActive ? 'bg-primary-foreground/20' : 'bg-yellow-100 text-yellow-700')}>{stats.pendingApplications}</span>
                 ) : null}
               </button>
             );
@@ -646,23 +550,17 @@ export default function AdminPage() {
 
       {/* 主内容区 */}
       <main className={cn('flex-1 transition-all duration-300', sidebarOpen ? 'ml-56' : 'ml-16')}>
-        {/* 顶部栏 */}
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/50 bg-white/95 backdrop-blur px-6">
           <h1 className="text-lg font-semibold">{navItems.find(n => n.key === activeTab)?.label || '后台管理'}</h1>
           <div className="flex items-center gap-3">
             {totalPending > 0 && (
               <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
-                <Bell className="h-3 w-3 mr-1" />
-                {totalPending} 条待处理
+                <Bell className="h-3 w-3 mr-1" />{totalPending} 条待处理
               </Badge>
             )}
-            <Button variant="outline" size="sm" onClick={() => router.push('/')} className="gap-1.5">
-              <Home className="h-4 w-4" />
-              首页
-            </Button>
+            <Button variant="outline" size="sm" onClick={() => router.push('/')} className="gap-1.5"><Home className="h-4 w-4" />首页</Button>
             <Button variant="outline" size="sm" onClick={fetchData} disabled={isLoading} className="gap-1.5">
-              <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-              刷新
+              <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />刷新
             </Button>
           </div>
         </header>
@@ -671,7 +569,6 @@ export default function AdminPage() {
           {/* ============ 数据概览 ============ */}
           {activeTab === 'dashboard' && stats && (
             <div className="space-y-6">
-              {/* 待处理提醒 */}
               {totalPending > 0 && (
                 <Card className="border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50">
                   <CardContent className="flex items-center justify-between p-4">
@@ -696,7 +593,6 @@ export default function AdminPage() {
                 </Card>
               )}
 
-              {/* 统计卡片 */}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard title="线索填报" value={stats.reports} pending={stats.pendingReports} icon={FileText} color="blue" />
                 <StatCard title="在线申请" value={stats.applications} pending={stats.pendingApplications} icon={Send} color="green" />
@@ -704,13 +600,11 @@ export default function AdminPage() {
                 <StatCard title="咨询记录" value={stats.consultations} icon={MessageSquare} color="orange" />
               </div>
 
-              {/* 图表区域 */}
               <div className="grid gap-6 lg:grid-cols-2">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-primary" />
-                      月度案件趋势
+                      <BarChart3 className="h-4 w-4 text-primary" />月度案件趋势
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -731,26 +625,25 @@ export default function AdminPage() {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-primary" />
-                      核心指标
+                      <TrendingUp className="h-4 w-4 text-primary" />核心指标
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">涉案金额总计</span>
+                        <span className="text-sm text-muted-foreground flex items-center gap-2"><DollarSign className="h-4 w-4" />涉案金额总计</span>
                         <span className="font-semibold text-primary">¥{(stats.totalAmount || 0).toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">帮助劳动者人数</span>
+                        <span className="text-sm text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" />帮助劳动者人数</span>
                         <span className="font-semibold">2,458+</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">平均处理天数</span>
+                        <span className="text-sm text-muted-foreground flex items-center gap-2"><Clock className="h-4 w-4" />平均处理天数</span>
                         <span className="font-semibold">7 天</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">成功维权率</span>
+                        <span className="text-sm text-muted-foreground flex items-center gap-2"><CheckCircle className="h-4 w-4" />成功维权率</span>
                         <span className="font-semibold text-green-600">98.6%</span>
                       </div>
                     </div>
@@ -758,7 +651,6 @@ export default function AdminPage() {
                 </Card>
               </div>
 
-              {/* 最近案件 */}
               <Card>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
@@ -782,14 +674,12 @@ export default function AdminPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-primary">¥{c.amount.toLocaleString()}</span>
+                          <span className="text-sm font-medium text-primary">¥{Number(c.amount).toLocaleString()}</span>
                           {getStatusBadge(c.status)}
                         </div>
                       </div>
                     ))}
-                    {cases.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">暂无案件数据</div>
-                    )}
+                    {cases.length === 0 && <div className="text-center py-8 text-muted-foreground">暂无案件数据</div>}
                   </div>
                 </CardContent>
               </Card>
@@ -799,7 +689,6 @@ export default function AdminPage() {
           {/* ============ 线索填报 ============ */}
           {activeTab === 'reports' && (
             <div className="space-y-4">
-              {/* 批量操作栏 */}
               {selectedIds.length > 0 && (
                 <Card className="bg-primary/5 border-primary/30">
                   <CardContent className="flex items-center justify-between p-3">
@@ -808,24 +697,21 @@ export default function AdminPage() {
                       <Button size="sm" variant="outline" onClick={() => handleBatchStatus('report', 'processing')}>批量处理</Button>
                       <Button size="sm" variant="outline" onClick={() => handleBatchStatus('report', 'completed')}>批量完成</Button>
                       <Button size="sm" variant="destructive" onClick={() => handleBatchDelete('reports')}>批量删除</Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setSelectedIds([]); setShowBatchActions(false); }}>取消</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>取消</Button>
                     </div>
                   </CardContent>
                 </Card>
               )}
-              
               <DataTable
                 columns={['', '申请人', '电话', '公司', '欠薪金额', '状态', '提交时间', '操作']}
                 data={reports}
                 isLoading={isLoading}
+                selectedIds={selectedIds}
+                onSelectAll={(ids) => handleSelectAll(ids)}
                 renderRow={(r) => (
                   <tr key={r.id} className="border-b border-border/50 hover:bg-muted/50">
                     <td className="px-4 py-3">
-                      <Checkbox 
-                        checked={selectedIds.includes(r.id)}
-                        onCheckedChange={() => handleSelectItem(r.id)}
-                        className="h-4 w-4"
-                      />
+                      <Checkbox checked={selectedIds.includes(r.id)} onCheckedChange={() => handleSelectItem(r.id)} className="h-4 w-4" />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -850,24 +736,15 @@ export default function AdminPage() {
                 )}
                 filterOptions={
                   <div className="flex gap-3 mb-4 flex-wrap">
-                    <Button variant="outline" size="sm" onClick={() => { setShowBatchActions(!showBatchActions); setSelectedIds([]); }} className="gap-1.5">
-                      <CheckSquare className="h-4 w-4" /> 批量操作
-                    </Button>
                     <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
                       <option value="">全部状态</option>
                       <option value="pending">待处理</option>
                       <option value="processing">处理中</option>
                       <option value="completed">已完成</option>
                     </select>
-                    <Button variant="outline" size="sm" onClick={() => handleExportData('线索填报', reports)} className="gap-1.5">
-                      <Download className="h-4 w-4" /> 导出JSON
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleExportCSV('线索填报', reports as unknown as Record<string, unknown>[], ['name', 'phone', 'company_name', 'owed_amount', 'status', 'created_at'])} className="gap-1.5">
-                      <File className="h-4 w-4" /> 导出CSV
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setNotificationForm({ type: 'sms', recipients: reports.filter(r => r.status === 'pending').map(r => r.phone), message: '' })} className="gap-1.5">
-                      <Phone className="h-4 w-4" /> 发送短信
-                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleExportData('线索填报', reports)} className="gap-1.5"><Download className="h-4 w-4" />导出JSON</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleExportCSV('线索填报', reports as unknown as Record<string, unknown>[], ['name', 'phone', 'company_name', 'owed_amount', 'status', 'created_at'])} className="gap-1.5"><File className="h-4 w-4" />导出CSV</Button>
+                    <Button variant="outline" size="sm" onClick={() => setNotificationForm({ type: 'sms', recipients: reports.filter(r => r.status === 'pending').map(r => r.phone), message: '' })} className="gap-1.5"><Phone className="h-4 w-4" />发送短信</Button>
                   </div>
                 }
               />
@@ -877,7 +754,6 @@ export default function AdminPage() {
           {/* ============ 在线申请 ============ */}
           {activeTab === 'applications' && (
             <div className="space-y-4">
-              {/* 批量操作栏 */}
               {selectedIds.length > 0 && (
                 <Card className="bg-primary/5 border-primary/30">
                   <CardContent className="flex items-center justify-between p-3">
@@ -886,24 +762,21 @@ export default function AdminPage() {
                       <Button size="sm" variant="outline" onClick={() => handleBatchStatus('application', 'processing')}>批量处理</Button>
                       <Button size="sm" variant="outline" onClick={() => handleBatchStatus('application', 'completed')}>批量完成</Button>
                       <Button size="sm" variant="destructive" onClick={() => handleBatchDelete('applications')}>批量删除</Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setSelectedIds([]); setShowBatchActions(false); }}>取消</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>取消</Button>
                     </div>
                   </CardContent>
                 </Card>
               )}
-              
               <DataTable
                 columns={['', '申请人', '电话', '类型', '欠薪金额', '状态', '提交时间', '操作']}
                 data={applications}
                 isLoading={isLoading}
+                selectedIds={selectedIds}
+                onSelectAll={(ids) => handleSelectAll(ids)}
                 renderRow={(a) => (
                   <tr key={a.id} className="border-b border-border/50 hover:bg-muted/50">
                     <td className="px-4 py-3">
-                      <Checkbox 
-                        checked={selectedIds.includes(a.id)}
-                        onCheckedChange={() => handleSelectItem(a.id)}
-                        className="h-4 w-4"
-                      />
+                      <Checkbox checked={selectedIds.includes(a.id)} onCheckedChange={() => handleSelectItem(a.id)} className="h-4 w-4" />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -932,21 +805,14 @@ export default function AdminPage() {
                 )}
                 filterOptions={
                   <div className="flex gap-3 mb-4 flex-wrap">
-                    <Button variant="outline" size="sm" onClick={() => { setShowBatchActions(!showBatchActions); setSelectedIds([]); }} className="gap-1.5">
-                      <CheckSquare className="h-4 w-4" /> 批量操作
-                    </Button>
                     <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
                       <option value="">全部状态</option>
                       <option value="pending">待处理</option>
                       <option value="processing">处理中</option>
                       <option value="completed">已完成</option>
                     </select>
-                    <Button variant="outline" size="sm" onClick={() => handleExportData('在线申请', applications)} className="gap-1.5">
-                      <Download className="h-4 w-4" /> 导出JSON
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleExportCSV('在线申请', applications as unknown as Record<string, unknown>[], ['applicant_name', 'applicant_phone', 'application_type', 'owed_amount', 'status', 'created_at'])} className="gap-1.5">
-                      <File className="h-4 w-4" /> 导出CSV
-                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleExportData('在线申请', applications)} className="gap-1.5"><Download className="h-4 w-4" />导出JSON</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleExportCSV('在线申请', applications as unknown as Record<string, unknown>[], ['applicant_name', 'applicant_phone', 'application_type', 'owed_amount', 'status', 'created_at'])} className="gap-1.5"><File className="h-4 w-4" />导出CSV</Button>
                   </div>
                 }
               />
@@ -956,16 +822,10 @@ export default function AdminPage() {
           {/* ============ 案件管理 ============ */}
           {activeTab === 'cases' && (
             <div className="space-y-4">
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
                 <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="搜索案件..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full rounded-lg border border-input bg-background pl-10 pr-4 py-2 text-sm"
-                  />
+                  <input type="text" placeholder="搜索案件..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full rounded-lg border border-input bg-background pl-10 pr-4 py-2 text-sm" />
                 </div>
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
                   <option value="">全部状态</option>
@@ -973,12 +833,8 @@ export default function AdminPage() {
                   <option value="processing">处理中</option>
                   <option value="completed">已完成</option>
                 </select>
-                <Button variant="outline" size="sm" onClick={() => handleExportData('案件数据', cases)} className="gap-1.5">
-                  <Download className="h-4 w-4" /> 导出
-                </Button>
-                <Button size="sm" className="gap-1.5">
-                  <PlusCircle className="h-4 w-4" /> 新建
-                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleExportData('案件数据', cases)} className="gap-1.5"><Download className="h-4 w-4" />导出</Button>
+                <Button size="sm" onClick={() => setShowModal('newCase')} className="gap-1.5"><PlusCircle className="h-4 w-4" />新建案件</Button>
               </div>
               <DataTable
                 columns={['案件编号', '原告', '被告', '类型', '金额', '状态', '承办人', '操作']}
@@ -988,14 +844,11 @@ export default function AdminPage() {
                   <tr key={c.id} className="border-b border-border/50 hover:bg-muted/50">
                     <td className="px-4 py-3 font-mono text-sm">{c.case_number}</td>
                     <td className="px-4 py-3">
-                      <div>
-                        <p className="font-medium text-sm">{c.plaintiff_name}</p>
-                        <p className="text-xs text-muted-foreground">{c.plaintiff_phone}</p>
-                      </div>
+                      <div><p className="font-medium text-sm">{c.plaintiff_name}</p><p className="text-xs text-muted-foreground">{c.plaintiff_phone}</p></div>
                     </td>
                     <td className="px-4 py-3 text-sm">{c.defendant_name}</td>
                     <td className="px-4 py-3"><Badge variant="outline" className="text-xs">{c.case_type}</Badge></td>
-                    <td className="px-4 py-3 text-sm font-medium text-primary">¥{c.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-primary">¥{Number(c.amount).toLocaleString()}</td>
                     <td className="px-4 py-3">{getStatusBadge(c.status)}</td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{c.handler || '-'}</td>
                     <td className="px-4 py-3">
@@ -1014,21 +867,14 @@ export default function AdminPage() {
           {activeTab === 'documents' && (
             <div className="space-y-6">
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">文书模板</CardTitle>
-                </CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-base">文书模板</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {templates.map((t) => (
                       <div key={t.id} className="flex items-center justify-between rounded-lg border border-border/50 p-3 hover:bg-muted/50">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100 text-purple-600">
-                            <LayoutTemplate className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm">{t.name}</p>
-                            <p className="text-xs text-muted-foreground">{t.variables.length} 个变量</p>
-                          </div>
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100 text-purple-600"><LayoutTemplate className="h-4 w-4" /></div>
+                          <div><p className="font-medium text-sm">{t.name}</p><p className="text-xs text-muted-foreground">{t.variables.length} 个变量</p></div>
                         </div>
                         <Badge variant={t.is_active ? 'default' : 'secondary'} className="text-xs">{t.is_active ? '启用' : '禁用'}</Badge>
                       </div>
@@ -1038,28 +884,22 @@ export default function AdminPage() {
               </Card>
 
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">已生成文书</CardTitle>
-                </CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-base">已生成文书</CardTitle></CardHeader>
                 <CardContent className="p-0">
                   <table className="w-full">
-                    <thead>
-                      <tr className="border-b bg-muted/30">
-                        <th className="px-4 py-2 text-left text-sm font-medium">文书类型</th>
-                        <th className="px-4 py-2 text-left text-sm font-medium">申请人</th>
-                        <th className="px-4 py-2 text-left text-sm font-medium">生成时间</th>
-                        <th className="px-4 py-2 text-right text-sm font-medium">操作</th>
-                      </tr>
-                    </thead>
+                    <thead><tr className="border-b bg-muted/30">
+                      <th className="px-4 py-2 text-left text-sm font-medium">文书类型</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium">申请人</th>
+                      <th className="px-4 py-2 text-left text-sm font-medium">生成时间</th>
+                      <th className="px-4 py-2 text-right text-sm font-medium">操作</th>
+                    </tr></thead>
                     <tbody>
                       {documents.map((d) => (
                         <tr key={d.id} className="border-b border-border/50 hover:bg-muted/50">
                           <td className="px-4 py-3 text-sm">{d.document_type}</td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">{d.applicant_name || '-'}</td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(d.created_at)}</td>
-                          <td className="px-4 py-3 text-right">
-                            <Button variant="ghost" size="sm"><Download className="h-4 w-4" /></Button>
-                          </td>
+                          <td className="px-4 py-3 text-right"><Button variant="ghost" size="sm"><Download className="h-4 w-4" /></Button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -1071,31 +911,34 @@ export default function AdminPage() {
 
           {/* ============ 咨询记录 ============ */}
           {activeTab === 'consultations' && (
-            <DataTable
-              columns={['用户问题', 'AI回复', '时间']}
-              data={consultations}
-              isLoading={isLoading}
-              renderRow={(c) => (
-                <tr key={c.id} className="border-b border-border/50 hover:bg-muted/50">
-                  <td className="px-4 py-3 max-w-[300px]">
-                    <p className="text-sm line-clamp-2">{c.user_question}</p>
-                  </td>
-                  <td className="px-4 py-3 max-w-[300px]">
-                    <p className="text-sm text-muted-foreground line-clamp-2">{c.ai_response || '-'}</p>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(c.created_at)}</td>
-                </tr>
-              )}
-            />
+            <div className="space-y-4">
+              <div className="flex gap-3">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input type="text" placeholder="搜索问题..." value={consultationSearch} onChange={(e) => setConsultationSearch(e.target.value)} className="w-full rounded-lg border border-input bg-background pl-10 pr-4 py-2 text-sm" />
+                </div>
+                <Button variant="outline" size="sm" onClick={() => handleExportData('咨询记录', consultations)} className="gap-1.5"><Download className="h-4 w-4" />导出</Button>
+              </div>
+              <DataTable
+                columns={['用户问题', 'AI回复', '时间']}
+                data={filteredConsultations}
+                isLoading={isLoading}
+                renderRow={(c) => (
+                  <tr key={c.id} className="border-b border-border/50 hover:bg-muted/50">
+                    <td className="px-4 py-3 max-w-[300px]"><p className="text-sm line-clamp-2">{c.user_question}</p></td>
+                    <td className="px-4 py-3 max-w-[400px]"><p className="text-sm text-muted-foreground line-clamp-3">{c.ai_response || '-'}</p></td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{formatDate(c.created_at)}</td>
+                  </tr>
+                )}
+              />
+            </div>
           )}
 
           {/* ============ 公告管理 ============ */}
           {activeTab === 'announcements' && (
             <div className="space-y-4">
               <div className="flex justify-end">
-                <Button size="sm" onClick={() => { setEditingItem({ id: 0, title: '', content: '', category: '通知', is_published: true, created_at: '', updated_at: '' }); setShowModal('form'); }} className="gap-1.5">
-                  <PlusCircle className="h-4 w-4" /> 新建公告
-                </Button>
+                <Button size="sm" onClick={() => { setEditingItem({ id: 0, title: '', content: '', category: '通知', is_published: true, created_at: '', updated_at: '' }); setShowModal('form'); }} className="gap-1.5"><PlusCircle className="h-4 w-4" />新建公告</Button>
               </div>
               <DataTable
                 columns={['标题', '分类', '状态', '时间', '操作']}
@@ -1105,9 +948,7 @@ export default function AdminPage() {
                   <tr key={a.id} className="border-b border-border/50 hover:bg-muted/50">
                     <td className="px-4 py-3 text-sm font-medium">{a.title}</td>
                     <td className="px-4 py-3"><Badge variant="outline" className="text-xs">{a.category}</Badge></td>
-                    <td className="px-4 py-3">
-                      <Badge variant={a.is_published ? 'default' : 'secondary'} className="text-xs">{a.is_published ? '已发布' : '草稿'}</Badge>
-                    </td>
+                    <td className="px-4 py-3"><Badge variant={a.is_published ? 'default' : 'secondary'} className="text-xs">{a.is_published ? '已发布' : '草稿'}</Badge></td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(a.created_at)}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
@@ -1127,10 +968,9 @@ export default function AdminPage() {
               <div className="flex justify-between">
                 <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileUpload} />
                 <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="gap-1.5">
-                  {isUploading ? <><Loader2 className="h-4 w-4 animate-spin" /> 上传中 {uploadProgress}%</> : <><Upload className="h-4 w-4" /> 上传文件</>}
+                  {isUploading ? <><Loader2 className="h-4 w-4 animate-spin" />上传中 {uploadProgress}%</> : <><Upload className="h-4 w-4" />上传文件</>}
                 </Button>
               </div>
-
               {isUploading && (
                 <Card className="border-primary/30 bg-primary/5">
                   <CardContent className="p-4">
@@ -1143,15 +983,12 @@ export default function AdminPage() {
                   </CardContent>
                 </Card>
               )}
-
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {files.map((f) => (
                   <Card key={f.id} className="group hover:shadow-md transition-shadow">
                     <CardContent className="p-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-                          <File className="h-5 w-5" />
-                        </div>
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600"><File className="h-5 w-5" /></div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{f.name}</p>
                           <p className="text-xs text-muted-foreground">{formatFileSize(f.size)}</p>
@@ -1168,14 +1005,8 @@ export default function AdminPage() {
                   </Card>
                 ))}
               </div>
-
               {files.length === 0 && (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">暂无文件</p>
-                  </CardContent>
-                </Card>
+                <Card><CardContent className="py-12 text-center"><FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" /><p className="text-muted-foreground">暂无文件</p></CardContent></Card>
               )}
             </div>
           )}
@@ -1183,37 +1014,22 @@ export default function AdminPage() {
           {/* ============ 系统设置 ============ */}
           {activeTab === 'settings' && (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">基础设置</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle className="text-base">基础设置</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {settings.map((s) => (
                   <div key={s.key} className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
-                    <div>
-                      <p className="font-medium text-sm">{s.description}</p>
-                      <p className="text-xs text-muted-foreground">{s.key}</p>
-                    </div>
+                    <div><p className="font-medium text-sm">{s.description}</p><p className="text-xs text-muted-foreground">{s.key}</p></div>
                     {['auto_assign', 'sms_notification', 'email_notification'].includes(s.key) ? (
-                      <button
-                        onClick={() => setSettings((prev) => prev.map((x) => x.key === s.key ? { ...x, value: x.value === 'true' ? 'false' : 'true' } : x))}
-                        className={cn('relative h-6 w-11 rounded-full transition-colors', s.value === 'true' ? 'bg-primary' : 'bg-muted')}
-                      >
+                      <button onClick={() => setSettings((prev) => prev.map((x) => x.key === s.key ? { ...x, value: x.value === 'true' ? 'false' : 'true' } : x))} className={cn('relative h-6 w-11 rounded-full transition-colors', s.value === 'true' ? 'bg-primary' : 'bg-muted')}>
                         <span className={cn('absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform', s.value === 'true' && 'translate-x-5')} />
                       </button>
                     ) : (
-                      <input
-                        type="text"
-                        value={s.value}
-                        onChange={(e) => setSettings((prev) => prev.map((x) => x.key === s.key ? { ...x, value: e.target.value } : x))}
-                        className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm w-48"
-                      />
+                      <input type="text" value={s.value} onChange={(e) => setSettings((prev) => prev.map((x) => x.key === s.key ? { ...x, value: e.target.value } : x))} className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm w-48" />
                     )}
                   </div>
                 ))}
                 <div className="flex justify-end pt-4">
-                  <Button onClick={handleSaveSettings} className="gap-1.5">
-                    <CheckCircle className="h-4 w-4" /> 保存设置
-                  </Button>
+                  <Button onClick={handleSaveSettings} className="gap-1.5"><CheckCircle className="h-4 w-4" />保存设置</Button>
                 </div>
               </CardContent>
             </Card>
@@ -1227,29 +1043,27 @@ export default function AdminPage() {
           <Card className="w-full max-w-lg max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">{showModal === 'form' ? (editingItem?.id ? '编辑公告' : '新建公告') : '详情'}</CardTitle>
+                <CardTitle className="text-base">{showModal === 'form' ? (editingItem?.id ? '编辑公告' : '新建公告') : showModal === 'newCase' ? '新建案件' : '详情'}</CardTitle>
                 <Button variant="ghost" size="sm" onClick={() => setShowModal(null)}><X className="h-4 w-4" /></Button>
               </div>
             </CardHeader>
             <CardContent>
               {showModal === 'detail' && selectedItem && (
                 <div className="space-y-3">
-                  {'name' in selectedItem && <div><span className="text-xs text-muted-foreground">姓名</span><p className="font-medium">{selectedItem.name}</p></div>}
-                  {'phone' in selectedItem && <div><span className="text-xs text-muted-foreground">电话</span><p className="font-medium">{selectedItem.phone}</p></div>}
-                  {'company_name' in selectedItem && <div><span className="text-xs text-muted-foreground">公司</span><p className="font-medium">{selectedItem.company_name || '-'}</p></div>}
-                  {'owed_amount' in selectedItem && <div><span className="text-xs text-muted-foreground">欠薪金额</span><p className="font-medium text-primary">{selectedItem.owed_amount ? `¥${selectedItem.owed_amount}` : '-'}</p></div>}
-                  {'description' in selectedItem && <div><span className="text-xs text-muted-foreground">描述</span><p className="text-sm">{selectedItem.description || '-'}</p></div>}
-                  {'case_number' in selectedItem && <div><span className="text-xs text-muted-foreground">案件编号</span><p className="font-mono">{selectedItem.case_number}</p></div>}
-                  {'defendant_name' in selectedItem && <div><span className="text-xs text-muted-foreground">被告</span><p className="font-medium">{selectedItem.defendant_name}</p></div>}
-                  {'amount' in selectedItem && <div><span className="text-xs text-muted-foreground">涉案金额</span><p className="font-medium text-primary">¥{selectedItem.amount.toLocaleString()}</p></div>}
-                  {'status' in selectedItem && (
-                    <div><span className="text-xs text-muted-foreground">状态</span><div className="mt-1">{getStatusBadge(selectedItem.status as string)}</div></div>
-                  )}
+                  {'name' in selectedItem && <DetailRow label="姓名" value={selectedItem.name} />}
+                  {'phone' in selectedItem && <DetailRow label="电话" value={selectedItem.phone} />}
+                  {'company_name' in selectedItem && <DetailRow label="公司" value={selectedItem.company_name || '-'} />}
+                  {'owed_amount' in selectedItem && <DetailRow label="欠薪金额" value={selectedItem.owed_amount ? `¥${selectedItem.owed_amount}` : '-'} highlight />}
+                  {'description' in selectedItem && <DetailRow label="描述" value={selectedItem.description || '-'} />}
+                  {'case_brief' in selectedItem && <DetailRow label="案件简述" value={selectedItem.case_brief || '-'} />}
+                  {'case_number' in selectedItem && <DetailRow label="案件编号" value={selectedItem.case_number} mono />}
+                  {'defendant_name' in selectedItem && <DetailRow label="被告" value={selectedItem.defendant_name} />}
+                  {'amount' in selectedItem && <DetailRow label="涉案金额" value={`¥${Number(selectedItem.amount).toLocaleString()}`} highlight />}
+                  {'notes' in selectedItem && selectedItem.notes && <DetailRow label="备注" value={selectedItem.notes} />}
+                  {'status' in selectedItem && <div><span className="text-xs text-muted-foreground">状态</span><div className="mt-1">{getStatusBadge(selectedItem.status as string)}</div></div>}
                   {'status' in selectedItem && (selectedItem.status === 'pending' || selectedItem.status === 'processing') && (
                     <div className="flex gap-2 pt-4">
-                      {selectedItem.status === 'pending' && (
-                        <Button size="sm" onClick={() => { handleUpdateStatus('case' in selectedItem ? 'case' : 'report', selectedItem.id, 'processing'); setShowModal(null); }}>开始处理</Button>
-                      )}
+                      {selectedItem.status === 'pending' && <Button size="sm" onClick={() => { handleUpdateStatus('case' in selectedItem ? 'case' : 'report', selectedItem.id, 'processing'); setShowModal(null); }}>开始处理</Button>}
                       <Button size="sm" variant="outline" onClick={() => { handleUpdateStatus('case' in selectedItem ? 'case' : 'report', selectedItem.id, 'completed'); setShowModal(null); }}>标记完成</Button>
                     </div>
                   )}
@@ -1257,48 +1071,22 @@ export default function AdminPage() {
               )}
               {showModal === 'form' && editingItem && (
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">标题</label>
-                    <input
-                      type="text"
-                      value={editingItem.title}
-                      onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
-                      className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">分类</label>
-                    <select
-                      value={editingItem.category}
-                      onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })}
-                      className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="通知">通知</option>
-                      <option value="指南">指南</option>
-                      <option value="案例">案例</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">内容</label>
-                    <textarea
-                      value={editingItem.content}
-                      onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })}
-                      className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[150px]"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="is_published"
-                      checked={editingItem.is_published}
-                      onChange={(e) => setEditingItem({ ...editingItem, is_published: e.target.checked })}
-                    />
-                    <label htmlFor="is_published" className="text-sm">立即发布</label>
-                  </div>
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="outline" onClick={() => setShowModal(null)}>取消</Button>
-                    <Button onClick={handleSaveAnnouncement}>保存</Button>
-                  </div>
+                  <div><label className="text-sm font-medium">标题</label><input type="text" value={editingItem.title} onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" /></div>
+                  <div><label className="text-sm font-medium">分类</label><select value={editingItem.category} onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="通知">通知</option><option value="指南">指南</option><option value="案例">案例</option></select></div>
+                  <div><label className="text-sm font-medium">内容</label><textarea value={editingItem.content} onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[150px]" /></div>
+                  <div className="flex items-center gap-2"><input type="checkbox" id="is_published" checked={editingItem.is_published} onChange={(e) => setEditingItem({ ...editingItem, is_published: e.target.checked })} /><label htmlFor="is_published" className="text-sm">立即发布</label></div>
+                  <div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setShowModal(null)}>取消</Button><Button onClick={handleSaveAnnouncement}>保存</Button></div>
+                </div>
+              )}
+              {showModal === 'newCase' && (
+                <div className="space-y-4">
+                  <div><label className="text-sm font-medium">原告姓名 *</label><input type="text" value={newCase.plaintiff_name} onChange={(e) => setNewCase({ ...newCase, plaintiff_name: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="请输入原告姓名" /></div>
+                  <div><label className="text-sm font-medium">原告电话</label><input type="text" value={newCase.plaintiff_phone} onChange={(e) => setNewCase({ ...newCase, plaintiff_phone: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="请输入联系电话" /></div>
+                  <div><label className="text-sm font-medium">被告名称 *</label><input type="text" value={newCase.defendant_name} onChange={(e) => setNewCase({ ...newCase, defendant_name: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="请输入被告/欠薪单位名称" /></div>
+                  <div><label className="text-sm font-medium">案件类型</label><select value={newCase.case_type} onChange={(e) => setNewCase({ ...newCase, case_type: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="欠薪纠纷">欠薪纠纷</option><option value="集体欠薪">集体欠薪</option><option value="工伤赔偿">工伤赔偿</option><option value="劳动合同纠纷">劳动合同纠纷</option></select></div>
+                  <div><label className="text-sm font-medium">涉案金额 (元) *</label><input type="number" value={newCase.amount} onChange={(e) => setNewCase({ ...newCase, amount: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="请输入金额" /></div>
+                  <div><label className="text-sm font-medium">备注</label><textarea value={newCase.notes} onChange={(e) => setNewCase({ ...newCase, notes: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[80px]" placeholder="案件备注信息" /></div>
+                  <div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setShowModal(null)}>取消</Button><Button onClick={handleCreateCase}>创建案件</Button></div>
                 </div>
               )}
             </CardContent>
@@ -1313,30 +1101,15 @@ export default function AdminPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
-                  {notificationForm.type === 'sms' ? <Phone className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
-                  发送{notificationForm.type === 'sms' ? '短信' : '邮件'}通知
+                  {notificationForm.type === 'sms' ? <Phone className="h-4 w-4" /> : <Mail className="h-4 w-4" />}发送{notificationForm.type === 'sms' ? '短信' : '邮件'}通知
                 </CardTitle>
                 <Button variant="ghost" size="sm" onClick={() => setNotificationForm({ type: null, recipients: [], message: '' })}><X className="h-4 w-4" /></Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">接收人数</label>
-                <p className="text-sm text-muted-foreground">{notificationForm.recipients.length} 人</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">通知内容</label>
-                <textarea
-                  value={notificationForm.message}
-                  onChange={(e) => setNotificationForm(prev => ({ ...prev, message: e.target.value }))}
-                  placeholder="请输入通知内容..."
-                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[100px]"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setNotificationForm({ type: null, recipients: [], message: '' })}>取消</Button>
-                <Button onClick={handleSendNotification}>发送</Button>
-              </div>
+              <div><label className="text-sm font-medium">接收人数</label><p className="text-sm text-muted-foreground">{notificationForm.recipients.length} 人</p></div>
+              <div><label className="text-sm font-medium">通知内容</label><textarea value={notificationForm.message} onChange={(e) => setNotificationForm(prev => ({ ...prev, message: e.target.value }))} placeholder="请输入通知内容..." className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[100px]" /></div>
+              <div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setNotificationForm({ type: null, recipients: [], message: '' })}>取消</Button><Button onClick={handleSendNotification}>发送</Button></div>
             </CardContent>
           </Card>
         </div>
@@ -1347,31 +1120,20 @@ export default function AdminPage() {
 
 // ============ 子组件 ============
 function StatCard({ title, value, pending, icon: Icon, color }: { title: string; value: number; pending?: number; icon: React.ElementType; color: string }) {
-  const colors: Record<string, string> = {
-    blue: 'bg-blue-100 text-blue-600',
-    green: 'bg-green-100 text-green-600',
-    purple: 'bg-purple-100 text-purple-600',
-    orange: 'bg-orange-100 text-orange-600',
-  };
+  const colors: Record<string, string> = { blue: 'bg-blue-100 text-blue-600', green: 'bg-green-100 text-green-600', purple: 'bg-purple-100 text-purple-600', orange: 'bg-orange-100 text-orange-600' };
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold">{value}</p>
-            {pending !== undefined && pending > 0 && <p className="text-xs text-yellow-600 mt-1">{pending} 条待处理</p>}
-          </div>
-          <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', colors[color])}>
-            <Icon className="h-5 w-5" />
-          </div>
+          <div><p className="text-sm text-muted-foreground">{title}</p><p className="text-2xl font-bold">{value}</p>{pending !== undefined && pending > 0 && <p className="text-xs text-yellow-600 mt-1">{pending} 条待处理</p>}</div>
+          <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', colors[color])}><Icon className="h-5 w-5" /></div>
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function DataTable<T>({ columns, data, isLoading, renderRow, filterOptions }: { columns: string[]; data: T[]; isLoading: boolean; renderRow: (item: T) => React.ReactNode; filterOptions?: React.ReactNode }) {
+function DataTable<T>({ columns, data, isLoading, selectedIds, onSelectAll, renderRow, filterOptions }: { columns: string[]; data: T[]; isLoading: boolean; selectedIds?: number[]; onSelectAll?: (ids: number[]) => void; renderRow: (item: T) => React.ReactNode; filterOptions?: React.ReactNode }) {
   return (
     <div className="space-y-4">
       {filterOptions}
@@ -1381,19 +1143,18 @@ function DataTable<T>({ columns, data, isLoading, renderRow, filterOptions }: { 
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/30">
-                  {columns.map((col) => (
-                    <th key={col} className="px-4 py-2.5 text-left text-sm font-medium">{col}</th>
+                  {columns.map((col, i) => (
+                    <th key={col} className="px-4 py-2.5 text-left text-sm font-medium">
+                      {i === 0 && selectedIds !== undefined && onSelectAll && data.length > 0 && 'id' in (data[0] as object) ? (
+                        <Checkbox checked={selectedIds.length === data.length} onCheckedChange={() => onSelectAll(data.map(d => (d as { id: number }).id))} className="h-4 w-4" />
+                      ) : null}
+                      {i === 0 && selectedIds !== undefined ? '' : col}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {isLoading ? (
-                  <tr><td colSpan={columns.length} className="px-4 py-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></td></tr>
-                ) : data.length === 0 ? (
-                  <tr><td colSpan={columns.length} className="px-4 py-8 text-center text-muted-foreground">暂无数据</td></tr>
-                ) : (
-                  data.map(renderRow)
-                )}
+                {isLoading ? <tr><td colSpan={columns.length} className="px-4 py-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></td></tr> : data.length === 0 ? <tr><td colSpan={columns.length} className="px-4 py-8 text-center text-muted-foreground">暂无数据</td></tr> : data.map(renderRow)}
               </tbody>
             </table>
           </div>
@@ -1401,4 +1162,8 @@ function DataTable<T>({ columns, data, isLoading, renderRow, filterOptions }: { 
       </Card>
     </div>
   );
+}
+
+function DetailRow({ label, value, highlight, mono }: { label: string; value: string; highlight?: boolean; mono?: boolean }) {
+  return <div><span className="text-xs text-muted-foreground">{label}</span><p className={cn('font-medium', highlight && 'text-primary', mono && 'font-mono')}>{value}</p></div>;
 }
