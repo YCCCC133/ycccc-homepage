@@ -1176,7 +1176,7 @@ function DetailModal({
   getStatusBadge,
   formatDate,
 }: {
-  item: Report | Application | Document | Consultation;
+  item: Report | Application | Document | Consultation | Announcement;
   onClose: () => void;
   onUpdateStatus: (type: 'report' | 'application', id: number, status: string) => void;
   onDelete: (type: string, id: number) => void;
@@ -1186,6 +1186,7 @@ function DetailModal({
   const isReport = (i: typeof item): i is Report => 'name' in i;
   const isApplication = (i: typeof item): i is Application => 'applicant_name' in i;
   const isConsultation = (i: typeof item): i is Consultation => 'user_question' in i;
+  const isAnnouncement = (i: typeof item): i is Announcement => 'content' in i && !('user_question' in i);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -1246,6 +1247,22 @@ function DetailModal({
                 <InfoRow icon={MessageSquare} label="用户问题" value={item.user_question} />
                 <InfoRow icon={MessageSquare} label="AI回复" value={item.ai_response || '-'} />
                 <InfoRow icon={Calendar} label="咨询时间" value={formatDate(item.created_at)} />
+              </>
+            )}
+
+            {isAnnouncement(item) && (
+              <>
+                <InfoRow icon={AlertCircle} label="标题" value={item.title} />
+                <InfoRow icon={FileText} label="分类" value={item.category} />
+                <InfoRow icon={Shield} label="状态" value={item.is_published ? '已发布' : '草稿'} />
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-4 w-4" />
+                    <span>内容</span>
+                  </div>
+                  <div className="text-sm bg-muted/50 rounded-md p-3 whitespace-pre-wrap">{item.content}</div>
+                </div>
+                <InfoRow icon={Calendar} label="创建时间" value={formatDate(item.created_at)} />
               </>
             )}
           </div>
