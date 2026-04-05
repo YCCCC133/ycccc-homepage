@@ -95,7 +95,7 @@ export function Navigation() {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    'group relative flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium outline-none transition-all lg:gap-2 lg:px-4',
+                    'group relative flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-2 text-sm font-medium outline-none transition-all md:gap-1.5 lg:gap-2 lg:px-4',
                     isActive
                       ? 'bg-primary text-primary-foreground shadow-md'
                       : 'text-foreground/70 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground'
@@ -107,8 +107,7 @@ export function Navigation() {
                       isActive ? 'scale-110' : 'group-hover:scale-110'
                     )}
                   />
-                  <span className="hidden lg:inline">{item.name}</span>
-                  <span className="lg:hidden">{item.name.slice(0, 2)}</span>
+                  <span className="text-xs lg:text-sm">{item.name}</span>
                   {isActive && (
                     <span className="absolute -bottom-0.5 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-[var(--gold)]" />
                   )}
