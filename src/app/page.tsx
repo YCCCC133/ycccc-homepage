@@ -298,20 +298,20 @@ export default function HomePage() {
                   {notices.map((notice) => (
                     <div
                       key={notice.title}
-                      className="flex items-start justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0"
+                      className="flex items-start justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0 cursor-pointer group"
                     >
                       <div className="flex-1">
                         <Badge variant="outline" className="mb-2 text-xs">
                           {notice.type}
                         </Badge>
-                        <h4 className="mb-1 font-medium text-foreground hover:text-primary cursor-pointer">
+                        <h4 className="mb-1 font-medium text-foreground group-hover:text-primary transition-colors">
                           {notice.title}
                         </h4>
                         <p className="text-xs text-muted-foreground">
                           {notice.date}
                         </p>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                     </div>
                   ))}
                 </div>
@@ -364,8 +364,11 @@ export default function HomePage() {
                   </div>
                 </Link>
 
-                <Link href="/legal-aid">
-                  <div className="flex items-center gap-3 rounded-lg border border-[var(--gold)]/30 bg-white/80 p-4 transition-all hover:shadow-md">
+                <Link 
+                  href="/legal-aid"
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                >
+                  <div className="flex items-center gap-3 rounded-lg border border-[var(--gold)]/30 bg-white/80 p-4 transition-all duration-200 hover:shadow-md hover:border-[var(--gold)]/50">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--gold)]/10">
                       <Heart className="h-5 w-5 text-[var(--gold-foreground)]" />
                     </div>
@@ -378,8 +381,11 @@ export default function HomePage() {
                   </div>
                 </Link>
 
-                <Link href="/cases">
-                  <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-white/80 p-4 transition-all hover:shadow-md">
+                <Link 
+                  href="/cases"
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                >
+                  <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-white/80 p-4 transition-all duration-200 hover:shadow-md hover:border-primary/40">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                       <FolderOpen className="h-5 w-5 text-primary" />
                     </div>

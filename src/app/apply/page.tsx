@@ -199,11 +199,12 @@ export default function ApplyPage() {
               {applicationTypes.map((type) => (
                 <button
                   key={type.id}
+                  type="button"
                   onClick={() => form.setValue('applicationType', type.id as 'support' | 'legal_aid')}
-                  className={`w-full rounded-lg border p-4 text-left transition-all ${
+                  className={`w-full rounded-lg border p-4 text-left outline-none transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                     form.watch('applicationType') === type.id
                       ? 'border-primary bg-primary/5 shadow-md'
-                      : 'border-border hover:border-primary/50'
+                      : 'border-border hover:border-primary/50 hover:shadow-sm'
                   }`}
                 >
                   <div className="mb-3 flex items-center gap-3">

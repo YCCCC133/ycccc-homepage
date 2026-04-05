@@ -195,10 +195,13 @@ export default function CasesPage() {
                 return (
                   <Card
                     key={caseItem.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${
-                      selectedCase?.id === caseItem.id ? 'border-primary' : ''
+                    className={`cursor-pointer transition-all hover:shadow-md outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                      selectedCase?.id === caseItem.id ? 'border-primary ring-2 ring-primary/20' : ''
                     }`}
                     onClick={() => setSelectedCase(caseItem)}
+                    tabIndex={0}
+                    role="button"
+                    onKeyDown={(e) => e.key === 'Enter' && setSelectedCase(caseItem)}
                   >
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">

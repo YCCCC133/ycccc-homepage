@@ -252,14 +252,15 @@ ${data.evidence}
                 {documentTypes.map((doc) => (
                   <button
                     key={doc.id}
+                    type="button"
                     onClick={() => {
                       setSelectedDoc(doc.id);
                       setGeneratedDoc(null);
                     }}
-                    className={`flex flex-col items-start rounded-lg border p-4 text-left transition-all ${
+                    className={`flex flex-col items-start rounded-lg border p-4 text-left outline-none transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                       selectedDoc === doc.id
                         ? 'border-primary bg-primary/5 shadow-md'
-                        : 'border-border hover:border-primary/50'
+                        : 'border-border hover:border-primary/50 hover:shadow-sm'
                     }`}
                   >
                     <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
