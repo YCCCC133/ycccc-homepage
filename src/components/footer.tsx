@@ -30,17 +30,6 @@ export function Footer() {
             <p className="text-sm leading-relaxed text-muted-foreground">
               保障劳动者（特别是农民工）薪酬权益，帮助诉讼能力弱的劳动者追讨欠薪，提供专业的法律支持与服务。
             </p>
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Shield className="h-4 w-4" />
-              </div>
-              <div className="text-xs text-muted-foreground">
-                全国检察机关大数据法律监督模型竞赛
-                <span className="ml-1 rounded bg-[var(--gold)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--gold-foreground)]">
-                  一等奖
-                </span>
-              </div>
-            </div>
           </div>
 
           {/* 快速链接 */}
