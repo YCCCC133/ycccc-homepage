@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     const client = await pool.connect();
     try {
-      let query = `
+      const query = `
         SELECT id, title, category, created_at, updated_at
         FROM announcements
         ${publishedOnly ? 'WHERE is_published = true' : ''}

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 
 interface Announcement {
   id: number;

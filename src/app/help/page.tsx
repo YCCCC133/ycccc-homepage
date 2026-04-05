@@ -6,7 +6,6 @@ import {
   MessageSquare,
   PenTool,
   Send,
-  FolderOpen,
   HelpCircle,
   Phone,
   ChevronRight,

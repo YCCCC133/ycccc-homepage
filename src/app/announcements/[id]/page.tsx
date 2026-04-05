@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Calendar, Tag, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +19,6 @@ interface Announcement {
 
 export default function AnnouncementDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -34,7 +33,7 @@ export default function AnnouncementDetailPage() {
         } else {
           setError(data.error || '公告不存在');
         }
-      } catch (err) {
+      } catch {
         setError('加载公告失败');
       } finally {
         setLoading(false);
