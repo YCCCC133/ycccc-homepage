@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   LogIn,
@@ -128,12 +128,6 @@ export default function AdminPage() {
     checkAuth();
   }, []);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchData();
-    }
-  }, [isAuthenticated, activeTab, page, statusFilter]);
-
   const checkAuth = async () => {
     try {
       const res = await fetch('/api/admin/login');
@@ -177,7 +171,7 @@ export default function AdminPage() {
     setIsAuthenticated(false);
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       const type = activeTab === 'dashboard' ? 'stats' : activeTab;
@@ -213,7 +207,13 @@ export default function AdminPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeTab, page, statusFilter]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated, fetchData]);
 
   const handleUpdateStatus = async (type: 'report' | 'application', id: number, status: string) => {
     try {
@@ -766,7 +766,6 @@ export default function AdminPage() {
       {selectedItem && (
         <DetailModal
           item={selectedItem}
-          type={activeTab}
           onClose={() => setSelectedItem(null)}
           onUpdateStatus={handleUpdateStatus}
           onDelete={handleDelete}
@@ -929,7 +928,6 @@ function DataTable<T>({
 // Detail Modal Component
 function DetailModal({
   item,
-  type,
   onClose,
   onUpdateStatus,
   onDelete,
@@ -937,7 +935,6 @@ function DetailModal({
   formatDate,
 }: {
   item: Report | Application | Document | Consultation;
-  type: TabType;
   onClose: () => void;
   onUpdateStatus: (type: 'report' | 'application', id: number, status: string) => void;
   onDelete: (type: string, id: number) => void;
