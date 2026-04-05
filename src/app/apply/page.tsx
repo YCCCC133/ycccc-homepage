@@ -188,7 +188,7 @@ export default function ApplyPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Application Type Selection */}
         <div className="lg:col-span-1">
-          <Card className="sticky top-24">
+          <Card className="sticky top-24 md:top-32">
             <CardHeader>
               <CardTitle className="text-lg">选择申请类型</CardTitle>
               <CardDescription>

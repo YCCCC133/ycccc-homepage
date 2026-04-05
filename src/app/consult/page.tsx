@@ -204,7 +204,7 @@ export default function ConsultPage() {
   };
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-theme(spacing.16)-theme(spacing.6))] max-w-6xl flex-col px-4 py-6 md:h-[calc(100vh-theme(spacing.24)-theme(spacing.6))]">
+    <div className="mx-auto flex h-[calc(100vh-5rem)] max-w-6xl flex-col px-4 py-6 md:h-[calc(100vh-7rem)]">
       {/* Header */}
       <div className="mb-6">
         <h1 className="mb-2 text-3xl font-bold text-foreground">智能法律咨询</h1>
@@ -216,7 +216,7 @@ export default function ConsultPage() {
       <div className="grid flex-1 gap-6 lg:grid-cols-4">
         {/* Sidebar - Quick Actions */}
         <div className="hidden lg:block">
-          <Card className="sticky top-28">
+          <Card className="sticky top-24 md:top-32">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Sparkles className="h-4 w-4 text-primary" />
