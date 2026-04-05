@@ -666,6 +666,9 @@ export default function AdminPage() {
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}登录系统
                 </Button>
+                <p className="text-center text-xs text-muted-foreground mt-2">
+                  默认密码：<code className="px-1.5 py-0.5 rounded bg-muted font-mono">huxin2026</code>
+                </p>
               </form>
               <div className="mt-6 pt-4 border-t border-border/50">
                 <button onClick={() => router.push('/')} className="w-full text-center text-sm text-muted-foreground hover:text-primary flex items-center justify-center gap-2">
