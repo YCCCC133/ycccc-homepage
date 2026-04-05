@@ -113,7 +113,7 @@ export default function CasesPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Side - Search & Filters */}
         <div className="lg:col-span-1">
-          <Card className="sticky top-24">
+          <Card className="sticky top-20 md:top-28">
             <CardHeader>
               <CardTitle className="text-lg">查询条件</CardTitle>
             </CardHeader>
