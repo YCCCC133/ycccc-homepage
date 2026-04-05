@@ -37,7 +37,11 @@ import {
   Menu,
   User,
   AlertTriangle,
+  CheckSquare,
+  Mail,
+  Phone,
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -184,6 +188,9 @@ export default function AdminPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [showBatchActions, setShowBatchActions] = useState(false);
+  const [notificationForm, setNotificationForm] = useState<{ type: 'sms' | 'email' | null; recipients: string[]; message: string }>({ type: null, recipients: [], message: '' });
 
   // ============ 初始化 ============
   useEffect(() => {
@@ -417,6 +424,78 @@ export default function AdminPage() {
     } catch (error) {
       console.error('保存设置失败:', error);
     }
+  };
+
+  // 批量操作
+  const handleSelectItem = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleBatchDelete = async (type: string) => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`确定删除选中的 ${selectedIds.length} 条记录？`)) return;
+    
+    for (const id of selectedIds) {
+      await handleDelete(type, id);
+    }
+    setSelectedIds([]);
+    setShowBatchActions(false);
+  };
+
+  const handleBatchStatus = async (type: 'report' | 'application' | 'case', status: string) => {
+    if (selectedIds.length === 0) return;
+    
+    for (const id of selectedIds) {
+      await handleUpdateStatus(type, id, status);
+    }
+    setSelectedIds([]);
+    setShowBatchActions(false);
+  };
+
+  // 发送通知
+  const handleSendNotification = async () => {
+    if (!notificationForm.type || !notificationForm.message || notificationForm.recipients.length === 0) {
+      alert('请填写完整信息');
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/admin/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: notificationForm.type,
+          recipients: notificationForm.recipients,
+          content: notificationForm.message,
+          title: notificationForm.type === 'sms' ? '短信通知' : '邮件通知',
+        }),
+      });
+      if ((await res.json()).success) {
+        alert('通知发送成功');
+        setNotificationForm({ type: null, recipients: [], message: '' });
+      }
+    } catch (error) {
+      console.error('发送通知失败:', error);
+    }
+  };
+
+  // 导出CSV
+  const handleExportCSV = (type: string, data: Record<string, unknown>[], columns: string[]) => {
+    const headers = columns.join(',');
+    const rows = data.map(item => 
+      columns.map(col => {
+        const value = item[col.toLowerCase().replace(/[^a-z_]/g, '_')] ?? '';
+        return typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value;
+      }).join(',')
+    ).join('\n');
+    
+    const blob = new Blob(['\ufeff' + headers + '\n' + rows], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${type}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // ============ 工具函数 ============
@@ -719,96 +798,159 @@ export default function AdminPage() {
 
           {/* ============ 线索填报 ============ */}
           {activeTab === 'reports' && (
-            <DataTable
-              columns={['申请人', '电话', '公司', '欠薪金额', '状态', '提交时间', '操作']}
-              data={reports}
-              isLoading={isLoading}
-              renderRow={(r) => (
-                <tr key={r.id} className="border-b border-border/50 hover:bg-muted/50">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-600">{r.name.charAt(0)}</div>
-                      <span className="font-medium text-sm">{r.name}</span>
+            <div className="space-y-4">
+              {/* 批量操作栏 */}
+              {selectedIds.length > 0 && (
+                <Card className="bg-primary/5 border-primary/30">
+                  <CardContent className="flex items-center justify-between p-3">
+                    <span className="text-sm">已选择 {selectedIds.length} 项</span>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleBatchStatus('report', 'processing')}>批量处理</Button>
+                      <Button size="sm" variant="outline" onClick={() => handleBatchStatus('report', 'completed')}>批量完成</Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleBatchDelete('reports')}>批量删除</Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setSelectedIds([]); setShowBatchActions(false); }}>取消</Button>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{r.phone}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground max-w-[150px] truncate">{r.company_name || '-'}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-primary">{r.owed_amount ? `¥${r.owed_amount}` : '-'}</td>
-                  <td className="px-4 py-3">{getStatusBadge(r.status)}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(r.created_at)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => { setSelectedItem(r); setShowModal('detail'); }}><Eye className="h-4 w-4" /></Button>
-                      {r.status === 'pending' && (
-                        <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus('report', r.id, 'processing')}><CheckCircle className="h-4 w-4 text-green-600" /></Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                  </CardContent>
+                </Card>
               )}
-              filterOptions={
-                <div className="flex gap-3 mb-4">
-                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                    <option value="">全部状态</option>
-                    <option value="pending">待处理</option>
-                    <option value="processing">处理中</option>
-                    <option value="completed">已完成</option>
-                  </select>
-                  <Button variant="outline" size="sm" onClick={() => handleExportData('线索填报', reports)} className="gap-1.5">
-                    <Download className="h-4 w-4" /> 导出
-                  </Button>
-                </div>
-              }
-            />
+              
+              <DataTable
+                columns={['', '申请人', '电话', '公司', '欠薪金额', '状态', '提交时间', '操作']}
+                data={reports}
+                isLoading={isLoading}
+                renderRow={(r) => (
+                  <tr key={r.id} className="border-b border-border/50 hover:bg-muted/50">
+                    <td className="px-4 py-3">
+                      <Checkbox 
+                        checked={selectedIds.includes(r.id)}
+                        onCheckedChange={() => handleSelectItem(r.id)}
+                        className="h-4 w-4"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-600">{r.name.charAt(0)}</div>
+                        <span className="font-medium text-sm">{r.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{r.phone}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground max-w-[150px] truncate">{r.company_name || '-'}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-primary">{r.owed_amount ? `¥${r.owed_amount}` : '-'}</td>
+                    <td className="px-4 py-3">{getStatusBadge(r.status)}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(r.created_at)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => { setSelectedItem(r); setShowModal('detail'); }}><Eye className="h-4 w-4" /></Button>
+                        {r.status === 'pending' && (
+                          <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus('report', r.id, 'processing')}><CheckCircle className="h-4 w-4 text-green-600" /></Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                filterOptions={
+                  <div className="flex gap-3 mb-4 flex-wrap">
+                    <Button variant="outline" size="sm" onClick={() => { setShowBatchActions(!showBatchActions); setSelectedIds([]); }} className="gap-1.5">
+                      <CheckSquare className="h-4 w-4" /> 批量操作
+                    </Button>
+                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                      <option value="">全部状态</option>
+                      <option value="pending">待处理</option>
+                      <option value="processing">处理中</option>
+                      <option value="completed">已完成</option>
+                    </select>
+                    <Button variant="outline" size="sm" onClick={() => handleExportData('线索填报', reports)} className="gap-1.5">
+                      <Download className="h-4 w-4" /> 导出JSON
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleExportCSV('线索填报', reports as unknown as Record<string, unknown>[], ['name', 'phone', 'company_name', 'owed_amount', 'status', 'created_at'])} className="gap-1.5">
+                      <File className="h-4 w-4" /> 导出CSV
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setNotificationForm({ type: 'sms', recipients: reports.filter(r => r.status === 'pending').map(r => r.phone), message: '' })} className="gap-1.5">
+                      <Phone className="h-4 w-4" /> 发送短信
+                    </Button>
+                  </div>
+                }
+              />
+            </div>
           )}
 
           {/* ============ 在线申请 ============ */}
           {activeTab === 'applications' && (
-            <DataTable
-              columns={['申请人', '电话', '类型', '欠薪金额', '状态', '提交时间', '操作']}
-              data={applications}
-              isLoading={isLoading}
-              renderRow={(a) => (
-                <tr key={a.id} className="border-b border-border/50 hover:bg-muted/50">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 text-xs font-medium text-green-600">{a.applicant_name.charAt(0)}</div>
-                      <span className="font-medium text-sm">{a.applicant_name}</span>
+            <div className="space-y-4">
+              {/* 批量操作栏 */}
+              {selectedIds.length > 0 && (
+                <Card className="bg-primary/5 border-primary/30">
+                  <CardContent className="flex items-center justify-between p-3">
+                    <span className="text-sm">已选择 {selectedIds.length} 项</span>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleBatchStatus('application', 'processing')}>批量处理</Button>
+                      <Button size="sm" variant="outline" onClick={() => handleBatchStatus('application', 'completed')}>批量完成</Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleBatchDelete('applications')}>批量删除</Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setSelectedIds([]); setShowBatchActions(false); }}>取消</Button>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{a.applicant_phone}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className={a.application_type === 'support_prosecution' ? 'bg-green-50 text-green-700 border-green-300' : 'bg-blue-50 text-blue-700 border-blue-300'}>
-                      {a.application_type === 'support_prosecution' ? '支持起诉' : '法律援助'}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-sm font-medium text-primary">{a.owed_amount ? `¥${a.owed_amount}` : '-'}</td>
-                  <td className="px-4 py-3">{getStatusBadge(a.status)}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(a.created_at)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => { setSelectedItem(a); setShowModal('detail'); }}><Eye className="h-4 w-4" /></Button>
-                      {a.status === 'pending' && (
-                        <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus('application', a.id, 'processing')}><CheckCircle className="h-4 w-4 text-green-600" /></Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                  </CardContent>
+                </Card>
               )}
-              filterOptions={
-                <div className="flex gap-3 mb-4">
-                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                    <option value="">全部状态</option>
-                    <option value="pending">待处理</option>
-                    <option value="processing">处理中</option>
-                    <option value="completed">已完成</option>
-                  </select>
-                  <Button variant="outline" size="sm" onClick={() => handleExportData('在线申请', applications)} className="gap-1.5">
-                    <Download className="h-4 w-4" /> 导出
-                  </Button>
-                </div>
-              }
-            />
+              
+              <DataTable
+                columns={['', '申请人', '电话', '类型', '欠薪金额', '状态', '提交时间', '操作']}
+                data={applications}
+                isLoading={isLoading}
+                renderRow={(a) => (
+                  <tr key={a.id} className="border-b border-border/50 hover:bg-muted/50">
+                    <td className="px-4 py-3">
+                      <Checkbox 
+                        checked={selectedIds.includes(a.id)}
+                        onCheckedChange={() => handleSelectItem(a.id)}
+                        className="h-4 w-4"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 text-xs font-medium text-green-600">{a.applicant_name.charAt(0)}</div>
+                        <span className="font-medium text-sm">{a.applicant_name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{a.applicant_phone}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant="outline" className={a.application_type === 'support_prosecution' ? 'bg-green-50 text-green-700 border-green-300' : 'bg-blue-50 text-blue-700 border-blue-300'}>
+                        {a.application_type === 'support_prosecution' ? '支持起诉' : '法律援助'}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-primary">{a.owed_amount ? `¥${a.owed_amount}` : '-'}</td>
+                    <td className="px-4 py-3">{getStatusBadge(a.status)}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(a.created_at)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => { setSelectedItem(a); setShowModal('detail'); }}><Eye className="h-4 w-4" /></Button>
+                        {a.status === 'pending' && (
+                          <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus('application', a.id, 'processing')}><CheckCircle className="h-4 w-4 text-green-600" /></Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                filterOptions={
+                  <div className="flex gap-3 mb-4 flex-wrap">
+                    <Button variant="outline" size="sm" onClick={() => { setShowBatchActions(!showBatchActions); setSelectedIds([]); }} className="gap-1.5">
+                      <CheckSquare className="h-4 w-4" /> 批量操作
+                    </Button>
+                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                      <option value="">全部状态</option>
+                      <option value="pending">待处理</option>
+                      <option value="processing">处理中</option>
+                      <option value="completed">已完成</option>
+                    </select>
+                    <Button variant="outline" size="sm" onClick={() => handleExportData('在线申请', applications)} className="gap-1.5">
+                      <Download className="h-4 w-4" /> 导出JSON
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleExportCSV('在线申请', applications as unknown as Record<string, unknown>[], ['applicant_name', 'applicant_phone', 'application_type', 'owed_amount', 'status', 'created_at'])} className="gap-1.5">
+                      <File className="h-4 w-4" /> 导出CSV
+                    </Button>
+                  </div>
+                }
+              />
+            </div>
           )}
 
           {/* ============ 案件管理 ============ */}
@@ -1159,6 +1301,42 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ============ 通知弹窗 ============ */}
+      {notificationForm.type && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setNotificationForm({ type: null, recipients: [], message: '' })}>
+          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  {notificationForm.type === 'sms' ? <Phone className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
+                  发送{notificationForm.type === 'sms' ? '短信' : '邮件'}通知
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setNotificationForm({ type: null, recipients: [], message: '' })}><X className="h-4 w-4" /></Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">接收人数</label>
+                <p className="text-sm text-muted-foreground">{notificationForm.recipients.length} 人</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">通知内容</label>
+                <textarea
+                  value={notificationForm.message}
+                  onChange={(e) => setNotificationForm(prev => ({ ...prev, message: e.target.value }))}
+                  placeholder="请输入通知内容..."
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[100px]"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setNotificationForm({ type: null, recipients: [], message: '' })}>取消</Button>
+                <Button onClick={handleSendNotification}>发送</Button>
+              </div>
             </CardContent>
           </Card>
         </div>

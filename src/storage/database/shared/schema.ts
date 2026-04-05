@@ -1,5 +1,4 @@
-import { pgTable, serial, timestamp, varchar, text, numeric, boolean, integer, index } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { pgTable, serial, timestamp, varchar, text, numeric, integer, index } from "drizzle-orm/pg-core";
 
 // 系统健康检查表 - 必须保留
 export const healthCheck = pgTable("health_check", {
