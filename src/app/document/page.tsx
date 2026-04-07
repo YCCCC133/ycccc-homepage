@@ -127,6 +127,11 @@ ${data.facts}
 证据和证据来源：
 ${data.evidence}
 
+法律依据：
+1.《中华人民共和国劳动法》第五十条：工资应当以货币形式按月支付给劳动者本人。
+2.《中华人民共和国劳动合同法》第三十条：用人单位应当按照劳动合同约定和国家规定，向劳动者及时足额支付劳动报酬。
+3.《保障农民工工资支付条例》第三条：农民工有按时足额获得工资的权利。
+
 此致
 北京市西城区人民法院
 
@@ -138,7 +143,7 @@ ${data.evidence}
 2. 证据材料复印件1套
 `,
       support: `
-支持起诉申请书
+支 持 起 诉 申 请 书
 
 申请人：${data.plaintiffName}，男/女，身份证号：${data.plaintiffIdCard}
 住所：${data.plaintiffAddress}
@@ -149,13 +154,15 @@ ${data.evidence}
 ${data.defendantPhone ? `联系电话：${data.defendantPhone}` : ''}
 
 申请事项：
-请求贵院支持申请人对被申请人提起的民事诉讼。
+请求贵院支持申请人对被申请人提起的民事诉讼，追索劳动报酬。
 
 事实和理由：
 ${data.facts}
 
 申请依据：
 根据《中华人民共和国民事诉讼法》第十五条规定："机关、社会团体、企业事业单位对损害国家、集体或者个人民事权益的行为，可以支持受损害的单位或者个人向人民法院起诉。"
+
+根据《人民检察院民事诉讼监督规则（试行）》相关规定，人民检察院可以对农民工等弱势群体起诉维权提供支持。
 
 证据材料：
 ${data.evidence}
@@ -165,6 +172,10 @@ ${data.evidence}
 
                                         申请人：${data.plaintiffName}
                                         ${new Date().toLocaleDateString('zh-CN')}
+
+附：
+1. 身份证复印件1份
+2. 证据材料1套
 `,
       legal_aid: `
 法律援助申请书
@@ -202,6 +213,23 @@ ${data.evidence}
   const copyToClipboard = () => {
     if (generatedDoc) {
       navigator.clipboard.writeText(generatedDoc);
+    }
+  };
+
+  const downloadDocument = () => {
+    if (generatedDoc) {
+      const blob = new Blob([generatedDoc], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const docNames: Record<string, string> = {
+        complaint: '民事起诉状',
+        support: '支持起诉申请书',
+        legal_aid: '法律援助申请书',
+      };
+      link.href = url;
+      link.download = `${docNames[selectedDoc] || '法律文书'}_${new Date().toISOString().split('T')[0]}.txt`;
+      link.click();
+      URL.revokeObjectURL(url);
     }
   };
 
@@ -513,6 +541,14 @@ ${data.evidence}
                     >
                       <Copy className="mr-1 h-3 w-3" />
                       复制
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={downloadDocument}
+                    >
+                      <Download className="mr-1 h-3 w-3" />
+                      下载
                     </Button>
                     <Button
                       size="sm"

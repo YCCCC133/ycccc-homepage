@@ -56,41 +56,45 @@
 
 :root {
   --radius: 0.75rem;
-  /* 法务平台专业配色 - 深蓝金主题 */
-  --background: oklch(0.98 0.005 250);
-  --foreground: oklch(0.15 0.02 250);
+  /* 护薪平台专业配色 - 深蓝墨绿渐变，主基调绿色 */
+  --background: oklch(0.98 0.005 180);
+  --foreground: oklch(0.15 0.02 180);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.02 250);
+  --card-foreground: oklch(0.15 0.02 180);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.02 250);
-  --primary: oklch(0.45 0.15 250);
-  --primary-foreground: oklch(0.98 0.005 250);
-  --secondary: oklch(0.95 0.01 250);
-  --secondary-foreground: oklch(0.25 0.02 250);
-  --muted: oklch(0.96 0.01 250);
-  --muted-foreground: oklch(0.5 0.02 250);
-  --accent: oklch(0.92 0.02 250);
-  --accent-foreground: oklch(0.2 0.02 250);
+  --popover-foreground: oklch(0.15 0.02 180);
+  /* 主色调：墨绿色 */
+  --primary: oklch(0.45 0.12 160);
+  --primary-foreground: oklch(0.98 0.005 180);
+  --secondary: oklch(0.95 0.01 180);
+  --secondary-foreground: oklch(0.25 0.02 180);
+  --muted: oklch(0.96 0.01 180);
+  --muted-foreground: oklch(0.5 0.02 180);
+  --accent: oklch(0.92 0.02 180);
+  --accent-foreground: oklch(0.2 0.02 180);
   --destructive: oklch(0.55 0.22 25);
-  --border: oklch(0.9 0.01 250);
-  --input: oklch(0.9 0.01 250);
-  --ring: oklch(0.45 0.15 250);
+  --border: oklch(0.9 0.01 180);
+  --input: oklch(0.9 0.01 180);
+  --ring: oklch(0.45 0.12 160);
+  /* 深蓝色辅助色 */
+  --deep-blue: oklch(0.35 0.15 250);
+  --deep-blue-foreground: oklch(0.98 0.005 250);
   /* 金色点缀色 */
   --gold: oklch(0.75 0.15 85);
   --gold-foreground: oklch(0.15 0.02 85);
-  --chart-1: oklch(0.45 0.15 250);
-  --chart-2: oklch(0.6 0.12 180);
+  --chart-1: oklch(0.45 0.12 160);
+  --chart-2: oklch(0.35 0.15 250);
   --chart-3: oklch(0.75 0.15 85);
   --chart-4: oklch(0.65 0.1 300);
   --chart-5: oklch(0.55 0.12 120);
-  --sidebar: oklch(0.98 0.005 250);
-  --sidebar-foreground: oklch(0.15 0.02 250);
-  --sidebar-primary: oklch(0.45 0.15 250);
-  --sidebar-primary-foreground: oklch(0.98 0.005 250);
-  --sidebar-accent: oklch(0.95 0.01 250);
-  --sidebar-accent-foreground: oklch(0.25 0.02 250);
-  --sidebar-border: oklch(0.9 0.01 250);
-  --sidebar-ring: oklch(0.45 0.15 250);
+  --sidebar: oklch(0.98 0.005 180);
+  --sidebar-foreground: oklch(0.15 0.02 180);
+  --sidebar-primary: oklch(0.45 0.12 160);
+  --sidebar-primary-foreground: oklch(0.98 0.005 180);
+  --sidebar-accent: oklch(0.95 0.01 180);
+  --sidebar-accent-foreground: oklch(0.25 0.02 180);
+  --sidebar-border: oklch(0.9 0.01 180);
+  --sidebar-ring: oklch(0.45 0.12 160);
 }
 
 .dark {

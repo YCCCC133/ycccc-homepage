@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -8,10 +8,10 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  FileText,
-  Phone,
   Calendar,
   ChevronRight,
+  FileText,
+  Phone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,48 +26,22 @@ import {
 } from '@/components/ui/select';
 
 interface Case {
-  id: string;
-  type: '线索' | '申请';
+  id: number;
+  case_number: string;
+  type: '线索' | '申请' | '案件';
   status: 'pending' | 'processing' | 'completed';
   statusText: string;
   title: string;
+  plaintiff_name: string;
+  defendant_name: string;
+  case_type: string;
+  amount: string;
   submitDate: string;
   updateDate: string;
   content: string;
+  handler?: string;
+  notes?: string;
 }
-
-const mockCases: Case[] = [
-  {
-    id: 'XC20260115001',
-    type: '线索',
-    status: 'processing',
-    statusText: '处理中',
-    title: '某建筑公司拖欠工资',
-    submitDate: '2026-01-15',
-    updateDate: '2026-01-17',
-    content: '涉及金额：45,000元 | 欠薪月数：3个月',
-  },
-  {
-    id: 'SQ20260112001',
-    type: '申请',
-    status: 'pending',
-    statusText: '待审核',
-    title: '支持起诉申请',
-    submitDate: '2026-01-12',
-    updateDate: '2026-01-12',
-    content: '申请类型：检察机关支持起诉',
-  },
-  {
-    id: 'XC20260108001',
-    type: '线索',
-    status: 'completed',
-    statusText: '已办结',
-    title: '某餐饮公司欠薪纠纷',
-    submitDate: '2026-01-08',
-    updateDate: '2026-01-15',
-    content: '涉及金额：12,000元 | 已成功追回',
-  },
-];
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -81,22 +55,64 @@ const statusIcons = {
   completed: CheckCircle2,
 };
 
+const statusLabels = {
+  pending: '待处理',
+  processing: '处理中',
+  completed: '已完成',
+};
+
 export default function CasesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [cases] = useState<Case[]>(mockCases);
+  const [cases, setCases] = useState<Case[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+
+  useEffect(() => {
+    fetchCases();
+  }, []);
+
+  const fetchCases = async () => {
+    try {
+      // 获取案件数据
+      const res = await fetch('/api/cases');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setCases(data.data.map((c: Record<string, unknown>) => ({
+          id: c.id as number,
+          case_number: c.case_number as string,
+          type: '案件' as const,
+          status: c.status as 'pending' | 'processing' | 'completed',
+          statusText: statusLabels[c.status as keyof typeof statusLabels] || '未知',
+          title: `${c.plaintiff_name} vs ${c.defendant_name}`,
+          plaintiff_name: c.plaintiff_name as string,
+          defendant_name: c.defendant_name as string,
+          case_type: c.case_type as string,
+          amount: c.amount as string,
+          submitDate: c.filing_date ? new Date(c.filing_date as string).toLocaleDateString('zh-CN') : '-',
+          updateDate: c.updated_at ? new Date(c.updated_at as string).toLocaleDateString('zh-CN') : '-',
+          content: `${c.case_type} | 涉案金额：¥${Number(c.amount || 0).toLocaleString()}`,
+          handler: c.handler as string,
+          notes: c.notes as string,
+        })));
+      }
+    } catch (error) {
+      console.error('获取案件数据失败:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredCases = cases.filter((c) => {
     const matchesSearch =
-      c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.title.toLowerCase().includes(searchQuery.toLowerCase());
+      c.case_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.plaintiff_name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const handleSearch = () => {
-    // In real app, this would make an API call
     console.log('Searching for:', searchQuery);
   };
 

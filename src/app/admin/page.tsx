@@ -26,6 +26,7 @@ interface Stats {
   avgProcessingDays?: number;
   successRate?: number;
   helpedWorkers?: number;
+  sourceDistribution?: Record<string, number>; // 线索来源分布
 }
 
 interface Announcement {
@@ -37,6 +38,7 @@ interface Report {
   id: number; name: string; phone: string; company_name: string | null; owed_amount: string | null;
   description: string | null; status: string; created_at: string; id_card?: string;
   company_address?: string; owed_months?: number; worker_count?: number; evidence?: string;
+  source?: string; // 线索来源：自主填报/12345热线/街道综治/检察业务
 }
 
 interface Application {
@@ -597,8 +599,8 @@ export default function AdminPage() {
   if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen">
-        {/* 左侧品牌区域 */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-8 flex-col justify-between">
+        {/* 左侧品牌区域 - 深蓝墨绿渐变 */}
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#1a3a5c] via-[#1e4d5c] to-[#1a5c4c] p-8 flex-col justify-between">
           <div>
             <div className="flex items-center gap-3 mb-8">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
@@ -613,22 +615,22 @@ export default function AdminPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white/10 rounded-xl p-4 backdrop-blur">
-                <Users className="h-8 w-8 text-white/80 mb-2" />
+                <Users className="h-8 w-8 text-emerald-300 mb-2" />
                 <p className="text-2xl font-bold text-white">2,458+</p>
                 <p className="text-white/60 text-sm">帮助劳动者</p>
               </div>
               <div className="bg-white/10 rounded-xl p-4 backdrop-blur">
-                <Database className="h-8 w-8 text-white/80 mb-2" />
+                <Database className="h-8 w-8 text-cyan-300 mb-2" />
                 <p className="text-2xl font-bold text-white">1,200+</p>
                 <p className="text-white/60 text-sm">成功案例</p>
               </div>
               <div className="bg-white/10 rounded-xl p-4 backdrop-blur">
-                <DollarSign className="h-8 w-8 text-white/80 mb-2" />
+                <DollarSign className="h-8 w-8 text-yellow-300 mb-2" />
                 <p className="text-2xl font-bold text-white">¥860万+</p>
                 <p className="text-white/60 text-sm">追回金额</p>
               </div>
               <div className="bg-white/10 rounded-xl p-4 backdrop-blur">
-                <CheckCircle className="h-8 w-8 text-white/80 mb-2" />
+                <CheckCircle className="h-8 w-8 text-green-300 mb-2" />
                 <p className="text-2xl font-bold text-white">98.6%</p>
                 <p className="text-white/60 text-sm">成功维权率</p>
               </div>
@@ -639,10 +641,10 @@ export default function AdminPage() {
         </div>
         
         {/* 右侧登录区域 */}
-        <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-muted/50 to-background">
+        <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-emerald-50/50 to-background">
           <Card className="w-full max-w-md shadow-xl border-border/50">
             <CardHeader className="text-center pb-2">
-              <div className="lg:hidden mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80">
+              <div className="lg:hidden mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-[#1a3a5c] to-[#1a5c4c]">
                 <Scale className="h-7 w-7 text-white" />
               </div>
               <CardTitle className="text-xl">管理员登录</CardTitle>
@@ -655,7 +657,7 @@ export default function AdminPage() {
                   <input
                     type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                     placeholder="请输入管理员密码"
-                    className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
+                    className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                   />
                 </div>
                 {loginError && (
@@ -663,7 +665,7 @@ export default function AdminPage() {
                     <AlertCircle className="h-4 w-4" />{loginError}
                   </div>
                 )}
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full bg-gradient-to-r from-[#1a3a5c] to-[#1a5c4c] hover:from-[#1a3a5c]/90 hover:to-[#1a5c4c]/90" disabled={isLoading}>
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}登录系统
                 </Button>
                 <p className="text-center text-xs text-muted-foreground mt-2">
@@ -889,6 +891,33 @@ export default function AdminPage() {
                 <StatCard title="咨询记录" value={stats.consultations} icon={MessageSquare} color="orange" />
               </div>
 
+              {/* 线索来源分布 */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-primary" />线索来源分布
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {[
+                      { label: '自主填报', count: reports.filter(r => !r.source || r.source === '自主填报').length, color: 'bg-emerald-500', icon: '📝' },
+                      { label: '12345热线', count: reports.filter(r => r.source === '12345热线').length, color: 'bg-blue-500', icon: '📞' },
+                      { label: '街道综治', count: reports.filter(r => r.source === '街道综治').length, color: 'bg-purple-500', icon: '🏢' },
+                      { label: '检察业务', count: reports.filter(r => r.source === '检察业务').length, color: 'bg-orange-500', icon: '⚖️' },
+                    ].map((source) => (
+                      <div key={source.label} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                        <span className="text-2xl">{source.icon}</span>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{source.label}</p>
+                          <p className="text-xl font-bold">{source.count}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
               <div className="grid gap-6 lg:grid-cols-3">
                 <Card className="lg:col-span-2">
                   <CardHeader className="pb-2">
@@ -1028,7 +1057,7 @@ export default function AdminPage() {
                 </Card>
               )}
               <DataTable
-                columns={['', '申请人', '电话', '公司', '欠薪金额', '状态', '提交时间', '操作']}
+                columns={['', '申请人', '电话', '公司', '欠薪金额', '来源', '状态', '提交时间', '操作']}
                 data={reports}
                 isLoading={isLoading}
                 selectedIds={selectedIds}
@@ -1047,6 +1076,16 @@ export default function AdminPage() {
                     <td className="px-4 py-3 text-sm text-muted-foreground">{r.phone}</td>
                     <td className="px-4 py-3 text-sm text-muted-foreground max-w-[150px] truncate">{r.company_name || '-'}</td>
                     <td className="px-4 py-3 text-sm font-medium text-primary">{r.owed_amount ? `¥${r.owed_amount}` : '-'}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant="outline" className={cn('text-xs',
+                        r.source === '12345热线' ? 'border-blue-300 text-blue-600' :
+                        r.source === '街道综治' ? 'border-purple-300 text-purple-600' :
+                        r.source === '检察业务' ? 'border-orange-300 text-orange-600' :
+                        'border-emerald-300 text-emerald-600'
+                      )}>
+                        {r.source || '自主填报'}
+                      </Badge>
+                    </td>
                     <td className="px-4 py-3">{getStatusBadge(r.status)}</td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(r.created_at)}</td>
                     <td className="px-4 py-3">
