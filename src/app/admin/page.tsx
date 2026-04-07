@@ -176,11 +176,21 @@ export default function AdminPage() {
         body: JSON.stringify({ password }),
       });
       const data = await res.json();
-      if (data.success) { setIsAuthenticated(true); setPassword(''); }
-      else { setLoginError(data.error || '登录失败'); }
-    } catch {
-      setLoginError('网络错误');
-    } finally { setIsLoading(false); }
+      if (data.success) {
+        setIsAuthenticated(true);
+        setPassword('');
+        // 登录成功后立即获取数据，不在这里设置isLoading为false
+        // fetchData会管理isLoading状态
+      } else {
+        setLoginError(data.error || '登录失败');
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('登录错误:', error);
+      setLoginError('网络错误，请稍后重试');
+      setIsLoading(false);
+    }
+    // 注意：成功的登录不在这里重置isLoading，由fetchData管理
   };
 
   const handleLogout = () => {
@@ -198,6 +208,12 @@ export default function AdminPage() {
           fetch('/api/admin/data?type=stats'),
           fetch('/api/admin/cases?pageSize=5'),
         ]);
+        // 检查认证状态
+        if (statsRes.status === 401 || casesRes.status === 401) {
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          return;
+        }
         const statsData = await statsRes.json();
         const casesData = await casesRes.json();
         if (statsData.stats) setStats(statsData.stats);
@@ -668,9 +684,6 @@ export default function AdminPage() {
                 <Button type="submit" className="w-full bg-gradient-to-r from-[#1a3a5c] to-[#1a5c4c] hover:from-[#1a3a5c]/90 hover:to-[#1a5c4c]/90" disabled={isLoading}>
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}登录系统
                 </Button>
-                <p className="text-center text-xs text-muted-foreground mt-2">
-                  默认密码：<code className="px-1.5 py-0.5 rounded bg-muted font-mono">huxin2026</code>
-                </p>
               </form>
               <div className="mt-6 pt-4 border-t border-border/50">
                 <button onClick={() => router.push('/')} className="w-full text-center text-sm text-muted-foreground hover:text-primary flex items-center justify-center gap-2">
