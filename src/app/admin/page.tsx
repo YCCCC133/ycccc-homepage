@@ -1461,7 +1461,7 @@ export default function AdminPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <div className="flex gap-4">
-                  <div className="text-sm text-muted-foreground">共 {consultations.length} 条咨询记录</div>
+                  <div className="text-sm text-muted-foreground">共 {consultationsTotal || filteredConsultations.length} 条咨询记录</div>
                   <div className="flex gap-3">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1469,7 +1469,10 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => handleExportData('咨询记录', consultations)} className="gap-1.5"><Download className="h-4 w-4" />导出</Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleExportData('咨询记录', filteredConsultations)} className="gap-1.5"><Download className="h-4 w-4" />导出JSON</Button>
+                  <Button variant="outline" size="sm" onClick={() => handleExportCSV('咨询记录', filteredConsultations as unknown as Record<string, unknown>[], ['user_question', 'ai_response', 'created_at'])} className="gap-1.5"><File className="h-4 w-4" />导出CSV</Button>
+                </div>
               </div>
               {filteredConsultations.length === 0 && !isLoading ? (
                 <Card><CardContent className="p-8 text-center"><MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" /><p className="text-muted-foreground">暂无咨询记录</p></CardContent></Card>
@@ -1497,6 +1500,16 @@ export default function AdminPage() {
                     </Card>
                   ))}
                 </div>
+                {consultationsTotal > 10 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30 rounded-lg">
+                    <p className="text-sm text-muted-foreground">显示 {filteredConsultations.length} 条，共 {consultationsTotal} 条</p>
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1}>上一页</Button>
+                      <span className="px-3 py-1.5 text-sm">第 {page} 页</span>
+                      <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={filteredConsultations.length < 10}>下一页</Button>
+                    </div>
+                  </div>
+                )}
               )}
             </div>
           )}
