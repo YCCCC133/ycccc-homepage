@@ -213,7 +213,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature, index) => (
+            {features.map((feature) => (
               <Link 
                 key={feature.title} 
                 href={feature.href}

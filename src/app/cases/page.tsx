@@ -65,12 +65,7 @@ export default function CasesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [cases, setCases] = useState<Case[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
-
-  useEffect(() => {
-    fetchCases();
-  }, []);
 
   const fetchCases = async () => {
     try {
@@ -98,10 +93,12 @@ export default function CasesPage() {
       }
     } catch (error) {
       console.error('获取案件数据失败:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCases();
+  }, []);
 
   const filteredCases = cases.filter((c) => {
     const matchesSearch =

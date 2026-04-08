@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ChevronLeft, ChevronRight, Volume2, Clock, User, ArrowRight } from 'lucide-react';
 
 interface Announcement {
@@ -125,12 +126,15 @@ export function ScrollingAnnouncementBanner() {
       {hasImage ? (
         <>
           {/* Optimized Image Loading */}
-          <img
+          <Image
             src={currentAnnouncement.image_url || ''}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+            fill
+            className="object-cover transition-opacity duration-700"
             style={{ opacity: hasImage ? 1 : 0 }}
             onLoad={() => setImagesLoaded(prev => ({ ...prev, [currentAnnouncement.id]: true }))}
+            sizes="100vw"
+            priority={currentIndex === 0}
           />
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/30" />
@@ -258,10 +262,12 @@ export function AnnouncementThumbnails({ announcements }: { announcements: Annou
           className="group relative aspect-[16/9] rounded-lg overflow-hidden"
         >
           {announcement.image_url ? (
-            <img
+            <Image
               src={announcement.image_url}
               alt={announcement.title}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              sizes="(max-width: 640px) 50vw, 33vw"
             />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-emerald-800" />
