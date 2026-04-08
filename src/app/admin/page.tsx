@@ -7,7 +7,8 @@ import {
   Trash2, X, ChevronLeft, RefreshCw, Scale, Shield, Eye, ArrowRight,
   Bell, Home, PlusCircle, Loader2, Database, Upload, Download, Settings, BarChart3,
   Search, Edit, FolderOpen, File, LayoutTemplate, Menu, User, AlertTriangle,
-  Mail, Phone, Clock, DollarSign, Users, Printer, PieChart, Activity, BookOpen
+  Mail, Phone, Clock, DollarSign, Users, Printer, PieChart, Activity, BookOpen,
+  Calendar, Archive
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -182,6 +183,10 @@ export default function AdminPage() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
   const [passwordError, setPasswordError] = useState('');
+
+  // 案例关联文件
+  const [caseFiles, setCaseFiles] = useState<FileItem[]>([]);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
 
   // ============ 初始化 ============
   useEffect(() => { checkAuth(); }, []);
@@ -461,6 +466,34 @@ export default function AdminPage() {
     a.download = `${doc.document_type}_${doc.applicant_name || '未知'}_${new Date().toISOString().split('T')[0]}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // 获取案例关联文件
+  const fetchCaseFiles = async (caseId: number) => {
+    setIsLoadingFiles(true);
+    try {
+      const res = await fetch(`/api/admin/files?case_id=${caseId}`);
+      const data = await res.json();
+      if (data.success) {
+        setCaseFiles(data.data);
+      }
+    } catch (error) {
+      console.error('获取案例文件失败:', error);
+    } finally {
+      setIsLoadingFiles(false);
+    }
+  };
+
+  // 打开详情时获取文件
+  const handleOpenDetail = (item: typeof selectedItem) => {
+    setSelectedItem(item);
+    setShowModal('detail');
+    // 如果是案件类型，获取关联文件
+    if (item && 'case_number' in item) {
+      fetchCaseFiles(item.id as number);
+    } else {
+      setCaseFiles([]);
+    }
   };
 
   const handleSaveAnnouncement = async () => {
@@ -1212,7 +1245,7 @@ export default function AdminPage() {
                     <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(r.created_at)}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => { setSelectedItem(r); setShowModal('detail'); }}><Eye className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleOpenDetail(r)}><Eye className="h-4 w-4" /></Button>
                         {r.status === 'pending' && (
                           <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus('report', r.id, 'processing')}><CheckCircle className="h-4 w-4 text-green-600" /></Button>
                         )}
@@ -1856,25 +1889,185 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent>
               {showModal === 'detail' && selectedItem && (
-                <div className="space-y-3">
-                  {'name' in selectedItem && <DetailRow label="姓名" value={selectedItem.name} />}
-                  {'phone' in selectedItem && <DetailRow label="电话" value={selectedItem.phone} />}
-                  {'company_name' in selectedItem && <DetailRow label="公司" value={selectedItem.company_name || '-'} />}
-                  {'owed_amount' in selectedItem && <DetailRow label="欠薪金额" value={selectedItem.owed_amount ? `¥${selectedItem.owed_amount}` : '-'} highlight />}
-                  {'description' in selectedItem && <DetailRow label="描述" value={selectedItem.description || '-'} />}
-                  {'case_brief' in selectedItem && <DetailRow label="案件简述" value={selectedItem.case_brief || '-'} />}
-                  {'case_number' in selectedItem && <DetailRow label="案件编号" value={selectedItem.case_number} mono />}
-                  {'case_type' in selectedItem && <DetailRow label="案件类型" value={selectedItem.case_type} />}
-                  {'defendant_name' in selectedItem && <DetailRow label="被告" value={selectedItem.defendant_name} />}
-                  {'amount' in selectedItem && <DetailRow label="涉案金额" value={`¥${Number(selectedItem.amount).toLocaleString()}`} highlight />}
-                  {'notes' in selectedItem && selectedItem.notes && <DetailRow label="备注" value={selectedItem.notes} />}
-                  {'user_question' in selectedItem && <DetailRow label="用户问题" value={selectedItem.user_question} />}
-                  {'ai_response' in selectedItem && <DetailRow label="AI回复" value={selectedItem.ai_response || '暂无回复'} />}
-                  {'status' in selectedItem && <div><span className="text-xs text-muted-foreground">状态</span><div className="mt-1">{getStatusBadge(selectedItem.status as string)}</div></div>}
-                  
-                  {/* 案件承办人分配 */}
+                <div className="space-y-4">
+                  {/* 案件概览区域 */}
+                  {'case_number' in selectedItem && (
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-lg text-foreground">{selectedItem.case_number || '案件详情'}</h3>
+                          {'case_type' in selectedItem && (
+                            <Badge variant="outline" className="mt-1 bg-blue-50 text-blue-700 border-blue-200">{selectedItem.case_type}</Badge>
+                          )}
+                        </div>
+                        {'status' in selectedItem && <div className="text-right">{getStatusBadge(selectedItem.status as string)}</div>}
+                      </div>
+                      {'amount' in selectedItem && selectedItem.amount && (
+                        <div className="text-2xl font-bold text-blue-600">¥{Number(selectedItem.amount).toLocaleString()}</div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 基本信息卡片 */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {'plaintiff_name' in selectedItem && selectedItem.plaintiff_name && (
+                      <div className="bg-muted/30 rounded-lg p-3">
+                        <div className="text-xs text-muted-foreground mb-1">原告</div>
+                        <div className="text-sm font-medium">{selectedItem.plaintiff_name}</div>
+                        {'plaintiff_phone' in selectedItem && selectedItem.plaintiff_phone && (
+                          <div className="text-xs text-muted-foreground mt-1">{selectedItem.plaintiff_phone}</div>
+                        )}
+                      </div>
+                    )}
+                    {'defendant_name' in selectedItem && selectedItem.defendant_name && (
+                      <div className="bg-muted/30 rounded-lg p-3">
+                        <div className="text-xs text-muted-foreground mb-1">被告</div>
+                        <div className="text-sm font-medium">{selectedItem.defendant_name}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 线索/申请信息 */}
+                  {'name' in selectedItem && (
+                    <div className="bg-muted/30 rounded-lg p-3">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">姓名</div>
+                          <div className="text-sm font-medium">{selectedItem.name}</div>
+                        </div>
+                        {'phone' in selectedItem && (
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">联系电话</div>
+                            <div className="text-sm font-medium">{selectedItem.phone}</div>
+                          </div>
+                        )}
+                        {'company_name' in selectedItem && (
+                          <div className="col-span-2">
+                            <div className="text-xs text-muted-foreground mb-1">涉及公司</div>
+                            <div className="text-sm">{selectedItem.company_name || '-'}</div>
+                          </div>
+                        )}
+                        {'owed_amount' in selectedItem && selectedItem.owed_amount && (
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">欠薪金额</div>
+                            <div className="text-sm font-semibold text-red-600">¥{Number(selectedItem.owed_amount).toLocaleString()}</div>
+                          </div>
+                        )}
+                        {'worker_count' in selectedItem && (
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">涉及人数</div>
+                            <div className="text-sm">{selectedItem.worker_count || 1} 人</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 描述/简述 */}
+                  {('description' in selectedItem || 'case_brief' in selectedItem) && (
+                    <div className="bg-muted/30 rounded-lg p-3">
+                      <div className="text-xs text-muted-foreground mb-2">{'case_brief' in selectedItem ? '案件简述' : '详细描述'}</div>
+                      <div className="text-sm whitespace-pre-wrap">{(selectedItem as Record<string, unknown>).case_brief || (selectedItem as Record<string, unknown>).description || '-'}</div>
+                    </div>
+                  )}
+
+                  {/* 证据信息 */}
+                  {'evidence' in selectedItem && selectedItem.evidence && (
+                    <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4 text-amber-600" />
+                        <span className="text-xs text-muted-foreground">证据材料</span>
+                      </div>
+                      <div className="text-sm">{selectedItem.evidence}</div>
+                    </div>
+                  )}
+
+                  {/* 关联文件（案件类型显示） */}
+                  {'case_number' in selectedItem && (
+                    <div className="border-t pt-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-muted-foreground">关联文件</span>
+                        {isLoadingFiles && <Loader2 className="h-3 w-3 animate-spin" />}
+                      </div>
+                      {caseFiles.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {caseFiles.map((file) => (
+                            <div key={file.id} className="bg-muted/30 rounded-lg p-2 flex items-center gap-2">
+                              {file.type?.startsWith('image/') ? (
+                                <div className="relative w-12 h-12 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                                  <img src={file.url} alt={file.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                </div>
+                              ) : (
+                                <div className="w-12 h-12 rounded bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                  <File className="h-6 w-6 text-blue-600" />
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-medium truncate">{file.name}</div>
+                                <div className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</div>
+                              </div>
+                              <a href={file.url} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-muted rounded">
+                                <Download className="h-4 w-4 text-muted-foreground" />
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground text-center py-4 bg-muted/20 rounded-lg">
+                          暂无关联文件
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 咨询记录 */}
+                  {'user_question' in selectedItem && (
+                    <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+                      <div className="text-xs text-muted-foreground mb-2">用户问题</div>
+                      <div className="text-sm mb-3">{selectedItem.user_question}</div>
+                      <div className="text-xs text-muted-foreground mb-2">AI回复</div>
+                      <div className="text-sm text-muted-foreground">{selectedItem.ai_response || '暂无回复'}</div>
+                    </div>
+                  )}
+
+                  {/* 时间线 */}
+                  {'created_at' in selectedItem && (
+                    <div className="border-t pt-3">
+                      <div className="text-xs text-muted-foreground mb-2">时间线</div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">创建时间：</span>
+                          <span>{new Date(selectedItem.created_at as string).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</span>
+                        </div>
+                        {'updated_at' in selectedItem && (selectedItem as Record<string, unknown>).updated_at && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle className="h-4 w-4 text-emerald-500" />
+                            <span className="text-muted-foreground">更新时间：</span>
+                            <span>{new Date((selectedItem as Record<string, unknown>).updated_at as string).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</span>
+                          </div>
+                        )}
+                        {'filing_date' in selectedItem && (selectedItem as Record<string, unknown>).filing_date && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="h-4 w-4 text-blue-500" />
+                            <span className="text-muted-foreground">立案时间：</span>
+                            <span>{String((selectedItem as Record<string, unknown>).filing_date)}</span>
+                          </div>
+                        )}
+                        {'close_date' in selectedItem && (selectedItem as Record<string, unknown>).close_date && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Archive className="h-4 w-4 text-gray-500" />
+                            <span className="text-muted-foreground">结案时间：</span>
+                            <span>{String((selectedItem as Record<string, unknown>).close_date)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 承办人 */}
                   {'handler' in selectedItem && (
-                    <div>
+                    <div className="border-t pt-3">
                       <span className="text-xs text-muted-foreground">承办人</span>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {handlers.map((h) => (
@@ -1894,9 +2087,18 @@ export default function AdminPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* 备注 */}
+                  {'notes' in selectedItem && selectedItem.notes && (
+                    <div className="bg-muted/30 rounded-lg p-3">
+                      <div className="text-xs text-muted-foreground mb-1">备注</div>
+                      <div className="text-sm">{selectedItem.notes}</div>
+                    </div>
+                  )}
                   
+                  {/* 操作按钮 */}
                   {'status' in selectedItem && (selectedItem.status === 'pending' || selectedItem.status === 'processing') && (
-                    <div className="flex gap-2 pt-4">
+                    <div className="flex gap-2 pt-4 border-t">
                       {selectedItem.status === 'pending' && <Button size="sm" onClick={() => { handleUpdateStatus('case' in selectedItem ? 'case' : 'report', selectedItem.id, 'processing'); setShowModal(null); }}>开始处理</Button>}
                       <Button size="sm" variant="outline" onClick={() => { handleUpdateStatus('case' in selectedItem ? 'case' : 'report', selectedItem.id, 'completed'); setShowModal(null); }}>标记完成</Button>
                     </div>
