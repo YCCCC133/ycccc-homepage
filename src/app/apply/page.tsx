@@ -70,10 +70,34 @@ export default function ApplyPage() {
 
   async function onSubmit(data: FormData) {
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setSubmitSuccess(true);
-    console.log(data);
+    try {
+      const res = await fetch('/api/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicant_name: data.name,
+          applicant_phone: data.phone,
+          applicant_id_card: data.idCard,
+          applicant_address: data.address,
+          application_type: data.applicationType,
+          case_brief: data.caseDescription,
+          owed_amount: data.owedAmount,
+        }),
+      });
+      
+      const result = await res.json();
+      
+      if (result.success) {
+        setSubmitSuccess(true);
+      } else {
+        alert(result.error || '提交失败，请稍后重试');
+      }
+    } catch (error) {
+      console.error('提交申请失败:', error);
+      alert('网络错误，请稍后重试');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const applicationTypes = [
