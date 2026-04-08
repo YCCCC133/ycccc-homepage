@@ -94,15 +94,45 @@ export default function DocumentPage() {
     },
   });
 
+  const docTypeMapping: Record<string, string> = {
+    complaint: '民事起诉状',
+    support: '支持起诉申请书',
+    legal_aid: '法律援助申请表',
+    payment_order: '支付令申请书',
+    evidence: '证据目录',
+  };
+
   async function onSubmit(data: FormData) {
     setIsGenerating(true);
-    // Simulate document generation
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    // Generate document content
-    const docContent = generateDocument(selectedDoc, data);
-    setGeneratedDoc(docContent);
-    setIsGenerating(false);
+    try {
+      const response = await fetch('/api/document', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          document_type: docTypeMapping[selectedDoc] || selectedDoc,
+          applicant_name: data.plaintiffName,
+          applicant_phone: data.plaintiffPhone,
+          case_description: `${data.claim}\n\n${data.facts}\n\n证据：${data.evidence}`,
+          salary_info: `身份证：${data.plaintiffIdCard}\n电话：${data.plaintiffPhone}`,
+          employer_info: `单位：${data.defendantName}\n地址：${data.defendantAddress}\n电话：${data.defendantPhone || '无'}`
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setGeneratedDoc(result.data.document_content);
+      } else {
+        alert(result.error || '生成失败，请重试');
+      }
+    } catch (error) {
+      console.error('生成文书失败:', error);
+      alert('网络错误，请重试');
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   function generateDocument(type: string, data: FormData): string {

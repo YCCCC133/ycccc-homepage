@@ -81,7 +81,7 @@ export default function ApplyPage() {
           applicant_address: data.address,
           application_type: data.applicationType,
           case_brief: data.caseDescription,
-          owed_amount: data.owedAmount,
+          request_content: data.requestContent,
         }),
       });
       

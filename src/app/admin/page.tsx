@@ -66,7 +66,9 @@ interface Application {
 }
 
 interface Document {
-  id: number; document_type: string; applicant_name: string | null; created_at: string;
+  id: number; document_type: string; applicant_name: string | null; 
+  applicant_phone?: string | null; document_content?: string | null;
+  template_used?: string | null; created_at: string;
 }
 
 interface Consultation {
@@ -80,7 +82,8 @@ interface CaseItem {
 }
 
 interface FileItem {
-  id: number; name: string; type: string; size: number; case_id: number | null; created_at: string;
+  id: number; name: string; type: string; size: number; case_id: number | null; 
+  created_at: string; url?: string; path?: string;
 }
 
 interface Template {
@@ -89,7 +92,8 @@ interface Template {
 
 interface Knowledge {
   id: number; title: string; content: string; category: string; source: string | null;
-  tags: string[]; is_active: boolean; created_at: string; updated_at: string;
+  tags: string[]; is_active: boolean; is_published?: boolean;
+  created_at: string; updated_at: string; image_url?: string;
 }
 
 interface SystemSetting {
@@ -153,12 +157,12 @@ export default function AdminPage() {
   const [consultationsTotal, setConsultationsTotal] = useState(0);
 
   // UI状态
-  const [selectedItem, setSelectedItem] = useState<Report | Application | Document | Consultation | Announcement | CaseItem | Template | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Report | Application | Document | Consultation | Announcement | Knowledge | CaseItem | Template | null>(null);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showModal, setShowModal] = useState<'detail' | 'form' | 'newCase' | 'newTemplate' | 'editTemplate' | null>(null);
-  const [editingItem, setEditingItem] = useState<Announcement | null>(null);
+  const [showModal, setShowModal] = useState<'detail' | 'form' | 'knowledgeForm' | 'newCase' | 'newTemplate' | 'editTemplate' | null>(null);
+  const [editingItem, setEditingItem] = useState<Record<string, unknown> | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -1562,7 +1566,7 @@ export default function AdminPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <p className="text-sm text-muted-foreground">智能咨询的数据源，AI会根据知识库内容回答问题</p>
-                <Button size="sm" onClick={() => { setEditingItem({ id: 0, title: '', content: '', category: '劳动法', source: '', tags: [], is_active: true, created_at: '', updated_at: '' } as Announcement); setShowModal('knowledgeForm'); }} className="gap-1.5"><PlusCircle className="h-4 w-4" />添加知识</Button>
+                <Button size="sm" onClick={() => { setEditingItem({ id: 0, title: '', content: '', category: '劳动法', source: '', tags: [], is_active: true, created_at: '', updated_at: '' } as unknown as Record<string, unknown>); setShowModal('knowledgeForm'); }} className="gap-1.5"><PlusCircle className="h-4 w-4" />添加知识</Button>
               </div>
               <div className="grid gap-3">
                 {isLoading ? (
@@ -1589,7 +1593,7 @@ export default function AdminPage() {
                             )}
                           </div>
                           <div className="flex gap-1 shrink-0">
-                            <Button variant="ghost" size="sm" onClick={() => { setEditingItem(k as unknown as Announcement); setShowModal('knowledgeForm'); }}><Edit className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => { setEditingItem(k as unknown as Record<string, unknown>); setShowModal('knowledgeForm'); }}><Edit className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete('knowledge', k.id)}><Trash2 className="h-4 w-4" /></Button>
                           </div>
                         </div>
@@ -1626,7 +1630,7 @@ export default function AdminPage() {
                     <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(a.created_at)}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => { setEditingItem(a); setShowModal('form'); }}>编辑</Button>
+                        <Button variant="ghost" size="sm" onClick={() => { setEditingItem(a as unknown as Record<string, unknown>); setShowModal('form'); }}>编辑</Button>
                         <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete('announcement', a.id)}>删除</Button>
                       </div>
                     </td>
@@ -1967,7 +1971,7 @@ export default function AdminPage() {
                   {('description' in selectedItem || 'case_brief' in selectedItem) && (
                     <div className="bg-muted/30 rounded-lg p-3">
                       <div className="text-xs text-muted-foreground mb-2">{'case_brief' in selectedItem ? '案件简述' : '详细描述'}</div>
-                      <div className="text-sm whitespace-pre-wrap">{(selectedItem as Record<string, unknown>).case_brief || (selectedItem as Record<string, unknown>).description || '-'}</div>
+                      <div className="text-sm whitespace-pre-wrap">{String((selectedItem as unknown as Record<string, unknown>).case_brief || (selectedItem as unknown as Record<string, unknown>).description || '-')}</div>
                     </div>
                   )}
 
@@ -2040,25 +2044,25 @@ export default function AdminPage() {
                           <span className="text-muted-foreground">创建时间：</span>
                           <span>{new Date(selectedItem.created_at as string).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</span>
                         </div>
-                        {'updated_at' in selectedItem && (selectedItem as Record<string, unknown>).updated_at && (
+                        {'updated_at' in selectedItem && String((selectedItem as unknown as Record<string, unknown>).updated_at || '') && (
                           <div className="flex items-center gap-2 text-sm">
                             <CheckCircle className="h-4 w-4 text-emerald-500" />
                             <span className="text-muted-foreground">更新时间：</span>
-                            <span>{new Date((selectedItem as Record<string, unknown>).updated_at as string).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</span>
+                            <span>{new Date((selectedItem as unknown as Record<string, unknown>).updated_at as string).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</span>
                           </div>
                         )}
-                        {'filing_date' in selectedItem && (selectedItem as Record<string, unknown>).filing_date && (
+                        {'filing_date' in selectedItem && String((selectedItem as unknown as Record<string, unknown>).filing_date || '') && (
                           <div className="flex items-center gap-2 text-sm">
                             <Calendar className="h-4 w-4 text-blue-500" />
                             <span className="text-muted-foreground">立案时间：</span>
-                            <span>{String((selectedItem as Record<string, unknown>).filing_date)}</span>
+                            <span>{String((selectedItem as unknown as Record<string, unknown>).filing_date)}</span>
                           </div>
                         )}
-                        {'close_date' in selectedItem && (selectedItem as Record<string, unknown>).close_date && (
+                        {'close_date' in selectedItem && String((selectedItem as unknown as Record<string, unknown>).close_date || '') && (
                           <div className="flex items-center gap-2 text-sm">
                             <Archive className="h-4 w-4 text-gray-500" />
                             <span className="text-muted-foreground">结案时间：</span>
-                            <span>{String((selectedItem as Record<string, unknown>).close_date)}</span>
+                            <span>{String((selectedItem as unknown as Record<string, unknown>).close_date)}</span>
                           </div>
                         )}
                       </div>
@@ -2107,36 +2111,36 @@ export default function AdminPage() {
               )}
               {showModal === 'form' && editingItem && (
                 <div className="space-y-4">
-                  <div><label className="text-sm font-medium">标题</label><input type="text" value={editingItem.title} onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" /></div>
-                  <div><label className="text-sm font-medium">分类</label><select value={editingItem.category} onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="通知">通知</option><option value="指南">指南</option><option value="案例">案例</option></select></div>
+                  <div><label className="text-sm font-medium">标题</label><input type="text" value={String(editingItem.title || '')} onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" /></div>
+                  <div><label className="text-sm font-medium">分类</label><select value={String(editingItem.category || '')} onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="通知">通知</option><option value="指南">指南</option><option value="案例">案例</option></select></div>
                   <div>
                     <label className="text-sm font-medium">封面图片</label>
                     <input ref={announcementImageRef} type="file" accept="image/*" className="hidden" onChange={handleAnnouncementImageUpload} />
                     <div className="mt-1 flex flex-col gap-2">
-                      {editingItem.image_url && (
+                      {String(editingItem.image_url || '') && (
                         <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
-                          <img src={editingItem.image_url} alt="封面" className="w-full h-full object-cover" />
+                          <img src={String(editingItem.image_url || '')} alt="封面" className="w-full h-full object-cover" />
                           <Button variant="destructive" size="sm" className="absolute top-2 right-2 h-6 w-6 p-0" onClick={() => setEditingItem({ ...editingItem, image_url: undefined })}><X className="h-3 w-3" /></Button>
                         </div>
                       )}
                       <Button variant="outline" size="sm" onClick={() => announcementImageRef.current?.click()} disabled={isUploadingImage} className="gap-1.5">
-                        {isUploadingImage ? <><Loader2 className="h-4 w-4 animate-spin" />上传中...</> : <><Upload className="h-4 w-4" />{editingItem.image_url ? '更换图片' : '上传封面图片'}</>}
+                        {isUploadingImage ? <><Loader2 className="h-4 w-4 animate-spin" />上传中...</> : <><Upload className="h-4 w-4" />{String(editingItem.image_url || '') ? '更换图片' : '上传封面图片'}</>}
                       </Button>
                     </div>
                   </div>
-                  <div><label className="text-sm font-medium">内容</label><textarea value={editingItem.content} onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[150px]" /></div>
-                  <div className="flex items-center gap-2"><input type="checkbox" id="is_published" checked={editingItem.is_published} onChange={(e) => setEditingItem({ ...editingItem, is_published: e.target.checked })} /><label htmlFor="is_published" className="text-sm">立即发布</label></div>
+                  <div><label className="text-sm font-medium">内容</label><textarea value={String(editingItem.content || '')} onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[150px]" /></div>
+                  <div className="flex items-center gap-2"><input type="checkbox" id="is_published" checked={Boolean(editingItem.is_published)} onChange={(e) => setEditingItem({ ...editingItem, is_published: e.target.checked })} /><label htmlFor="is_published" className="text-sm">立即发布</label></div>
                   <div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setShowModal(null)}>取消</Button><Button onClick={handleSaveAnnouncement}>保存</Button></div>
                 </div>
               )}
               {showModal === 'knowledgeForm' && editingItem && (
                 <div className="space-y-4">
-                  <div><label className="text-sm font-medium">标题 *</label><input type="text" value={editingItem.title} onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="知识标题" /></div>
-                  <div><label className="text-sm font-medium">分类</label><select value={editingItem.category} onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="劳动法">劳动法</option><option value="案例">案例</option><option value="流程">流程</option><option value="通用">通用</option></select></div>
-                  <div><label className="text-sm font-medium">来源</label><input type="text" value={(editingItem as unknown as Knowledge).source || ''} onChange={(e) => setEditingItem({ ...editingItem, source: e.target.value } as Announcement)} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="来源（可选）" /></div>
-                  <div><label className="text-sm font-medium">内容 *</label><textarea value={editingItem.content} onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[200px]" placeholder="知识内容，AI会基于此内容回答问题" /></div>
-                  <div><label className="text-sm font-medium">标签（用逗号分隔）</label><input type="text" defaultValue={((editingItem as unknown as Knowledge).tags || []).join(', ')} onChange={(e) => { const tags = e.target.value.split(',').map(t => t.trim()).filter(Boolean); setEditingItem({ ...editingItem, tags } as Announcement); }} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="如：工资, 加班, 劳动合同" /></div>
-                  <div className="flex items-center gap-2"><input type="checkbox" id="is_active" checked={(editingItem as unknown as Knowledge).is_active ?? true} onChange={(e) => setEditingItem({ ...editingItem, is_active: e.target.checked } as Announcement)} /><label htmlFor="is_active" className="text-sm">启用此知识（启用后AI回答会参考此内容）</label></div>
+                  <div><label className="text-sm font-medium">标题 *</label><input type="text" value={String(editingItem.title || '')} onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="知识标题" /></div>
+                  <div><label className="text-sm font-medium">分类</label><select value={String(editingItem.category || '')} onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="劳动法">劳动法</option><option value="案例">案例</option><option value="流程">流程</option><option value="通用">通用</option></select></div>
+                  <div><label className="text-sm font-medium">来源</label><input type="text" value={String((editingItem as unknown as Record<string, unknown>).source || '')} onChange={(e) => setEditingItem({ ...editingItem, source: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="来源（可选）" /></div>
+                  <div><label className="text-sm font-medium">内容 *</label><textarea value={String(editingItem.content || '')} onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[200px]" placeholder="知识内容，AI会基于此内容回答问题" /></div>
+                  <div><label className="text-sm font-medium">标签（用逗号分隔）</label><input type="text" defaultValue={Array.isArray((editingItem as unknown as Record<string, unknown>).tags) ? ((editingItem as unknown as Record<string, unknown>).tags as string[]).join(', ') : ''} onChange={(e) => { const tags = e.target.value.split(',').map(t => t.trim()).filter(Boolean); setEditingItem({ ...editingItem, tags }); }} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="如：工资, 加班, 劳动合同" /></div>
+                  <div className="flex items-center gap-2"><input type="checkbox" id="is_active" checked={Boolean((editingItem as unknown as Record<string, unknown>).is_active ?? true)} onChange={(e) => setEditingItem({ ...editingItem, is_active: e.target.checked })} /><label htmlFor="is_active" className="text-sm">启用此知识（启用后AI回答会参考此内容）</label></div>
                   <div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setShowModal(null)}>取消</Button><Button onClick={handleSaveKnowledge}>保存</Button></div>
                 </div>
               )}

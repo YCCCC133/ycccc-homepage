@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ChevronLeft, ChevronRight, Volume2, Clock, User, ArrowRight } from 'lucide-react';
 
 interface Announcement {
