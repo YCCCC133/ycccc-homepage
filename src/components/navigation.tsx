@@ -38,7 +38,7 @@ export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-50">
+    <nav className="sticky top-0 z-50 no-select">
       {/* 毛玻璃效果遮罩层 */}
       <div className="absolute inset-0 bg-background/60 backdrop-blur-xl" />
       

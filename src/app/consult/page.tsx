@@ -420,7 +420,7 @@ export default function ConsultPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-emerald-50 selection-primary">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-emerald-50 selection-primary select-text">
       {/* 头部 */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -498,7 +498,7 @@ export default function ConsultPage() {
                 }`}
               >
                 <div
-                  className={`text-sm leading-relaxed whitespace-pre-wrap ${
+                  className={`text-sm leading-relaxed whitespace-pre-wrap select-text ${
                     message.role === 'user' ? '' : 'text-gray-700'
                   }`}
                 >

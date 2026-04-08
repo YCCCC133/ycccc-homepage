@@ -3,6 +3,46 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* 禁用系统组件文本选中 */
+@layer base {
+  /* 全局禁用系统组件的文本选中 */
+  .no-select,
+  nav,
+  header,
+  [role="navigation"],
+  [role="banner"] {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+  
+  /* 确保禁用选中后仍可点击和访问 */
+  .no-select button,
+  .no-select a,
+  .no-select [role="button"],
+  nav button,
+  nav a,
+  nav [role="button"] {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+  }
+  
+  /* 内容区域允许选中 */
+  .select-text,
+  .select-text p,
+  .select-text span:not(button span),
+  .select-text div:not([role="button"] div),
+  .content-area,
+  article,
+  .message-content,
+  [data-selectable] {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    user-select: text;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
