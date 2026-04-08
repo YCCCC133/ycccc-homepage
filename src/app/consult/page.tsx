@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, Loader2, Volume2, AlertCircle, BookOpen } from 'lucide-react';
+import { Send, Bot, User, Loader2, AlertCircle, BookOpen } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -13,6 +13,59 @@ interface Message {
 interface QuickQuestion {
   icon: string;
   text: string;
+}
+
+// 滚动配置
+const SCROLL_CONFIG = {
+  // 非线性插值曲线 (cubic-bezier approximation)
+  easeOutExpo: (t: number) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
+  easeOutQuart: (t: number) => 1 - Math.pow(1 - t, 4),
+  
+  // 滚动速度参数
+  baseDuration: 400,        // 基础动画时长 (ms)
+  minDuration: 200,        // 最小动画时长 (ms)
+  maxDuration: 800,        // 最大动画时长 (ms)
+  
+  // 文本匹配参数
+  charsPerSecond: 30,       // 假设阅读速度
+  scrollThreshold: 0.85,    // 滚动触发阈值 (视口高度的85%)
+};
+
+// 自定义滚动函数，使用非线性插值
+function smoothScrollTo(
+  container: HTMLElement,
+  targetTop: number,
+  duration: number,
+  easeFn: (t: number) => number
+): () => void {
+  const startTop = container.scrollTop;
+  const distance = targetTop - startTop;
+  const startTime = performance.now();
+  
+  let animationId: number;
+  let cancelled = false;
+  
+  const cancel = () => {
+    cancelled = true;
+    if (animationId) cancelAnimationFrame(animationId);
+  };
+  
+  const animate = (currentTime: number) => {
+    if (cancelled) return;
+    
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easedProgress = easeFn(progress);
+    
+    container.scrollTop = startTop + distance * easedProgress;
+    
+    if (progress < 1) {
+      animationId = requestAnimationFrame(animate);
+    }
+  };
+  
+  animationId = requestAnimationFrame(animate);
+  return cancel;
 }
 
 export default function ConsultPage() {
@@ -27,19 +80,159 @@ export default function ConsultPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // 滚动取消函数引用
+  const scrollCancelRef = useRef<(() => void) | null>(null);
+  
+  // 用户交互状态
+  const userInteractingRef = useRef(false);
+  const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const scrollToBottom = useCallback(() => {
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    });
+  // 检测用户主动滚动
+  const handleUserScroll = useCallback(() => {
+    userInteractingRef.current = true;
+    setIsUserScrolling(true);
+    
+    // 取消当前滚动动画
+    if (scrollCancelRef.current) {
+      scrollCancelRef.current();
+      scrollCancelRef.current = null;
+    }
+    
+    // 清除之前的timeout
+    if (userScrollTimeoutRef.current) {
+      clearTimeout(userScrollTimeoutRef.current);
+    }
+    
+    // 用户停止滚动后，恢复自动滚动
+    userScrollTimeoutRef.current = setTimeout(() => {
+      userInteractingRef.current = false;
+      setIsUserScrolling(false);
+    }, 1500); // 1.5秒后恢复自动滚动
   }, []);
 
+  // 监听用户交互事件
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const events = ['wheel', 'touchstart', 'touchmove', 'mousedown', 'keydown'];
+    
+    const handleInteraction = () => {
+      userInteractingRef.current = true;
+      setIsUserScrolling(true);
+      
+      if (userScrollTimeoutRef.current) {
+        clearTimeout(userScrollTimeoutRef.current);
+      }
+      
+      userScrollTimeoutRef.current = setTimeout(() => {
+        userInteractingRef.current = false;
+        setIsUserScrolling(false);
+      }, 2000); // 2秒后恢复
+    };
+
+    events.forEach(event => {
+      container.addEventListener(event, handleInteraction, { passive: true });
+    });
+
+    return () => {
+      events.forEach(event => {
+        container.removeEventListener(event, handleInteraction);
+      });
+      if (userScrollTimeoutRef.current) {
+        clearTimeout(userScrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // 智能滚动到底部
+  const smartScrollToBottom = useCallback((contentLength: number) => {
+    const container = messagesContainerRef.current;
+    const endRef = messagesEndRef.current;
+    
+    if (!container || !endRef || userInteractingRef.current) return;
+    
+    // 检查是否已经在视口底部
+    const containerRect = container.getBoundingClientRect();
+    const containerBottom = containerRect.bottom;
+    const viewportHeight = window.innerHeight;
+    
+    // 计算元素是否在可见范围内
+    const endRect = endRef.getBoundingClientRect();
+    const isNearBottom = endRect.top < viewportHeight * SCROLL_CONFIG.scrollThreshold;
+    
+    // 如果内容已经可见，不需要滚动
+    if (isNearBottom && contentLength > 0) {
+      const distance = Math.abs(endRect.top - containerBottom + container.clientTop);
+      
+      // 如果距离太近，跳过滚动
+      if (distance < 50) return;
+    }
+    
+    // 取消之前的滚动动画
+    if (scrollCancelRef.current) {
+      scrollCancelRef.current();
+    }
+    
+    // 计算目标位置
+    const targetTop = endRef.offsetTop - container.clientTop;
+    
+    // 根据距离计算动画时长（使用easeOutQuart曲线）
+    const distance = Math.abs(targetTop - container.scrollTop);
+    const baseTime = (distance / 500) * SCROLL_CONFIG.baseDuration;
+    const duration = Math.max(
+      SCROLL_CONFIG.minDuration,
+      Math.min(SCROLL_CONFIG.maxDuration, baseTime)
+    );
+    
+    // 使用非线性插值滚动
+    scrollCancelRef.current = smoothScrollTo(
+      container,
+      targetTop,
+      duration,
+      SCROLL_CONFIG.easeOutQuart
+    );
+  }, []);
+
+  // 消息更新时触发智能滚动
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      const contentLength = lastMessage.content.length;
+      
+      // 如果是AI正在生成，使用延迟滚动匹配阅读节奏
+      if (isLoading && lastMessage.role === 'assistant') {
+        // 延迟滚动，等待内容累积
+        const delay = Math.min(contentLength / SCROLL_CONFIG.charsPerSecond * 1000, 500);
+        const timer = setTimeout(() => {
+          smartScrollToBottom(contentLength);
+        }, delay);
+        return () => clearTimeout(timer);
+      } else if (!isLoading) {
+        // 非加载状态，直接滚动
+        smartScrollToBottom(contentLength);
+      }
+    }
+  }, [messages, isLoading, smartScrollToBottom]);
+
+  // 组件卸载时清理
+  useEffect(() => {
+    return () => {
+      if (scrollCancelRef.current) {
+        scrollCancelRef.current();
+      }
+      if (userScrollTimeoutRef.current) {
+        clearTimeout(userScrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const quickQuestions: QuickQuestion[] = [
     { icon: '💰', text: '老板拖欠工资怎么办？' },
@@ -61,7 +254,10 @@ export default function ConsultPage() {
     const trimmedInput = input.trim();
     if (!trimmedInput || isLoading) return;
 
-    // 创建用户消息
+    // 用户发送消息时，恢复自动滚动
+    userInteractingRef.current = false;
+    setIsUserScrolling(false);
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -74,7 +270,6 @@ export default function ConsultPage() {
     setIsLoading(true);
     setError(null);
 
-    // 创建AI消息占位
     const assistantMessageId = (Date.now() + 1).toString();
     let assistantContent = '';
 
@@ -88,7 +283,6 @@ export default function ConsultPage() {
       },
     ]);
 
-    // 创建 AbortController 用于取消请求
     abortControllerRef.current = new AbortController();
 
     try {
@@ -118,6 +312,9 @@ export default function ConsultPage() {
         throw new Error('无法读取响应');
       }
 
+      let lastScrollTime = 0;
+      const scrollInterval = 150; // 每150ms检查一次滚动
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -134,14 +331,20 @@ export default function ConsultPage() {
               const parsed = JSON.parse(data);
               if (parsed.content) {
                 assistantContent += parsed.content;
-                // 更新AI消息
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMessageId
-                      ? { ...msg, content: assistantContent }
-                      : msg
-                  )
-                );
+                
+                // 节流更新，减少不必要的渲染
+                const now = Date.now();
+                if (now - lastScrollTime > 50) {
+                  lastScrollTime = now;
+                  
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === assistantMessageId
+                        ? { ...msg, content: assistantContent }
+                        : msg
+                    )
+                  );
+                }
               }
             } catch (e) {
               // 忽略解析错误
@@ -149,16 +352,23 @@ export default function ConsultPage() {
           }
         }
       }
+      
+      // 确保最终内容更新
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { ...msg, content: assistantContent }
+            : msg
+        )
+      );
     } catch (err) {
       if ((err as Error).name === 'AbortError') {
-        // 用户取消了请求
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantMessageId
               ? {
                   ...msg,
-                  content:
-                    msg.content || '请求已取消',
+                  content: msg.content || '请求已取消',
                 }
               : msg
           )
@@ -166,7 +376,6 @@ export default function ConsultPage() {
       } else {
         console.error('咨询失败:', err);
         setError('咨询失败，请稍后重试');
-        // 更新错误消息
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantMessageId
@@ -178,6 +387,9 @@ export default function ConsultPage() {
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
+      
+      // 滚动到底部
+      setTimeout(() => smartScrollToBottom(assistantContent.length), 100);
     }
   };
 
@@ -203,6 +415,8 @@ export default function ConsultPage() {
       },
     ]);
     setError(null);
+    userInteractingRef.current = false;
+    setIsUserScrolling(false);
   };
 
   return (
@@ -210,14 +424,22 @@ export default function ConsultPage() {
       {/* 头部 */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-              <Bot className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                <Bot className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">智能法律咨询</h1>
+                <p className="text-sm text-gray-500">基于知识库的专业法律指导</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">智能法律咨询</h1>
-              <p className="text-sm text-gray-500">基于知识库的专业法律指导</p>
-            </div>
+            {isUserScrolling && (
+              <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+                已暂停自动滚动
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -249,9 +471,13 @@ export default function ConsultPage() {
         </div>
       )}
 
-      {/* 消息列表 */}
+      {/* 消息列表 - 带滚动容器 */}
       <div className="max-w-4xl mx-auto px-4 pb-32">
-        <div className="space-y-4 py-4">
+        <div 
+          ref={messagesContainerRef}
+          className="space-y-4 py-4"
+          onScroll={handleUserScroll}
+        >
           {messages.map((message) => (
             <div
               key={message.id}
