@@ -90,8 +90,9 @@ export async function POST(request: NextRequest) {
     response.cookies.set('admin_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax', // 改为 lax，允许同站请求携带 cookie
       maxAge: 60 * 60 * 24, // 24小时
+      path: '/',
     });
     return response;
   } catch (error) {
