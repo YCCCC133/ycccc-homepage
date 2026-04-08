@@ -107,15 +107,29 @@ export async function POST(request: NextRequest) {
             if (chunk.content) {
               const text = chunk.content.toString();
               const data = `data: ${JSON.stringify({ content: text })}\n\n`;
-              controller.enqueue(encoder.encode(data));
+              // 检查 controller 状态，避免 "Controller is already closed" 错误
+              try {
+                controller.enqueue(encoder.encode(data));
+              } catch (enqueueError) {
+                // Controller 已关闭，用户可能中断了请求
+                break;
+              }
             }
           }
           // 发送结束标记
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-          controller.close();
+          try {
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
+          } catch {
+            // Controller 已关闭，忽略
+          }
         } catch (error) {
           console.error('Stream error:', error);
-          controller.error(error);
+          try {
+            controller.error(error);
+          } catch {
+            // Controller 已关闭，忽略
+          }
         }
       },
     });
