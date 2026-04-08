@@ -128,6 +128,10 @@ export default function AdminPage() {
   const [knowledge, setKnowledge] = useState<Knowledge[]>([]);
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   const [operationLogs, setOperationLogs] = useState<OperationLog[]>([]);
+  // 分页总数
+  const [reportsTotal, setReportsTotal] = useState(0);
+  const [applicationsTotal, setApplicationsTotal] = useState(0);
+  const [consultationsTotal, setConsultationsTotal] = useState(0);
 
   // UI状态
   const [selectedItem, setSelectedItem] = useState<Report | Application | Document | Consultation | Announcement | CaseItem | Template | null>(null);
@@ -307,8 +311,11 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (data.reports) setReports(data.reports);
+      if (data.reportsTotal !== undefined) setReportsTotal(data.reportsTotal);
       if (data.applications) setApplications(data.applications);
+      if (data.applicationsTotal !== undefined) setApplicationsTotal(data.applicationsTotal);
       if (data.consultations) setConsultations(data.consultations);
+      if (data.consultationsTotal !== undefined) setConsultationsTotal(data.consultationsTotal);
     } catch (error) {
       console.error('获取数据失败:', error);
     } finally { setIsLoading(false); }
@@ -1184,7 +1191,7 @@ export default function AdminPage() {
                 )}
                 filterOptions={
                   <div className="flex gap-3 mb-4 flex-wrap">
-                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                    <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
                       <option value="">全部状态</option>
                       <option value="pending">待处理</option>
                       <option value="processing">处理中</option>
@@ -1195,6 +1202,10 @@ export default function AdminPage() {
                     <Button variant="outline" size="sm" onClick={() => setNotificationForm({ type: 'sms', recipients: reports.filter(r => r.status === 'pending').map(r => r.phone), message: '' })} className="gap-1.5"><Phone className="h-4 w-4" />发送短信</Button>
                   </div>
                 }
+                totalCount={reportsTotal}
+                currentPage={page}
+                onPageChange={(p) => setPage(p)}
+                pageSize={20}
               />
             </div>
           )}
@@ -1253,7 +1264,7 @@ export default function AdminPage() {
                 )}
                 filterOptions={
                   <div className="flex gap-3 mb-4 flex-wrap">
-                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                    <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="rounded-lg border border-input bg-background px-3 py-2 text-sm">
                       <option value="">全部状态</option>
                       <option value="pending">待处理</option>
                       <option value="processing">处理中</option>
@@ -1263,6 +1274,10 @@ export default function AdminPage() {
                     <Button variant="outline" size="sm" onClick={() => handleExportCSV('在线申请', applications as unknown as Record<string, unknown>[], ['applicant_name', 'applicant_phone', 'application_type', 'owed_amount', 'status', 'created_at'])} className="gap-1.5"><File className="h-4 w-4" />导出CSV</Button>
                   </div>
                 }
+                totalCount={applicationsTotal}
+                currentPage={page}
+                onPageChange={(p) => setPage(p)}
+                pageSize={20}
               />
             </div>
           )}
@@ -1997,7 +2012,11 @@ function StatCard({ title, value, pending, icon: Icon, color }: { title: string;
   );
 }
 
-function DataTable<T>({ columns, data, isLoading, selectedIds, onSelectAll, renderRow, filterOptions }: { columns: string[]; data: T[]; isLoading: boolean; selectedIds?: number[]; onSelectAll?: (ids: number[]) => void; renderRow: (item: T) => React.ReactNode; filterOptions?: React.ReactNode }) {
+function DataTable<T>({ columns, data, isLoading, selectedIds, onSelectAll, renderRow, filterOptions, totalCount, currentPage, onPageChange, pageSize = 20 }: { columns: string[]; data: T[]; isLoading: boolean; selectedIds?: number[]; onSelectAll?: (ids: number[]) => void; renderRow: (item: T) => React.ReactNode; filterOptions?: React.ReactNode; totalCount?: number; currentPage?: number; onPageChange?: (page: number) => void; pageSize?: number }) {
+  const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 1;
+  const startItem = totalCount ? (currentPage! - 1) * pageSize + 1 : 1;
+  const endItem = totalCount ? Math.min(currentPage! * pageSize, totalCount) : data.length;
+  
   return (
     <div className="space-y-4">
       {filterOptions}
@@ -2022,6 +2041,18 @@ function DataTable<T>({ columns, data, isLoading, selectedIds, onSelectAll, rend
               </tbody>
             </table>
           </div>
+          {totalCount !== undefined && totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30">
+              <p className="text-sm text-muted-foreground">显示 {startItem}-{endItem} 条，共 {totalCount} 条</p>
+              <div className="flex gap-1">
+                <Button variant="outline" size="sm" onClick={() => onPageChange?.(1)} disabled={currentPage === 1}>首页</Button>
+                <Button variant="outline" size="sm" onClick={() => onPageChange?.((currentPage || 1) - 1)} disabled={currentPage === 1}>上一页</Button>
+                <span className="px-3 py-1.5 text-sm">第 {currentPage || 1} / {totalPages} 页</span>
+                <Button variant="outline" size="sm" onClick={() => onPageChange?.((currentPage || 1) + 1)} disabled={currentPage === totalPages}>下一页</Button>
+                <Button variant="outline" size="sm" onClick={() => onPageChange?.(totalPages)} disabled={currentPage === totalPages}>末页</Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
