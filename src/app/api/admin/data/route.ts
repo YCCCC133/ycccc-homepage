@@ -159,10 +159,18 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: '无效的类型' }, { status: 400 });
     }
 
-    const updateData = {
-      ...data,
-      updated_at: new Date().toISOString(),
-    };
+    // 只更新存在于表中的字段
+    const allowedFields = type === 'report' 
+      ? ['name', 'phone', 'id_card', 'company_name', 'company_address', 'owed_amount', 'owed_months', 'worker_count', 'description', 'evidence', 'status', 'source']
+      : ['name', 'phone', 'id_card', 'type', 'company_name', 'company_address', 'salary_amount', 'salary_months', 'description', 'status', 'source'];
+    
+    const updateData: Record<string, unknown> = {};
+    for (const key of allowedFields) {
+      if (data[key] !== undefined) {
+        updateData[key] = data[key];
+      }
+    }
+    updateData.updated_at = new Date().toISOString();
 
     const { error } = await client.from(table).update(updateData).eq('id', id);
     if (error) throw error;

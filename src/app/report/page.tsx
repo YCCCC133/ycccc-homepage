@@ -139,13 +139,45 @@ export default function ReportPage() {
     '其他证据',
   ];
 
+  const [reportNumber, setReportNumber] = useState<string>('');
+
   async function onSubmit(data: FormData) {
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsSubmitting(false);
-    setSubmitSuccess(true);
-    console.log(data);
+    try {
+      const response = await fetch('/api/reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: data.name,
+          phone: data.phone,
+          id_card: data.idCard,
+          address: data.address,
+          company_name: data.employerName,
+          company_address: data.employerAddress,
+          owed_amount: parseFloat(data.totalAmount) || 0,
+          owed_months: parseInt(data.salaryMonths) || 1,
+          worker_count: 1,
+          description: data.description,
+          evidence: data.hasEvidence ? (data.evidenceType?.join(',') || '有证据') : null,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setReportNumber(result.data.reportNumber || `XC${result.data.id}`);
+        setSubmitSuccess(true);
+      } else {
+        alert(result.error || '提交失败，请重试');
+      }
+    } catch (error) {
+      console.error('提交失败:', error);
+      alert('网络错误，请重试');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   if (submitSuccess) {
@@ -164,10 +196,10 @@ export default function ReportPage() {
             </p>
             <div className="mb-6 rounded-lg bg-white p-4 text-left">
               <div className="mb-2 text-sm text-muted-foreground">
-                线索编号：<span className="font-mono font-medium text-foreground">XC20260115001</span>
+                线索编号：<span className="font-mono font-medium text-foreground">{reportNumber || 'XC' + Date.now().toString().slice(-10)}</span>
               </div>
               <div className="text-sm text-muted-foreground">
-                提交时间：2026-01-15 14:30:25
+                提交时间：{new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
               </div>
             </div>
             <div className="flex gap-4 justify-center">
