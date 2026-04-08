@@ -142,7 +142,7 @@ export default function AdminPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [notificationForm, setNotificationForm] = useState<{ type: 'sms' | 'email' | null; recipients: string[]; message: string }>({ type: null, recipients: [], message: '' });
-  const [newCase, setNewCase] = useState({ plaintiff_name: '', plaintiff_phone: '', defendant_name: '', case_type: '欠薪纠纷', amount: '', notes: '' });
+  const [newCase, setNewCase] = useState({ plaintiff_name: '', plaintiff_phone: '', defendant_name: '', case_type: '基础拖欠劳动报酬类', amount: '', notes: '' });
   const [consultationSearch, setConsultationSearch] = useState('');
   const [globalSearch, setGlobalSearch] = useState('');
   const [searchResults, setSearchResults] = useState<{ type: string; items: unknown[] }[]>([]);
@@ -477,7 +477,7 @@ export default function AdminPage() {
       });
       if ((await res.json()).success) {
         setShowModal(null);
-        setNewCase({ plaintiff_name: '', plaintiff_phone: '', defendant_name: '', case_type: '欠薪纠纷', amount: '', notes: '' });
+        setNewCase({ plaintiff_name: '', plaintiff_phone: '', defendant_name: '', case_type: '基础拖欠劳动报酬类', amount: '', notes: '' });
         fetchData();
       }
     } catch (error) { console.error('创建案件失败:', error); }
@@ -1880,7 +1880,18 @@ export default function AdminPage() {
                   <div><label className="text-sm font-medium">原告姓名 *</label><input type="text" value={newCase.plaintiff_name} onChange={(e) => setNewCase({ ...newCase, plaintiff_name: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="请输入原告姓名" /></div>
                   <div><label className="text-sm font-medium">原告电话</label><input type="text" value={newCase.plaintiff_phone} onChange={(e) => setNewCase({ ...newCase, plaintiff_phone: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="请输入联系电话" /></div>
                   <div><label className="text-sm font-medium">被告名称 *</label><input type="text" value={newCase.defendant_name} onChange={(e) => setNewCase({ ...newCase, defendant_name: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="请输入被告/欠薪单位名称" /></div>
-                  <div><label className="text-sm font-medium">案件类型</label><select value={newCase.case_type} onChange={(e) => setNewCase({ ...newCase, case_type: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="欠薪纠纷">欠薪纠纷</option><option value="集体欠薪">集体欠薪</option><option value="工伤赔偿">工伤赔偿</option><option value="劳动合同纠纷">劳动合同纠纷</option></select></div>
+                  <div><label className="text-sm font-medium">案件类型</label>
+                    <select value={newCase.case_type} onChange={(e) => setNewCase({ ...newCase, case_type: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                      <option value="基础拖欠劳动报酬类">基础拖欠劳动报酬类</option>
+                      <option value="未签劳动合同欠薪类">未签劳动合同欠薪类</option>
+                      <option value="建设工程领域欠薪类">建设工程领域欠薪类</option>
+                      <option value="劳务派遣/外包欠薪类">劳务派遣/外包欠薪类</option>
+                      <option value="工伤/职业病伴欠薪类">工伤/职业病伴欠薪类</option>
+                      <option value="群体性欠薪维权类">群体性欠薪维权类</option>
+                      <option value="拒不支付劳动报酬类">拒不支付劳动报酬类</option>
+                      <option value="检察支持起诉胜诉类">检察支持起诉胜诉类</option>
+                    </select>
+                  </div>
                   <div><label className="text-sm font-medium">涉案金额 (元) *</label><input type="number" value={newCase.amount} onChange={(e) => setNewCase({ ...newCase, amount: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="请输入金额" /></div>
                   <div><label className="text-sm font-medium">备注</label><textarea value={newCase.notes} onChange={(e) => setNewCase({ ...newCase, notes: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[80px]" placeholder="案件备注信息" /></div>
                   <div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setShowModal(null)}>取消</Button><Button onClick={handleCreateCase}>创建案件</Button></div>
@@ -2020,28 +2031,71 @@ function DetailRow({ label, value, highlight, mono }: { label: string; value: st
   return <div><span className="text-xs text-muted-foreground">{label}</span><p className={cn('font-medium', highlight && 'text-primary', mono && 'font-mono')}>{value}</p></div>;
 }
 
+// 8大案例分类定义
+const CASE_CATEGORIES = [
+  { id: '基础拖欠劳动报酬类', label: '基础拖欠劳动报酬类', icon: '💰', color: 'bg-blue-500', description: '纯欠薪、无复杂纠纷' },
+  { id: '未签劳动合同欠薪类', label: '未签劳动合同欠薪类', icon: '📋', color: 'bg-green-500', description: '事实劳动关系、双倍工资' },
+  { id: '建设工程领域欠薪类', label: '建设工程领域欠薪类', icon: '🏗️', color: 'bg-orange-500', description: '建筑施工、农民工维权' },
+  { id: '劳务派遣/外包欠薪类', label: '劳务派遣/外包欠薪类', icon: '👥', color: 'bg-purple-500', description: '劳务派遣、人力外包' },
+  { id: '工伤/职业病伴欠薪类', label: '工伤/职业病伴欠薪类', icon: '⚠️', color: 'bg-red-500', description: '工伤赔偿、职业病' },
+  { id: '群体性欠薪维权类', label: '群体性欠薪维权类', icon: '👥‍👥‍👥', color: 'bg-pink-500', description: '3人以上集体欠薪' },
+  { id: '拒不支付劳动报酬类', label: '拒不支付劳动报酬类', icon: '🚫', color: 'bg-indigo-500', description: '恶意欠薪、涉刑' },
+  { id: '检察支持起诉胜诉类', label: '检察支持起诉胜诉类', icon: '⚖️', color: 'bg-teal-500', description: '检察支持、典型胜诉' },
+];
+
 // 案件类型分布组件
 function CaseTypeDistribution({ distribution }: { distribution: Record<string, number> }) {
-  const colors = ['bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-purple-500', 'bg-pink-500'];
-  const entries = Object.entries(distribution);
-  const total = entries.reduce((sum, [, count]) => sum + count, 0);
+  // 获取所有分类（包括已分配和未分配的）
+  const allCategories = CASE_CATEGORIES.map(cat => ({
+    ...cat,
+    count: distribution[cat.id] || 0,
+  }));
   
-  if (entries.length === 0) {
-    return <div className="text-center py-8 text-muted-foreground text-sm">暂无案件数据</div>;
+  const total = Object.values(distribution).reduce((sum, count) => sum + count, 0);
+  
+  // 如果没有数据，显示空状态
+  if (total === 0) {
+    return (
+      <div className="space-y-3">
+        {allCategories.map((cat) => (
+          <div key={cat.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
+            <span className="text-xl">{cat.icon}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground truncate">{cat.label}</span>
+                <span className="text-muted-foreground ml-2">0件</span>
+              </div>
+              <div className="h-1.5 bg-muted rounded-full mt-1">
+                <div className={cn('h-1.5 rounded-full', cat.color)} style={{ width: '0%' }} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
   
+  // 按数量排序，有数据的排在前面
+  const sortedCategories = [...allCategories].sort((a, b) => b.count - a.count);
+  
   return (
-    <div className="space-y-3">
-      {entries.map(([label, count], i) => {
-        const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+    <div className="space-y-2">
+      {sortedCategories.map((cat) => {
+        const percent = total > 0 ? Math.round((cat.count / total) * 100) : 0;
         return (
-          <div key={label}>
-            <div className="flex justify-between text-sm mb-1">
-              <span>{label}</span>
-              <span className="text-muted-foreground">{percent}% ({count}件)</span>
-            </div>
-            <div className="h-2 bg-muted rounded-full">
-              <div className={cn('h-2 rounded-full', colors[i % colors.length])} style={{ width: `${percent}%` }} />
+          <div key={cat.id} className={cn("flex items-center gap-3 p-2 rounded-lg transition-colors", cat.count > 0 && "bg-muted/50")}>
+            <span className="text-xl shrink-0">{cat.icon}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between text-sm mb-1">
+                <span className={cn("truncate", cat.count > 0 ? "font-medium" : "text-muted-foreground")}>{cat.label}</span>
+                <span className={cn("ml-2 shrink-0", cat.count > 0 ? "text-primary font-medium" : "text-muted-foreground")}>{cat.count}件</span>
+              </div>
+              <div className="h-1.5 bg-muted rounded-full">
+                <div 
+                  className={cn('h-1.5 rounded-full transition-all', cat.color)} 
+                  style={{ width: `${percent}%` }} 
+                />
+              </div>
             </div>
           </div>
         );
