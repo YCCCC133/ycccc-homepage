@@ -179,18 +179,17 @@ export default function AdminPage() {
       if (data.success) {
         setIsAuthenticated(true);
         setPassword('');
-        // 登录成功后立即获取数据，不在这里设置isLoading为false
-        // fetchData会管理isLoading状态
+        // 登录成功后获取数据
+        fetchData();
       } else {
         setLoginError(data.error || '登录失败');
-        setIsLoading(false);
       }
     } catch (error) {
       console.error('登录错误:', error);
       setLoginError('网络错误，请稍后重试');
+    } finally {
       setIsLoading(false);
     }
-    // 注意：成功的登录不在这里重置isLoading，由fetchData管理
   };
 
   const handleLogout = () => {
@@ -208,8 +207,8 @@ export default function AdminPage() {
           fetch('/api/admin/data?type=stats'),
           fetch('/api/admin/cases?pageSize=5'),
         ]);
-        // 检查认证状态
-        if (statsRes.status === 401 || casesRes.status === 401) {
+        // 检查认证状态 - 只有在明确401时才退出
+        if (statsRes.status === 401) {
           setIsAuthenticated(false);
           setIsLoading(false);
           return;
