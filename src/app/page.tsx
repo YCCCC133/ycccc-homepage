@@ -97,7 +97,7 @@ const steps = [
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col bg-background">
+    <div className="flex flex-col bg-background selection-primary">
       {/* Scrolling Announcement Banner */}
       <ScrollingAnnouncementBanner />
 

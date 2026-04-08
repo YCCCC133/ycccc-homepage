@@ -182,7 +182,7 @@ export default function ReportPage() {
 
   if (submitSuccess) {
     return (
-      <div className="mx-auto max-w-3xl bg-background px-4 py-16">
+      <div className="mx-auto max-w-3xl bg-background px-4 py-16 selection-primary">
         <Card className="border-green-200 bg-green-50">
           <CardContent className="pt-8 text-center">
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
@@ -217,7 +217,7 @@ export default function ReportPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl bg-background px-4 py-8">
+    <div className="mx-auto max-w-5xl bg-background px-4 py-8 selection-primary">
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold text-foreground">线索填报</h1>

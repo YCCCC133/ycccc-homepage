@@ -282,7 +282,7 @@ ${data.evidence}
   };
 
   return (
-    <div className="mx-auto max-w-6xl bg-background px-4 py-8">
+    <div className="mx-auto max-w-6xl bg-background px-4 py-8 selection-primary">
       {/* Header */}
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold text-foreground">法律文书生成</h1>
