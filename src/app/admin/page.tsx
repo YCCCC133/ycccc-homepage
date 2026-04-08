@@ -120,6 +120,7 @@ export default function AdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [documentsTotal, setDocumentsTotal] = useState(0);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [cases, setCases] = useState<CaseItem[]>([]);
@@ -278,6 +279,7 @@ export default function AdminPage() {
         const docsData = await docsRes.json();
         const templatesData = await templatesRes.json();
         if (docsData.documents) setDocuments(docsData.documents);
+        if (docsData.documentsTotal !== undefined) setDocumentsTotal(docsData.documentsTotal);
         if (templatesData.success) setTemplates(templatesData.data);
         setIsLoading(false);
         return;
@@ -428,6 +430,18 @@ export default function AdminPage() {
     const a = document.createElement('a');
     a.href = url;
     a.download = `${type}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // 下载文书
+  const handleDownloadDoc = (doc: Document) => {
+    const content = doc.document_content || '';
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${doc.document_type}_${doc.applicant_name || '未知'}_${new Date().toISOString().split('T')[0]}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1419,14 +1433,24 @@ export default function AdminPage() {
                           <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(d.created_at)}</td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="sm" title="预览"><Eye className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="sm" title="下载"><Download className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="sm" title="预览" onClick={() => { setSelectedItem(d); setShowModal('detail'); }}><Eye className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="sm" title="下载" onClick={() => handleDownloadDoc(d)}><Download className="h-4 w-4" /></Button>
                             </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  {documentsTotal > 10 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30">
+                      <p className="text-sm text-muted-foreground">显示 {documents.length} 条，共 {documentsTotal} 条</p>
+                      <div className="flex gap-1">
+                        <Button variant="outline" size="sm" onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1}>上一页</Button>
+                        <span className="px-3 py-1.5 text-sm">第 {page} 页</span>
+                        <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={documents.length < 10}>下一页</Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
