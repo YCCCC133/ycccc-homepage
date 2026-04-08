@@ -1005,22 +1005,29 @@ export default function AdminPage() {
                   <CardContent>
                     <div className="h-48 flex items-end justify-between gap-2">
                       {(stats.monthlyTrend || [
-                        { month: '1月', count: 12 },
-                        { month: '2月', count: 18 },
-                        { month: '3月', count: 9 },
-                        { month: '4月', count: 22 },
-                        { month: '5月', count: 16 },
-                        { month: '6月', count: 14 },
+                        { month: '1月', count: 0 },
+                        { month: '2月', count: 0 },
+                        { month: '3月', count: 0 },
+                        { month: '4月', count: 0 },
+                        { month: '5月', count: 0 },
+                        { month: '6月', count: 0 },
                       ]).map((item, i) => {
-                        const maxCount = Math.max(...(stats.monthlyTrend || []).map(m => m.count), 22);
+                        const allCounts = (stats.monthlyTrend || []).map(m => m.count);
+                        const maxCount = allCounts.length > 0 ? Math.max(...allCounts, 1) : 1;
                         const height = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+                        const minHeight = item.count > 0 ? 8 : 0;
                         return (
                           <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                            <span className="text-xs font-medium text-primary">{item.count}</span>
-                            <div className="w-full bg-primary/20 rounded-t relative" style={{ height: `${Math.max(height, 10)}%` }}>
-                              <div className="absolute inset-0 bg-primary rounded-t transition-all hover:bg-primary/80" style={{ height: '100%' }} />
+                            {item.count > 0 && (
+                              <span className="text-xs font-bold text-foreground">{item.count}</span>
+                            )}
+                            <div className="w-full rounded-t relative" style={{ height: `${Math.max(height, minHeight)}%`, minHeight: item.count > 0 ? '8px' : '2px' }}>
+                              <div 
+                                className="absolute inset-0 bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-t transition-all hover:from-emerald-500 hover:to-emerald-300 shadow-sm" 
+                                style={{ height: '100%' }} 
+                              />
                             </div>
-                            <span className="text-xs text-muted-foreground">{item.month}</span>
+                            <span className="text-xs text-muted-foreground font-medium">{item.month}</span>
                           </div>
                         );
                       })}
