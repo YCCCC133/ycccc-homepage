@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const client = await pool.connect();
     try {
       const query = `
-        SELECT id, title, category, created_at, updated_at
+        SELECT id, title, content, category, image_url, created_at, updated_at
         FROM announcements
         ${publishedOnly ? 'WHERE is_published = true' : ''}
         ORDER BY created_at DESC
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, content, category, is_published } = body;
+    const { title, content, category, is_published, image_url } = body;
 
     if (!title || !content) {
       return NextResponse.json({ success: false, error: '标题和内容不能为空' }, { status: 400 });
@@ -45,10 +45,10 @@ export async function POST(request: NextRequest) {
     const client = await pool.connect();
     try {
       const result = await client.query(
-        `INSERT INTO announcements (title, content, category, is_published)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, title, category, is_published, created_at, updated_at`,
-        [title, content, category || '通知', is_published ?? true]
+        `INSERT INTO announcements (title, content, category, is_published, image_url)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, title, content, category, image_url, is_published, created_at, updated_at`,
+        [title, content, category || '通知', is_published ?? true, image_url || null]
       );
       return NextResponse.json({ success: true, data: result.rows[0] });
     } finally {

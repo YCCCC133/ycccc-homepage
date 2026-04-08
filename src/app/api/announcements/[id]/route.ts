@@ -39,7 +39,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, content, category, is_published } = body;
+    const { title, content, category, is_published, image_url } = body;
 
     const client = await pool.connect();
     try {
@@ -49,10 +49,11 @@ export async function PUT(
              content = COALESCE($2, content),
              category = COALESCE($3, category),
              is_published = COALESCE($4, is_published),
+             image_url = COALESCE($5, image_url),
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = $5
+         WHERE id = $6
          RETURNING *`,
-        [title, content, category, is_published, id]
+        [title, content, category, is_published, image_url, id]
       );
       if (result.rows.length === 0) {
         return NextResponse.json({ success: false, error: '公告不存在' }, { status: 404 });
