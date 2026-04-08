@@ -184,18 +184,19 @@ export default function AdminPage() {
       const data = await res.json();
       
       if (data.success) {
-        // 登录成功
+        // 登录成功，重置状态并跳转
         setPassword('');
-        // 直接设置已认证，不在这里获取数据
-        // useEffect 会自动触发 fetchData
-        setIsAuthenticated(true);
+        setLoginError('');
+        
+        // 强制刷新页面以确保所有状态正确加载
+        window.location.reload();
       } else {
         setLoginError(data.error || '密码错误');
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('登录错误:', error);
       setLoginError('网络错误，请稍后重试');
-    } finally {
       setIsLoading(false);
     }
   };
