@@ -1413,28 +1413,45 @@ export default function AdminPage() {
           {/* ============ 咨询记录 ============ */}
           {activeTab === 'consultations' && (
             <div className="space-y-4">
-              <div className="flex gap-3">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <input type="text" placeholder="搜索问题..." value={consultationSearch} onChange={(e) => setConsultationSearch(e.target.value)} className="w-full rounded-lg border border-input bg-background pl-10 pr-4 py-2 text-sm" />
+              <div className="flex justify-between items-center">
+                <div className="flex gap-4">
+                  <div className="text-sm text-muted-foreground">共 {consultations.length} 条咨询记录</div>
+                  <div className="flex gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input type="text" placeholder="搜索问题..." value={consultationSearch} onChange={(e) => setConsultationSearch(e.target.value)} className="w-64 rounded-lg border border-input bg-background pl-10 pr-4 py-2 text-sm" />
+                    </div>
+                  </div>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => handleExportData('咨询记录', consultations)} className="gap-1.5"><Download className="h-4 w-4" />导出</Button>
               </div>
-              <DataTable
-                columns={['用户问题', 'AI回复', '时间', '操作']}
-                data={filteredConsultations}
-                isLoading={isLoading}
-                renderRow={(c) => (
-                  <tr key={c.id} className="border-b border-border/50 hover:bg-muted/50">
-                    <td className="px-4 py-3 max-w-[300px]"><p className="text-sm line-clamp-2">{c.user_question}</p></td>
-                    <td className="px-4 py-3 max-w-[400px]"><p className="text-sm text-muted-foreground line-clamp-3">{c.ai_response || '-'}</p></td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{formatDate(c.created_at)}</td>
-                    <td className="px-4 py-3">
-                      <Button variant="ghost" size="sm" onClick={() => { setSelectedItem(c); setShowModal('detail'); }}><Eye className="h-4 w-4" /></Button>
-                    </td>
-                  </tr>
-                )}
-              />
+              {filteredConsultations.length === 0 && !isLoading ? (
+                <Card><CardContent className="p-8 text-center"><MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" /><p className="text-muted-foreground">暂无咨询记录</p></CardContent></Card>
+              ) : (
+                <div className="grid gap-3">
+                  {filteredConsultations.map((c) => (
+                    <Card key={c.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600 shrink-0"><MessageSquare className="h-5 w-5" /></div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600">用户提问</Badge>
+                              <span className="text-sm text-muted-foreground">{formatDate(c.created_at)}</span>
+                            </div>
+                            <p className="text-sm font-medium mb-3 bg-blue-50 rounded-lg p-3">{c.user_question}</p>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-600">AI回复</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-4 bg-gray-50 rounded-lg p-3">{c.ai_response || '暂无回复'}</p>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => { setSelectedItem(c); setShowModal('detail'); }}><Eye className="h-4 w-4" /></Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

@@ -1,405 +1,355 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import {
-  Send,
-  Bot,
-  User,
-  FileText,
-  PenTool,
-  Phone,
-  Loader2,
-  Sparkles,
-  MessageCircle,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Send, Bot, User, Loader2, Volume2, AlertCircle, BookOpen } from 'lucide-react';
 
 interface Message {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
 }
 
-const quickQuestions = [
-  '老板拖欠工资怎么维权？',
-  '没有签劳动合同如何证明劳动关系？',
-  '建筑工地欠薪应该找哪个部门？',
-  '农民工工资保证金是什么？',
-  '如何申请检察支持起诉？',
-  '集体欠薪如何维权？',
-];
+interface QuickQuestion {
+  icon: string;
+  text: string;
+}
 
 export default function ConsultPage() {
-  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([
     {
+      id: 'welcome',
       role: 'assistant',
-      content:
-        '您好！我是护薪平台智能法律顾问，专门为农民工朋友提供工资拖欠领域的法律咨询和维权指导。\n\n我可以帮您解答以下问题：\n• 工资拖欠维权途径\n• 劳动关系认定方法\n• 检察支持起诉申请\n• 法律援助申请流程\n• 集体欠薪维权指南\n\n请问有什么可以帮助您的吗？',
+      content: '您好，我是护薪平台的法律智能助手，专门为您提供劳动法律咨询和维权指导服务。\n\n请问有什么可以帮助您的？您可以：\n• 咨询劳动合同相关问题\n• 了解工资拖欠维权途径\n• 询问工伤赔偿标准\n• 申请法律援助条件\n• 其他劳动权益问题',
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // 自动滚动到底部 - 使用节流优化
-  useEffect(() => {
-    if (scrollRef.current) {
-      requestAnimationFrame(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-      });
-    }
-  }, [messages]);
-
-  // 组件卸载时取消请求
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  // 快捷提问
-  const handleQuickQuestion = useCallback((question: string) => {
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  const quickQuestions: QuickQuestion[] = [
+    { icon: '💰', text: '老板拖欠工资怎么办？' },
+    { icon: '📋', text: '劳动合同应该包含哪些内容？' },
+    { icon: '⚠️', text: '遭遇工伤如何申请赔偿？' },
+    { icon: '⚖️', text: '如何申请法律援助？' },
+    { icon: '🔧', text: '加班费怎么计算？' },
+    { icon: '🏢', text: '公司不签劳动合同违法吗？' },
+  ];
+
+  const handleQuickQuestion = (question: string) => {
     setInput(question);
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, []);
+    inputRef.current?.focus();
+  };
 
-  // 发送消息
-  const sendMessage = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    
+    const trimmedInput = input.trim();
+    if (!trimmedInput || isLoading) return;
 
-    // 取消之前的请求
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-
+    // 创建用户消息
     const userMessage: Message = {
+      id: Date.now().toString(),
       role: 'user',
-      content: input.trim(),
+      content: trimmedInput,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+    setError(null);
 
-    // 准备对话历史（不含欢迎消息）
-    const conversationHistory = messages.slice(1).map((msg) => ({
-      role: msg.role,
-      content: msg.content,
-    }));
-    conversationHistory.push({
-      role: 'user',
-      content: userMessage.content,
-    });
+    // 创建AI消息占位
+    const assistantMessageId = (Date.now() + 1).toString();
+    let assistantContent = '';
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+      },
+    ]);
+
+    // 创建 AbortController 用于取消请求
+    abortControllerRef.current = new AbortController();
 
     try {
       const response = await fetch('/api/consult', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ messages: conversationHistory }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: messages
+            .filter((m) => m.id !== 'welcome')
+            .concat([userMessage])
+            .map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+        }),
         signal: abortControllerRef.current.signal,
       });
 
-      if (!response.ok) throw new Error('请求失败');
+      if (!response.ok) {
+        throw new Error('网络请求失败');
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let assistantContent = '';
 
-      // 逐块读取流式响应
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+      if (!reader) {
+        throw new Error('无法读取响应');
+      }
 
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') {
-                continue;
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.content) {
+                assistantContent += parsed.content;
+                // 更新AI消息
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, content: assistantContent }
+                      : msg
+                  )
+                );
               }
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.content) {
-                  assistantContent += parsed.content;
-                  // 实时更新消息
-                  setMessages((prev) => {
-                    const newMessages = [...prev];
-                    const lastMessage = newMessages[newMessages.length - 1];
-                    if (lastMessage.role === 'assistant') {
-                      lastMessage.content = assistantContent;
-                    } else {
-                      newMessages.push({
-                        role: 'assistant',
-                        content: assistantContent,
-                        timestamp: new Date(),
-                      });
-                    }
-                    return newMessages;
-                  });
-                }
-              } catch {
-                // 忽略解析错误
-              }
+            } catch (e) {
+              // 忽略解析错误
             }
           }
         }
       }
-
-      // 确保最后一条消息是完整的
-      setMessages((prev) => {
-        const newMessages = [...prev];
-        const lastMessage = newMessages[newMessages.length - 1];
-        if (lastMessage.role === 'assistant') {
-          lastMessage.content = assistantContent;
-          lastMessage.timestamp = new Date();
-        }
-        return newMessages;
-      });
-    } catch (error) {
-      // 忽略取消请求的错误
-      if (error instanceof Error && error.name === 'AbortError') {
-        return;
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') {
+        // 用户取消了请求
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content:
+                    msg.content || '请求已取消',
+                }
+              : msg
+          )
+        );
+      } else {
+        console.error('咨询失败:', err);
+        setError('咨询失败，请稍后重试');
+        // 更新错误消息
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? { ...msg, content: '抱歉，服务暂时不可用，请稍后重试。' }
+              : msg
+          )
+        );
       }
-      console.error('Error:', error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content:
-            '抱歉，服务暂时不可用。如需紧急帮助，请拨打12345政务服务热线。',
-          timestamp: new Date(),
-        },
-      ]);
     } finally {
       setIsLoading(false);
-    }
-  }, [input, isLoading, messages]);
-
-  // 处理键盘事件
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+      abortControllerRef.current = null;
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  const stopGeneration = () => {
+    abortControllerRef.current?.abort();
+  };
+
+  const clearChat = () => {
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content:
+          '您好，我是护薪平台的法律智能助手，专门为您提供劳动法律咨询和维权指导服务。\n\n请问有什么可以帮助您的？您可以：\n• 咨询劳动合同相关问题\n• 了解工资拖欠维权途径\n• 询问工伤赔偿标准\n• 申请法律援助条件\n• 其他劳动权益问题',
+        timestamp: new Date(),
+      },
+    ]);
+    setError(null);
+  };
+
   return (
-    <div className="mx-auto max-w-6xl bg-background px-4 py-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="mb-2 text-3xl font-bold text-foreground">智能法律咨询</h1>
-        <p className="text-muted-foreground">
-          AI智能应答常见法律问题，24小时在线提供专业法律指引
-        </p>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-emerald-50">
+      {/* 头部 */}
+      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+              <Bot className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">智能法律咨询</h1>
+              <p className="text-sm text-gray-500">基于知识库的专业法律指导</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-4">
-        {/* Sidebar - Quick Actions */}
-        <div className="hidden lg:block">
-          <Card className="sticky top-28 md:top-36">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Sparkles className="h-4 w-4 text-primary" />
-                常见问题
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {quickQuestions.map((question, index) => (
-                <Button
-                  key={index}
-                  variant="ghost"
-                  className="h-auto w-full justify-start whitespace-normal text-left text-sm"
-                  onClick={() => handleQuickQuestion(question)}
-                >
-                  <MessageCircle className="mr-2 h-3.5 w-3.5 shrink-0 text-primary" />
-                  {question}
-                </Button>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FileText className="h-4 w-4 text-primary" />
-                快速入口
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => router.push('/report')}
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                线索填报
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => router.push('/document')}
-              >
-                <PenTool className="mr-2 h-4 w-4" />
-                文书生成
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                asChild
-              >
-                <a href="tel:12345">
-                  <Phone className="mr-2 h-4 w-4" />
-                  12345热线
-                </a>
-              </Button>
-            </CardContent>
-          </Card>
+      {/* 知识库提示 */}
+      <div className="max-w-4xl mx-auto px-4 py-3">
+        <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100">
+          <BookOpen className="w-4 h-4" />
+          <span>AI 助手基于劳动法律法规知识库为您提供解答</span>
         </div>
+      </div>
 
-        {/* Main Chat Area */}
-        <div className="flex flex-col lg:col-span-3">
-          {/* Messages */}
-          <Card className="flex flex-col overflow-hidden">
-            <ScrollArea className="h-[400px] lg:h-[500px] p-6" ref={scrollRef}>
-              <div className="space-y-4">
-                {messages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`flex gap-3 ${
-                      message.role === 'user' ? 'flex-row-reverse' : ''
-                    }`}
-                  >
-                    {/* Avatar */}
-                    <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-gradient-to-br from-primary to-primary/80 text-white'
-                      }`}
-                    >
-                      {message.role === 'user' ? (
-                        <User className="h-5 w-5" />
-                      ) : (
-                        <Bot className="h-5 w-5" />
-                      )}
-                    </div>
-
-                    {/* Message Content */}
-                    <div
-                      className={`flex-1 ${
-                        message.role === 'user' ? 'text-right' : ''
-                      }`}
-                    >
-                      <div
-                        className={`inline-block rounded-2xl px-4 py-3 text-sm ${
-                          message.role === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
-                        }`}
-                      >
-                        <div className="whitespace-pre-wrap text-left">
-                          {message.content}
-                        </div>
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {message.timestamp.toLocaleTimeString('zh-CN', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Loading Indicator */}
-                {isLoading && (
-                  <div className="flex gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-white">
-                      <Bot className="h-5 w-5" />
-                    </div>
-                    <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-3">
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      <span className="text-sm text-muted-foreground">
-                        正在思考中...
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </Card>
-
-          {/* Mobile Quick Questions */}
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-2 lg:hidden">
-            {quickQuestions.slice(0, 3).map((question, index) => (
-              <Badge
-                key={index}
-                variant="secondary"
-                className="cursor-pointer whitespace-nowrap transition-colors hover:bg-primary hover:text-primary-foreground active:scale-95"
-                onClick={() => handleQuickQuestion(question)}
+      {/* 快捷问题 */}
+      {messages.length === 1 && (
+        <div className="max-w-4xl mx-auto px-4 pb-4">
+          <p className="text-sm text-gray-500 mb-3">快捷问题：</p>
+          <div className="flex flex-wrap gap-2">
+            {quickQuestions.map((q, i) => (
+              <button
+                key={i}
+                onClick={() => handleQuickQuestion(q.text)}
+                className="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-full hover:border-emerald-300 hover:bg-emerald-50 transition-colors flex items-center gap-1.5"
               >
-                {question}
-              </Badge>
+                <span>{q.icon}</span>
+                <span>{q.text}</span>
+              </button>
             ))}
           </div>
+        </div>
+      )}
 
-          {/* Input Area */}
-          <div className="mt-4">
-            <Card className="border-2 border-primary/20 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-              <CardContent className="p-3">
-                <div className="flex gap-3">
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="输入您的问题，例如：老板拖欠工资怎么办？"
-                    className="flex-1 resize-none border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground focus:ring-0"
-                    rows={2}
-                    disabled={isLoading}
-                    aria-label="输入您的问题"
-                  />
-                  <Button
-                    size="icon"
-                    className="h-10 w-10 shrink-0 transition-transform active:scale-95"
-                    onClick={sendMessage}
-                    disabled={!input.trim() || isLoading}
-                    aria-label="发送消息"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
+      {/* 消息列表 */}
+      <div className="max-w-4xl mx-auto px-4 pb-32">
+        <div className="space-y-4 py-4">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex gap-3 ${
+                message.role === 'user' ? 'justify-end' : 'justify-start'
+              }`}
+            >
+              {message.role === 'assistant' && (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0">
+                  <Bot className="w-5 h-5 text-white" />
                 </div>
-              </CardContent>
-            </Card>
-            <p className="mt-2 text-center text-xs text-muted-foreground">
-              按 Enter 发送，Shift + Enter 换行 ·
-              <span className="text-primary"> 如需紧急帮助请拨打 12345</span>
+              )}
+              <div
+                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                  message.role === 'user'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white'
+                    : 'bg-white border shadow-sm'
+                }`}
+              >
+                <div
+                  className={`text-sm leading-relaxed whitespace-pre-wrap ${
+                    message.role === 'user' ? '' : 'text-gray-700'
+                  }`}
+                >
+                  {message.content || (
+                    <span className="flex items-center gap-2 text-gray-400">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      正在思考...
+                    </span>
+                  )}
+                </div>
+              </div>
+              {message.role === 'user' && (
+                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                  <User className="w-5 h-5 text-gray-600" />
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* 错误提示 */}
+          {error && (
+            <div className="flex justify-center">
+              <div className="flex items-center gap-2 text-red-500 bg-red-50 px-4 py-2 rounded-full text-sm">
+                <AlertCircle className="w-4 h-4" />
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* 输入区域 */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <form onSubmit={handleSubmit} className="flex gap-3">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="输入您的问题，按 Enter 发送..."
+              className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              rows={1}
+              disabled={isLoading}
+            />
+            {isLoading ? (
+              <button
+                type="button"
+                onClick={stopGeneration}
+                className="px-4 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors flex items-center gap-2"
+              >
+                <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                停止
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!input.trim()}
+                className="px-6 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                发送
+              </button>
+            )}
+          </form>
+          <div className="flex justify-between items-center mt-2">
+            <p className="text-xs text-gray-400">
+              按 Enter 发送，Shift + Enter 换行
             </p>
+            {messages.length > 1 && (
+              <button
+                onClick={clearChat}
+                className="text-xs text-gray-400 hover:text-gray-600"
+              >
+                清空对话
+              </button>
+            )}
           </div>
         </div>
       </div>
