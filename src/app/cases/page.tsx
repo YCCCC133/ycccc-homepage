@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -100,14 +100,15 @@ export default function CasesPage() {
     fetchCases();
   }, []);
 
-  const filteredCases = cases.filter((c) => {
+  const filteredCases = useMemo(() => {
+    return cases.filter((c) => {
     const matchesSearch =
       c.case_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.plaintiff_name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
     return matchesSearch && matchesStatus;
-  });
+  })}, [cases, searchQuery, statusFilter]);
 
   const handleSearch = () => {
     console.log('Searching for:', searchQuery);

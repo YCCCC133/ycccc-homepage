@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { type, variables, useTemplate } = body;
+    const { type, variables } = body;
 
     if (!type) {
       return NextResponse.json(
