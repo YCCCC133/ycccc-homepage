@@ -1,8 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LLMClient, Config, HeaderUtils, Message } from 'coze-coding-dev-sdk';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 // 使用 Node.js runtime 以支持 coze-coding-dev-sdk
 export const runtime = 'nodejs';
+
+// 获取知识库内容
+async function getKnowledgeBase() {
+  try {
+    const client = getSupabaseClient();
+    const { data, error } = await client
+      .from('knowledge_base')
+      .select('title, content, category, tags')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error('获取知识库失败:', error);
+      return null;
+    }
+    return data;
+  } catch (error) {
+    console.error('获取知识库失败:', error);
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +39,18 @@ export async function POST(request: NextRequest) {
     } else if (body.message) {
       // 单条消息格式，转换为对话历史
       conversationHistory = [{ role: 'user', content: body.message }];
+    }
+
+    // 获取知识库内容
+    const knowledgeBase = await getKnowledgeBase();
+    let knowledgeSection = '';
+    
+    if (knowledgeBase && knowledgeBase.length > 0) {
+      const knowledgeItems = knowledgeBase.map((k, i) => 
+        `[知识${i + 1}] ${k.title}\n分类：${k.category}\n内容：${k.content}${k.tags && k.tags.length > 0 ? `\n标签：${k.tags.join(', ')}` : ''}`
+      ).join('\n\n');
+      
+      knowledgeSection = `\n\n## 参考知识库\n以下是您需要参考的知识库内容，回答问题时请优先使用这些信息：\n\n${knowledgeItems}\n\n如果知识库中没有相关信息，再基于您的法律知识进行回答，但请注明"根据一般法律规定"。`;
     }
 
     const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
@@ -46,9 +81,9 @@ export async function POST(request: NextRequest) {
 4. **重要提示**：
    - 如果涉及紧急情况，提醒用户拨打12345热线
    - 建议用户保留相关证据（合同、工资条、聊天记录等）
-   - 提醒用户可以通过平台进行线索填报、文书生成等操作
+   - 提醒用户可以通过平台进行线索填报、文书生成等操作${knowledgeSection}
 
-请根据以上原则，为用户提供专业、贴心的法律咨询服务。`;
+请根据以上原则和知识库内容，为用户提供专业、贴心的法律咨询服务。`;
 
     const messages: Message[] = [
       { role: 'system', content: systemPrompt },

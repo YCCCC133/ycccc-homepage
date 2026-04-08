@@ -7,7 +7,7 @@ import {
   Trash2, X, ChevronLeft, RefreshCw, Scale, Shield, Eye, ArrowRight,
   Bell, Home, PlusCircle, Loader2, Database, Upload, Download, Settings, BarChart3,
   Search, Edit, FolderOpen, File, LayoutTemplate, Menu, User, AlertTriangle,
-  Mail, Phone, Clock, DollarSign, Users, Printer, PieChart, Activity
+  Mail, Phone, Clock, DollarSign, Users, Printer, PieChart, Activity, BookOpen
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 // ============ 类型定义 ============
-type TabType = 'dashboard' | 'reports' | 'applications' | 'cases' | 'documents' | 'consultations' | 'announcements' | 'files' | 'settings';
+type TabType = 'dashboard' | 'reports' | 'applications' | 'cases' | 'documents' | 'consultations' | 'knowledge' | 'announcements' | 'files' | 'settings';
 
 interface Stats {
   reports: number; applications: number; documents: number; consultations: number;
@@ -69,6 +69,11 @@ interface Template {
   id: number; name: string; type: string; content: string; variables: string[]; is_active: boolean;
 }
 
+interface Knowledge {
+  id: number; title: string; content: string; category: string; source: string | null;
+  tags: string[]; is_active: boolean; created_at: string; updated_at: string;
+}
+
 interface SystemSetting {
   key: string; value: string; description: string;
 }
@@ -85,6 +90,7 @@ const navItems = [
   { key: 'cases' as TabType, label: '案件管理', icon: Database, group: '业务' },
   { key: 'documents' as TabType, label: '文书管理', icon: PenTool, group: '业务' },
   { key: 'consultations' as TabType, label: '咨询记录', icon: MessageSquare, group: '业务' },
+  { key: 'knowledge' as TabType, label: '知识库', icon: BookOpen, group: '业务' },
   { key: 'announcements' as TabType, label: '公告管理', icon: AlertCircle, group: '运营' },
   { key: 'files' as TabType, label: '文件管理', icon: FolderOpen, group: '运营' },
   { key: 'settings' as TabType, label: '系统设置', icon: Settings, group: '系统' },
@@ -93,7 +99,7 @@ const navItems = [
 // 分组配置
 const navGroups = [
   { name: '核心', keys: ['dashboard'] },
-  { name: '业务', keys: ['reports', 'applications', 'cases', 'documents', 'consultations'] },
+  { name: '业务', keys: ['reports', 'applications', 'cases', 'documents', 'consultations', 'knowledge'] },
   { name: '运营', keys: ['announcements', 'files'] },
   { name: '系统', keys: ['settings'] },
 ];
@@ -119,6 +125,7 @@ export default function AdminPage() {
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [knowledge, setKnowledge] = useState<Knowledge[]>([]);
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   const [operationLogs, setOperationLogs] = useState<OperationLog[]>([]);
 
@@ -272,6 +279,14 @@ export default function AdminPage() {
         return;
       }
 
+      if (activeTab === 'knowledge') {
+        const res = await fetch('/api/admin/knowledge');
+        const data = await res.json();
+        if (data.success) setKnowledge(data.data);
+        setIsLoading(false);
+        return;
+      }
+
       if (activeTab === 'settings') {
         const res = await fetch('/api/admin/settings');
         const data = await res.json();
@@ -318,6 +333,7 @@ export default function AdminPage() {
     if (!confirm('确定删除？此操作不可恢复。')) return;
     const endpoint = type === 'announcement' ? `/api/announcements/${id}` :
                      type === 'case' ? `/api/admin/cases/${id}` :
+                     type === 'knowledge' ? `/api/admin/knowledge/${id}` :
                      `/api/admin/data?type=${type}&id=${id}`;
     try {
       const res = await fetch(endpoint, { method: 'DELETE' });
@@ -415,6 +431,18 @@ export default function AdminPage() {
     const method = editingItem.id ? 'PUT' : 'POST';
     try {
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editingItem) });
+      if ((await res.json()).success) { setShowModal(null); setEditingItem(null); fetchData(); }
+    } catch (error) { console.error('保存失败:', error); }
+  };
+
+  // 保存知识库条目
+  const handleSaveKnowledge = async () => {
+    if (!editingItem?.title || !editingItem?.content) { alert('请填写标题和内容'); return; }
+    const k = editingItem as unknown as Knowledge;
+    const url = k.id ? `/api/admin/knowledge/${k.id}` : '/api/admin/knowledge';
+    const method = k.id ? 'PUT' : 'POST';
+    try {
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(k) });
       if ((await res.json()).success) { setShowModal(null); setEditingItem(null); fetchData(); }
     } catch (error) { console.error('保存失败:', error); }
   };
@@ -1410,6 +1438,50 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* ============ 知识库管理 ============ */}
+          {activeTab === 'knowledge' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-muted-foreground">智能咨询的数据源，AI会根据知识库内容回答问题</p>
+                <Button size="sm" onClick={() => { setEditingItem({ id: 0, title: '', content: '', category: '劳动法', source: '', tags: [], is_active: true, created_at: '', updated_at: '' } as Announcement); setShowModal('knowledgeForm'); }} className="gap-1.5"><PlusCircle className="h-4 w-4" />添加知识</Button>
+              </div>
+              <div className="grid gap-3">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+                ) : knowledge.length === 0 ? (
+                  <Card><CardContent className="p-8 text-center"><BookOpen className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" /><p className="text-muted-foreground">暂无知识数据</p></CardContent></Card>
+                ) : (
+                  knowledge.map((k) => (
+                    <Card key={k.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 shrink-0"><BookOpen className="h-5 w-5" /></div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-medium truncate">{k.title}</h4>
+                              <Badge variant={k.is_active ? 'default' : 'secondary'} className="text-xs">{k.is_active ? '启用' : '禁用'}</Badge>
+                              <Badge variant="outline" className="text-xs">{k.category}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-2">{k.content}</p>
+                            {k.tags && k.tags.length > 0 && (
+                              <div className="flex gap-1 mt-2 flex-wrap">
+                                {k.tags.map((tag, i) => <span key={i} className="text-xs bg-muted px-2 py-0.5 rounded">{tag}</span>)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <Button variant="ghost" size="sm" onClick={() => { setEditingItem(k as unknown as Announcement); setShowModal('knowledgeForm'); }}><Edit className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete('knowledge', k.id)}><Trash2 className="h-4 w-4" /></Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
           {/* ============ 公告管理 ============ */}
           {activeTab === 'announcements' && (
             <div className="space-y-4">
@@ -1766,6 +1838,17 @@ export default function AdminPage() {
                   <div><label className="text-sm font-medium">内容</label><textarea value={editingItem.content} onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[150px]" /></div>
                   <div className="flex items-center gap-2"><input type="checkbox" id="is_published" checked={editingItem.is_published} onChange={(e) => setEditingItem({ ...editingItem, is_published: e.target.checked })} /><label htmlFor="is_published" className="text-sm">立即发布</label></div>
                   <div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setShowModal(null)}>取消</Button><Button onClick={handleSaveAnnouncement}>保存</Button></div>
+                </div>
+              )}
+              {showModal === 'knowledgeForm' && editingItem && (
+                <div className="space-y-4">
+                  <div><label className="text-sm font-medium">标题 *</label><input type="text" value={editingItem.title} onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="知识标题" /></div>
+                  <div><label className="text-sm font-medium">分类</label><select value={editingItem.category} onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="劳动法">劳动法</option><option value="案例">案例</option><option value="流程">流程</option><option value="通用">通用</option></select></div>
+                  <div><label className="text-sm font-medium">来源</label><input type="text" value={(editingItem as unknown as Knowledge).source || ''} onChange={(e) => setEditingItem({ ...editingItem, source: e.target.value } as Announcement)} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="来源（可选）" /></div>
+                  <div><label className="text-sm font-medium">内容 *</label><textarea value={editingItem.content} onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[200px]" placeholder="知识内容，AI会基于此内容回答问题" /></div>
+                  <div><label className="text-sm font-medium">标签（用逗号分隔）</label><input type="text" defaultValue={((editingItem as unknown as Knowledge).tags || []).join(', ')} onChange={(e) => { const tags = e.target.value.split(',').map(t => t.trim()).filter(Boolean); setEditingItem({ ...editingItem, tags } as Announcement); }} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="如：工资, 加班, 劳动合同" /></div>
+                  <div className="flex items-center gap-2"><input type="checkbox" id="is_active" checked={(editingItem as unknown as Knowledge).is_active ?? true} onChange={(e) => setEditingItem({ ...editingItem, is_active: e.target.checked } as Announcement)} /><label htmlFor="is_active" className="text-sm">启用此知识（启用后AI回答会参考此内容）</label></div>
+                  <div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setShowModal(null)}>取消</Button><Button onClick={handleSaveKnowledge}>保存</Button></div>
                 </div>
               )}
               {showModal === 'newCase' && (
