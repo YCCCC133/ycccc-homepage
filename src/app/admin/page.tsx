@@ -1500,7 +1500,7 @@ export default function AdminPage() {
                     </Card>
                   ))}
                 </div>
-                {consultationsTotal > 10 && (
+                {(consultationsTotal || 0) > 10 ? (
                   <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30 rounded-lg">
                     <p className="text-sm text-muted-foreground">显示 {filteredConsultations.length} 条，共 {consultationsTotal} 条</p>
                     <div className="flex gap-1">
@@ -1509,7 +1509,7 @@ export default function AdminPage() {
                       <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={filteredConsultations.length < 10}>下一页</Button>
                     </div>
                   </div>
-                )}
+                ) : null}
               )}
             </div>
           )}
