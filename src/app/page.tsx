@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AnnouncementList } from '@/components/announcement-list';
+import { ScrollingAnnouncementBanner } from '@/components/scrolling-announcement';
 
 const features = [
   {
@@ -97,12 +98,24 @@ const steps = [
 export default function HomePage() {
   return (
     <div className="flex flex-col bg-background">
+      {/* Scrolling Announcement Banner */}
+      <ScrollingAnnouncementBanner />
+
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-primary/3 to-background py-16 md:py-24">
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-emerald-50/30 to-slate-50 py-16 md:py-24">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
-          <div className="absolute -bottom-20 -left-20 h-96 w-96 rounded-full bg-[var(--gold)]/10 blur-3xl" />
+          <div className="absolute -right-20 -top-20 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-emerald-200/40 via-emerald-300/20 to-transparent blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 h-[400px] w-[400px] rounded-full bg-gradient-to-tr from-slate-300/30 via-slate-200/20 to-transparent blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-gradient-to-r from-emerald-100/20 to-slate-200/20 blur-3xl" />
+        </div>
+
+        {/* Floating particles effect */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-[10%] h-2 w-2 rounded-full bg-emerald-400/50 animate-bounce" style={{ animationDuration: '3s' }} />
+          <div className="absolute top-40 right-[15%] h-3 w-3 rounded-full bg-emerald-300/40 animate-bounce" style={{ animationDuration: '4s', animationDelay: '0.5s' }} />
+          <div className="absolute bottom-32 left-[20%] h-2 w-2 rounded-full bg-slate-400/40 animate-bounce" style={{ animationDuration: '3.5s', animationDelay: '1s' }} />
+          <div className="absolute top-60 right-[25%] h-4 w-4 rounded-full bg-emerald-200/30 animate-bounce" style={{ animationDuration: '5s', animationDelay: '1.5s' }} />
         </div>
 
         <div className="relative mx-auto max-w-7xl px-4">
@@ -110,26 +123,30 @@ export default function HomePage() {
             {/* Badge */}
             <Badge
               variant="outline"
-              className="mb-6 border-primary/30 bg-primary/5 px-4 py-1.5 text-primary"
+              className="mb-6 border-emerald-200 bg-emerald-50/80 px-4 py-1.5 text-emerald-700 backdrop-blur-sm"
             >
               <Scale className="mr-2 h-3.5 w-3.5" />
-              参赛作品
+              <span className="hidden sm:inline">检察支持起诉</span>
+              <span className="sm:hidden">参赛作品</span>
             </Badge>
 
             {/* Title */}
             <h1 className="mb-6 text-4xl font-bold leading-tight text-foreground md:text-5xl lg:text-6xl">
-              <span className="text-primary">护薪</span>检察支持起诉
+              <span className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-400 bg-clip-text text-transparent">
+                护薪
+              </span>
+              <span className="text-foreground">平台</span>
               <br />
-              <span className="bg-gradient-to-r from-primary via-primary to-primary/70 bg-clip-text text-transparent">
-                智能平台
+              <span className="text-2xl md:text-3xl lg:text-4xl text-slate-600">
+                检察支持起诉智能平台
               </span>
             </h1>
 
             {/* Description */}
-            <p className="mb-8 max-w-2xl text-lg text-muted-foreground md:text-xl">
-              保障劳动者（特别是农民工）薪酬权益
+            <p className="mb-8 max-w-2xl text-lg text-muted-foreground md:text-xl leading-relaxed">
+              运用<span className="text-emerald-600 font-semibold">数字检察</span>技术手段，
               <br className="hidden md:block" />
-              帮助诉讼能力弱的劳动者追讨欠薪
+              保障劳动者（特别是<span className="text-emerald-600 font-semibold">农民工</span>）薪酬权益
             </p>
 
             {/* CTA Buttons */}
@@ -137,7 +154,7 @@ export default function HomePage() {
               <Link href="/report">
                 <Button
                   size="lg"
-                  className="gap-2 bg-gradient-to-r from-primary to-primary/90 shadow-lg hover:shadow-xl"
+                  className="gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:from-emerald-600 hover:to-emerald-600 transition-all duration-300"
                 >
                   <FileText className="h-5 w-5" />
                   立即填报线索
@@ -145,28 +162,34 @@ export default function HomePage() {
                 </Button>
               </Link>
               <Link href="/consult">
-                <Button size="lg" variant="outline" className="gap-2">
-                  <MessageSquare className="h-5 w-5" />
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="gap-2 border-2 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-all duration-300"
+                >
+                  <MessageSquare className="h-5 w-5 text-emerald-600" />
                   智能法律咨询
                 </Button>
               </Link>
             </div>
 
             {/* Quick Stats */}
-            <div className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-              {stats.map((stat) => (
+            <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {stats.map((stat, index) => (
                 <div
                   key={stat.label}
-                  className="rounded-xl border border-border/50 bg-white/80 p-3 backdrop-blur-sm transition-all hover:shadow-md sm:p-4"
+                  className="group relative rounded-2xl border border-emerald-100/50 bg-white/80 p-4 backdrop-blur-sm transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-200"
+                  style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  <stat.icon className="mb-2 h-4 w-4 text-primary sm:h-5 sm:w-5" />
-                  <div className="text-xl font-bold text-foreground sm:text-2xl">
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <stat.icon className="mb-3 h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform duration-300" />
+                  <div className="text-2xl font-bold text-foreground">
                     {stat.value}
-                    <span className="text-xs font-normal text-muted-foreground sm:text-sm">
+                    <span className="text-xs font-normal text-muted-foreground">
                       {stat.suffix}
                     </span>
                   </div>
-                  <div className="text-xs text-muted-foreground">{stat.label}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -175,38 +198,42 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="bg-background py-16 md:py-20">
+      <section className="bg-gradient-to-b from-white via-slate-50 to-white py-16 md:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
-              全方位维权服务
+              <span className="bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
+                全方位
+              </span>
+              维权服务
             </h2>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-lg">
               从线索收集到案件办理，提供一站式智能法律服务
             </p>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => (
+            {features.map((feature, index) => (
               <Link 
                 key={feature.title} 
                 href={feature.href}
-                className="outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl"
+                className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-xl"
               >
-                <Card className="group h-full cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 focus-within:ring-2 focus-within:ring-primary">
-                  <CardHeader>
+                <Card className="group h-full cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-2 border-emerald-100/50 hover:border-emerald-200">
+                  <CardHeader className="relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <div
-                      className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${feature.bgColor}`}
+                      className={`relative mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${feature.bgColor} group-hover:scale-110 transition-transform duration-300`}
                     >
                       <feature.icon className={`h-6 w-6 ${feature.color}`} />
                     </div>
-                    <CardTitle className="flex items-center justify-between">
+                    <CardTitle className="flex items-center justify-between text-lg">
                       {feature.title}
-                      <ArrowRight className="h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
+                      <ArrowRight className="h-5 w-5 text-emerald-500 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       {feature.description}
                     </p>
                   </CardContent>
@@ -218,11 +245,14 @@ export default function HomePage() {
       </section>
 
       {/* Process Section */}
-      <section className="bg-gradient-to-b from-primary/5 to-background py-16 md:py-20">
+      <section className="bg-gradient-to-b from-slate-50 to-white py-16 md:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
-              维权流程
+              <span className="bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
+                维权
+              </span>
+              流程
             </h2>
             <p className="text-muted-foreground">
               简单四步，快速启动您的维权之路
@@ -234,17 +264,17 @@ export default function HomePage() {
               <div key={item.step} className="relative">
                 {/* Connector line */}
                 {index < steps.length - 1 && (
-                  <div className="absolute left-1/2 top-12 hidden h-0.5 w-full -translate-x-1/2 bg-gradient-to-r from-primary/50 to-primary/20 md:block" />
+                  <div className="absolute left-1/2 top-12 hidden h-0.5 w-full -translate-x-1/2 bg-gradient-to-r from-emerald-300 to-emerald-100 md:block" />
                 )}
 
                 <div className="relative flex flex-col items-center text-center">
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-2xl font-bold text-white shadow-lg">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-2xl font-bold text-white shadow-lg shadow-emerald-500/30">
                     {item.step}
                   </div>
                   <h3 className="mb-2 text-lg font-semibold text-foreground">
                     {item.title}
                   </h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     {item.description}
                   </p>
                 </div>
@@ -254,7 +284,7 @@ export default function HomePage() {
 
           <div className="mt-12 text-center">
             <Link href="/report">
-              <Button size="lg" className="gap-2">
+              <Button size="lg" className="gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all">
                 开始维权
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -264,31 +294,31 @@ export default function HomePage() {
       </section>
 
       {/* Help & Resources */}
-      <section className="bg-gradient-to-b from-background via-primary/3 to-background py-16 md:py-20">
+      <section className="bg-gradient-to-b from-white via-emerald-50/30 to-white py-16 md:py-20">
         <div className="mx-auto max-w-7xl px-4">
           <div className="grid gap-8 lg:grid-cols-2">
             {/* Notice Board */}
             <AnnouncementList />
 
             {/* Quick Actions */}
-            <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
+            <Card className="bg-gradient-to-br from-emerald-50/80 to-emerald-100/30 border-emerald-100">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-primary" />
+                  <BookOpen className="h-5 w-5 text-emerald-600" />
                   快速入口
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 <Link 
                   href="tel:12345"
-                  className="outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-lg"
                 >
-                  <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-white/80 p-4 transition-all duration-200 hover:shadow-md hover:border-primary/40">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <Phone className="h-5 w-5 text-primary" />
+                  <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-white/80 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-200 hover:-translate-y-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+                      <Phone className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div>
-                      <div className="font-medium">12345热线</div>
+                      <div className="font-medium text-foreground">12345热线</div>
                       <div className="text-xs text-muted-foreground">
                         政务服务热线
                       </div>
@@ -298,14 +328,14 @@ export default function HomePage() {
 
                 <Link 
                   href="/help"
-                  className="outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-lg"
                 >
-                  <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-white/80 p-4 transition-all duration-200 hover:shadow-md hover:border-primary/40">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <Shield className="h-5 w-5 text-primary" />
+                  <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-white/80 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-200 hover:-translate-y-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+                      <Shield className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div>
-                      <div className="font-medium">使用帮助</div>
+                      <div className="font-medium text-foreground">使用帮助</div>
                       <div className="text-xs text-muted-foreground">
                         平台操作指南
                       </div>
@@ -315,14 +345,14 @@ export default function HomePage() {
 
                 <Link 
                   href="/legal-aid"
-                  className="outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-lg"
                 >
-                  <div className="flex items-center gap-3 rounded-lg border border-[var(--gold)]/30 bg-white/80 p-4 transition-all duration-200 hover:shadow-md hover:border-[var(--gold)]/50">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--gold)]/10">
-                      <Heart className="h-5 w-5 text-[var(--gold-foreground)]" />
+                  <div className="flex items-center gap-3 rounded-xl border border-amber-100 bg-white/80 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10 hover:border-amber-200 hover:-translate-y-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
+                      <Heart className="h-5 w-5 text-amber-600" />
                     </div>
                     <div>
-                      <div className="font-medium">法律援助</div>
+                      <div className="font-medium text-foreground">法律援助</div>
                       <div className="text-xs text-muted-foreground">
                         免费法律帮助
                       </div>
@@ -332,14 +362,14 @@ export default function HomePage() {
 
                 <Link 
                   href="/cases"
-                  className="outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-lg"
                 >
-                  <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-white/80 p-4 transition-all duration-200 hover:shadow-md hover:border-primary/40">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <FolderOpen className="h-5 w-5 text-primary" />
+                  <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-white/80 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-200 hover:-translate-y-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+                      <FolderOpen className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div>
-                      <div className="font-medium">案件查询</div>
+                      <div className="font-medium text-foreground">案件查询</div>
                       <div className="text-xs text-muted-foreground">
                         追踪案件进度
                       </div>
