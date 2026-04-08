@@ -15,6 +15,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+// ============ 内联分页组件 ============
+function Pagination({
+  total, page, dataLength, onPageChange
+}: { total: number; page: number; dataLength: number; onPageChange: (p: number) => void }) {
+  if (total <= 10) return null;
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30 rounded-lg">
+      <p className="text-sm text-muted-foreground">显示 {dataLength} 条，共 {total} 条</p>
+      <div className="flex gap-1">
+        <Button variant="outline" size="sm" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page <= 1}>上一页</Button>
+        <span className="px-3 py-1.5 text-sm">第 {page} 页</span>
+        <Button variant="outline" size="sm" onClick={() => onPageChange(page + 1)} disabled={dataLength < 10}>下一页</Button>
+      </div>
+    </div>
+  );
+}
+
 // ============ 类型定义 ============
 type TabType = 'dashboard' | 'reports' | 'applications' | 'cases' | 'documents' | 'consultations' | 'knowledge' | 'announcements' | 'files' | 'settings';
 
@@ -1477,6 +1494,7 @@ export default function AdminPage() {
               {filteredConsultations.length === 0 && !isLoading ? (
                 <Card><CardContent className="p-8 text-center"><MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" /><p className="text-muted-foreground">暂无咨询记录</p></CardContent></Card>
               ) : (
+                <>
                 <div className="grid gap-3">
                   {filteredConsultations.map((c) => (
                     <Card key={c.id} className="hover:shadow-md transition-shadow">
@@ -1500,16 +1518,8 @@ export default function AdminPage() {
                     </Card>
                   ))}
                 </div>
-                {(consultationsTotal || 0) > 10 ? (
-                  <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/30 rounded-lg">
-                    <p className="text-sm text-muted-foreground">显示 {filteredConsultations.length} 条，共 {consultationsTotal} 条</p>
-                    <div className="flex gap-1">
-                      <Button variant="outline" size="sm" onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1}>上一页</Button>
-                      <span className="px-3 py-1.5 text-sm">第 {page} 页</span>
-                      <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={filteredConsultations.length < 10}>下一页</Button>
-                    </div>
-                  </div>
-                ) : null}
+                <Pagination total={consultationsTotal} page={page} dataLength={filteredConsultations.length} onPageChange={setPage} />
+                </>
               )}
             </div>
           )}
