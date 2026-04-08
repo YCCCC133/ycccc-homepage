@@ -1802,6 +1802,7 @@ export default function AdminPage() {
                   {'description' in selectedItem && <DetailRow label="描述" value={selectedItem.description || '-'} />}
                   {'case_brief' in selectedItem && <DetailRow label="案件简述" value={selectedItem.case_brief || '-'} />}
                   {'case_number' in selectedItem && <DetailRow label="案件编号" value={selectedItem.case_number} mono />}
+                  {'case_type' in selectedItem && <DetailRow label="案件类型" value={selectedItem.case_type} />}
                   {'defendant_name' in selectedItem && <DetailRow label="被告" value={selectedItem.defendant_name} />}
                   {'amount' in selectedItem && <DetailRow label="涉案金额" value={`¥${Number(selectedItem.amount).toLocaleString()}`} highlight />}
                   {'notes' in selectedItem && selectedItem.notes && <DetailRow label="备注" value={selectedItem.notes} />}
