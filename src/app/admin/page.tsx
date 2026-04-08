@@ -185,10 +185,10 @@ export default function AdminPage() {
       
       if (data.success) {
         // 登录成功
-        setIsAuthenticated(true);
         setPassword('');
-        // 获取初始数据
-        await fetchData();
+        // 直接设置已认证，不在这里获取数据
+        // useEffect 会自动触发 fetchData
+        setIsAuthenticated(true);
       } else {
         setLoginError(data.error || '密码错误');
       }
@@ -215,12 +215,14 @@ export default function AdminPage() {
           fetch('/api/admin/data?type=stats'),
           fetch('/api/admin/cases?pageSize=5'),
         ]);
-        // 检查认证状态 - 只有在明确401时才退出
-        if (statsRes.status === 401) {
+        
+        // 检查认证状态 - 只要有一个返回401就退出
+        if (statsRes.status === 401 || casesRes.status === 401) {
           setIsAuthenticated(false);
           setIsLoading(false);
           return;
         }
+        
         const statsData = await statsRes.json();
         const casesData = await casesRes.json();
         if (statsData.stats) setStats(statsData.stats);
