@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ChevronLeft, ChevronRight, Volume2, Clock, User, ArrowRight } from 'lucide-react';
 
 interface Announcement {
@@ -29,7 +28,6 @@ export function ScrollingAnnouncementBanner() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [imagesLoaded, setImagesLoaded] = useState<Record<number, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
   const fetchAnnouncements = useCallback(async () => {
@@ -152,7 +150,8 @@ export function ScrollingAnnouncementBanner() {
 
   const currentAnnouncement = announcements[currentIndex];
   const gradient = categoryGradients[currentAnnouncement.category] || categoryGradients.default;
-  const hasImage = currentAnnouncement.image_url && imagesLoaded[currentAnnouncement.id];
+  // 直接检查 image_url 是否存在，不再依赖 imagesLoaded 状态
+  const hasImage = !!currentAnnouncement.image_url;
 
   return (
     <div 
@@ -163,16 +162,12 @@ export function ScrollingAnnouncementBanner() {
       {/* Background Image or Gradient */}
       {hasImage ? (
         <>
-          {/* Optimized Image Loading */}
-          <Image
+          {/* 使用普通 img 标签以确保兼容性 */}
+          <img
             src={currentAnnouncement.image_url || ''}
             alt=""
-            fill
-            className="object-cover transition-opacity duration-700"
-            style={{ opacity: hasImage ? 1 : 0 }}
-            onLoad={() => setImagesLoaded(prev => ({ ...prev, [currentAnnouncement.id]: true }))}
-            sizes="100vw"
-            priority={currentIndex === 0}
+            className="absolute inset-0 w-full h-full object-cover"
+            crossOrigin="anonymous"
           />
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/30" />
