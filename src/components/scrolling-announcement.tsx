@@ -30,16 +30,39 @@ export function ScrollingAnnouncementBanner() {
   const [isPaused, setIsPaused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [imagesLoaded, setImagesLoaded] = useState<Record<number, boolean>>({});
+  const [error, setError] = useState<string | null>(null);
 
   const fetchAnnouncements = useCallback(async () => {
     try {
       const response = await fetch('/api/announcements?limit=10&published_only=true');
       const data = await response.json();
-      if (data.success && data.data.length > 0) {
+      if (data.success && data.data && data.data.length > 0) {
         setAnnouncements(data.data);
+        setError(null);
+      } else if (data.success && data.data && data.data.length === 0) {
+        // 没有公告，使用默认公告
+        setAnnouncements([{
+          id: 0,
+          title: '护薪平台 - 检察支持起诉智能平台',
+          content: '为农民工群体提供薪酬权益保障服务，线索填报、智能咨询、文书生成、在线申请、案件查询等一站式服务。',
+          category: '通知',
+          image_url: null,
+          created_at: new Date().toISOString(),
+        }]);
+        setError(null);
       }
-    } catch (error) {
-      console.error('获取公告失败:', error);
+    } catch (err) {
+      console.error('获取公告失败:', err);
+      setError('获取公告失败');
+      // 即使失败也显示默认公告
+      setAnnouncements([{
+        id: 0,
+        title: '护薪平台 - 检察支持起诉智能平台',
+        content: '为农民工群体提供薪酬权益保障服务，线索填报、智能咨询、文书生成、在线申请、案件查询等一站式服务。',
+        category: '通知',
+        image_url: null,
+        created_at: new Date().toISOString(),
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -108,8 +131,23 @@ export function ScrollingAnnouncementBanner() {
     );
   }
 
+  // 确保至少有公告显示
   if (announcements.length === 0) {
-    return null;
+    setAnnouncements([{
+      id: 0,
+      title: '护薪平台 - 检察支持起诉智能平台',
+      content: '为农民工群体提供薪酬权益保障服务，线索填报、智能咨询、文书生成、在线申请、案件查询等一站式服务。',
+      category: '通知',
+      image_url: null,
+      created_at: new Date().toISOString(),
+    }]);
+    return (
+      <div className="relative h-[320px] sm:h-[380px] md:h-[420px] bg-gradient-to-br from-slate-800 to-emerald-900">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-white/60">暂无公告</div>
+        </div>
+      </div>
+    );
   }
 
   const currentAnnouncement = announcements[currentIndex];
