@@ -169,20 +169,24 @@ export default function AdminPage() {
     e.preventDefault();
     setLoginError('');
     setIsLoading(true);
+    
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
       });
+      
       const data = await res.json();
+      
       if (data.success) {
+        // 登录成功
         setIsAuthenticated(true);
         setPassword('');
-        // 登录成功后获取数据
-        fetchData();
+        // 获取初始数据
+        await fetchData();
       } else {
-        setLoginError(data.error || '登录失败');
+        setLoginError(data.error || '密码错误');
       }
     } catch (error) {
       console.error('登录错误:', error);
