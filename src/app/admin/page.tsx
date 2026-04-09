@@ -197,7 +197,9 @@ export default function AdminPage() {
 
   const checkAuth = async () => {
     try {
-      const res = await fetch('/api/admin/login');
+      const res = await fetch('/api/admin/login', {
+        credentials: 'include', // 确保发送 cookie
+      });
       const data = await res.json();
       setIsAuthenticated(data.authenticated);
     } catch {
@@ -217,17 +219,21 @@ export default function AdminPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
+        credentials: 'include', // 确保发送 cookie
       });
       
       const data = await res.json();
       
       if (data.success) {
-        // 登录成功，重置状态并跳转
+        // 登录成功，先设置认证状态
         setPassword('');
         setLoginError('');
+        setIsAuthenticated(true);
         
-        // 强制刷新页面以确保所有状态正确加载
-        window.location.reload();
+        // 延迟刷新，确保 cookie 被浏览器完全接受
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
       } else {
         setLoginError(data.error || '密码错误');
         setIsLoading(false);
@@ -240,7 +246,9 @@ export default function AdminPage() {
   };
 
   const handleLogout = () => {
-    document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    // 清除 cookie（同时清除有/无 secure 标记的 cookie）
+    document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure; SameSite=lax';
+    document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=lax';
     setIsAuthenticated(false);
   };
 
