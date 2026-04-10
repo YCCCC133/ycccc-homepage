@@ -112,8 +112,8 @@ export function Navigation() {
                     className={cn(
                       'group relative flex items-center gap-1 whitespace-nowrap rounded-xl px-2 py-1.5 text-sm font-medium outline-none transition-all duration-300 lg:gap-1.5 lg:px-3 lg:py-2',
                       isActive
-                        ? 'bg-gradient-to-r from-primary/20 to-primary/10 text-primary shadow-lg shadow-primary/10 backdrop-blur-md border border-primary/20'
-                        : 'text-foreground/70 hover:bg-gradient-to-r hover:from-accent/80 hover:to-accent/50 hover:text-foreground hover:backdrop-blur-md hover:border hover:border-border/50'
+                        ? 'bg-gradient-to-r from-primary/20 to-primary/10 text-primary shadow-lg shadow-primary/10 backdrop-blur-md ring-2 ring-primary/20'
+                        : 'text-foreground/70 hover:bg-gradient-to-r hover:from-accent/80 hover:to-accent/50 hover:text-foreground hover:backdrop-blur-md hover:ring-2 hover:ring-primary/20 hover:ring-offset-0'
                     )}
                   >
                     <item.icon

@@ -178,10 +178,10 @@ export default function HomePage() {
               {stats.map((stat, index) => (
                 <div
                   key={stat.label}
-                  className="group relative rounded-2xl border border-emerald-100/50 bg-white/80 p-4 backdrop-blur-sm transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-200"
+                  className="group relative rounded-2xl border border-emerald-100/50 bg-white/80 p-4 backdrop-blur-sm transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-300/70 hover:ring-2 hover:ring-emerald-200/50 hover:ring-offset-0"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                   <stat.icon className="mb-3 h-5 w-5 text-emerald-500 group-hover:scale-110 transition-transform duration-300" />
                   <div className="text-2xl font-bold text-foreground">
                     {stat.value}
@@ -219,9 +219,10 @@ export default function HomePage() {
                 href={feature.href}
                 className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-xl"
               >
-                <Card className="group h-full cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-2 border-emerald-100/50 hover:border-emerald-200">
-                  <CardHeader className="relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Card className="group relative h-full cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-2 border-emerald-100/50 hover:border-emerald-300/70 hover:ring-2 hover:ring-emerald-200/50 hover:ring-offset-0">
+                  {/* 背景渐变遮罩 - 使用非overflow裁剪方式 */}
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  <CardHeader className="relative z-10">
                     <div
                       className={`relative mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${feature.bgColor} group-hover:scale-110 transition-transform duration-300`}
                     >
@@ -232,7 +233,7 @@ export default function HomePage() {
                       <ArrowRight className="h-5 w-5 text-emerald-500 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="relative z-10">
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       {feature.description}
                     </p>
@@ -311,10 +312,10 @@ export default function HomePage() {
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 <Link 
                   href="tel:12345"
-                  className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-lg"
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-xl"
                 >
-                  <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-white/80 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-200 hover:-translate-y-1">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+                  <div className="group flex items-center gap-3 rounded-xl border border-emerald-100 bg-white/80 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-300/70 hover:ring-2 hover:ring-emerald-200/50 hover:ring-offset-0 hover:-translate-y-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 group-hover:bg-emerald-200 transition-colors duration-300">
                       <Phone className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div>
@@ -328,10 +329,10 @@ export default function HomePage() {
 
                 <Link 
                   href="/help"
-                  className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-lg"
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-xl"
                 >
-                  <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-white/80 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-200 hover:-translate-y-1">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+                  <div className="group flex items-center gap-3 rounded-xl border border-emerald-100 bg-white/80 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-300/70 hover:ring-2 hover:ring-emerald-200/50 hover:ring-offset-0 hover:-translate-y-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 group-hover:bg-emerald-200 transition-colors duration-300">
                       <Shield className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div>
@@ -345,10 +346,10 @@ export default function HomePage() {
 
                 <Link 
                   href="/legal-aid"
-                  className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-lg"
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-xl"
                 >
-                  <div className="flex items-center gap-3 rounded-xl border border-amber-100 bg-white/80 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10 hover:border-amber-200 hover:-translate-y-1">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
+                  <div className="group flex items-center gap-3 rounded-xl border border-amber-100 bg-white/80 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10 hover:border-amber-300/70 hover:ring-2 hover:ring-amber-200/50 hover:ring-offset-0 hover:-translate-y-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 group-hover:bg-amber-200 transition-colors duration-300">
                       <Heart className="h-5 w-5 text-amber-600" />
                     </div>
                     <div>
@@ -362,10 +363,10 @@ export default function HomePage() {
 
                 <Link 
                   href="/cases"
-                  className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-lg"
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-xl"
                 >
-                  <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-white/80 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-200 hover:-translate-y-1">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+                  <div className="group flex items-center gap-3 rounded-xl border border-emerald-100 bg-white/80 p-4 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10 hover:border-emerald-300/70 hover:ring-2 hover:ring-emerald-200/50 hover:ring-offset-0 hover:-translate-y-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 group-hover:bg-emerald-200 transition-colors duration-300">
                       <FolderOpen className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div>
