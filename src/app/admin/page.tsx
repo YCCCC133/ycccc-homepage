@@ -50,6 +50,7 @@ interface Stats {
 interface Announcement {
   id: number; title: string; content: string; category: string; is_published: boolean;
   created_at: string; updated_at: string; image_url?: string;
+  is_top?: boolean; is_banner?: boolean; sort_order?: number;
 }
 
 interface Report {

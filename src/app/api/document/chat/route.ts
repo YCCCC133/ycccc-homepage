@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { LLMClient, Config } from 'coze-coding-dev-sdk';
+import { LLMClient, Config, Message } from 'coze-coding-dev-sdk';
 
 // 使用 Node.js runtime
 export const runtime = 'nodejs';
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     const { messages, formData } = body;
 
     // 构建发送给大模型的消息
-    const llmMessages: Array<{ role: string; content: string }> = [
+    const llmMessages: Message[] = [
       { role: 'system', content: SYSTEM_PROMPT }
     ];
 

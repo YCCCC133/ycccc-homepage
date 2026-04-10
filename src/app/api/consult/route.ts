@@ -31,7 +31,7 @@ async function getKnowledgeBase() {
     const client = getSupabaseClient();
     const { data, error } = await client
       .from('knowledge_base')
-      .select('summary, category, case_type')
+      .select('title, summary, content, category, case_type, tags')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(20);

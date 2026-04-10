@@ -1,6 +1,6 @@
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
-import { getSupabaseClient } from './supabase-client';
+import { getSupabaseClient } from '../src/storage/database/supabase-client';
 
 const DATA_DIR = join(process.cwd(), 'assets', '数据源');
 
