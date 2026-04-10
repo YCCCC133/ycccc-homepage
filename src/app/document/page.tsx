@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Send, FileText, Loader2, Copy, Check, Download, Sparkles } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -292,9 +294,28 @@ export default function DocumentPage() {
                         : 'bg-white/80 text-foreground border border-emerald-100/50 shadow-sm'
                     }`}
                   >
-                    {msg.content.split('\n').map((line, i) => (
-                      <p key={i} className={i > 0 ? 'mt-2' : ''}>{line}</p>
-                    ))}
+                    {msg.role === 'assistant' ? (
+                      <ReactMarkdown 
+                        className="prose prose-sm prose-emerald max-w-none"
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          h1: ({children}) => <h1 className="text-lg font-bold mt-3 mb-2 first:mt-0">{children}</h1>,
+                          h2: ({children}) => <h2 className="text-base font-bold mt-3 mb-2 first:mt-0">{children}</h2>,
+                          h3: ({children}) => <h3 className="text-sm font-semibold mt-2 mb-1 first:mt-0">{children}</h3>,
+                          p: ({children}) => <p className="mb-2 last:mb-0">{children}</p>,
+                          ul: ({children}) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+                          ol: ({children}) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+                          li: ({children}) => <li className="text-sm">{children}</li>,
+                          strong: ({children}) => <strong className="font-semibold">{children}</strong>,
+                          code: ({children}) => <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                          blockquote: ({children}) => <blockquote className="border-l-2 border-emerald-300 pl-3 italic my-2">{children}</blockquote>,
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    ) : (
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    )}
                   </div>
                 </div>
               ))}
