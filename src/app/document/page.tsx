@@ -296,25 +296,26 @@ export default function DocumentPage() {
                   >
                     {msg.role === 'assistant' ? (
                       <ReactMarkdown 
-                        className="prose prose-sm prose-emerald max-w-none"
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          h1: ({children}) => <h1 className="text-lg font-bold mt-3 mb-2 first:mt-0">{children}</h1>,
-                          h2: ({children}) => <h2 className="text-base font-bold mt-3 mb-2 first:mt-0">{children}</h2>,
-                          h3: ({children}) => <h3 className="text-sm font-semibold mt-2 mb-1 first:mt-0">{children}</h3>,
-                          p: ({children}) => <p className="mb-2 last:mb-0">{children}</p>,
-                          ul: ({children}) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
-                          ol: ({children}) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
-                          li: ({children}) => <li className="text-sm">{children}</li>,
-                          strong: ({children}) => <strong className="font-semibold">{children}</strong>,
-                          code: ({children}) => <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
-                          blockquote: ({children}) => <blockquote className="border-l-2 border-emerald-300 pl-3 italic my-2">{children}</blockquote>,
+                          h1: ({children}) => <h1 style={{fontSize:'1.125rem',fontWeight:'bold',marginTop:'12px',marginBottom:'8px'}}>{children}</h1>,
+                          h2: ({children}) => <h2 style={{fontSize:'1rem',fontWeight:'bold',marginTop:'12px',marginBottom:'8px'}}>{children}</h2>,
+                          h3: ({children}) => <h3 style={{fontSize:'0.875rem',fontWeight:'600',marginTop:'8px',marginBottom:'4px'}}>{children}</h3>,
+                          p: ({children}) => <p style={{marginBottom:'8px'}}>{children}</p>,
+                          ul: ({children}) => <ul style={{listStyleType:'disc',paddingLeft:'1rem',margin:'8px 0'}}>{children}</ul>,
+                          ol: ({children}) => <ol style={{listStyleType:'decimal',paddingLeft:'1rem',margin:'8px 0'}}>{children}</ol>,
+                          li: ({children}) => <li style={{fontSize:'0.875rem',marginBottom:'4px'}}>{children}</li>,
+                          strong: ({children}) => <strong style={{fontWeight:'600'}}>{children}</strong>,
+                          em: ({children}) => <em style={{fontStyle:'italic'}}>{children}</em>,
+                          code: ({children}) => <code style={{backgroundColor:'#f3f4f6',padding:'2px 4px',borderRadius:'4px',fontSize:'0.75rem',fontFamily:'monospace'}}>{children}</code>,
+                          blockquote: ({children}) => <blockquote style={{borderLeft:'2px solid #6ee7b7',paddingLeft:'12px',fontStyle:'italic',margin:'8px 0'}}>{children}</blockquote>,
+                          hr: () => <hr style={{border:'none',borderTop:'1px solid #e5e7eb',margin:'12px 0'}} />,
                         }}
                       >
                         {msg.content}
                       </ReactMarkdown>
                     ) : (
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <p style={{whiteSpace:'pre-wrap'}}>{msg.content}</p>
                     )}
                   </div>
                 </div>
