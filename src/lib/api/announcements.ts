@@ -70,7 +70,7 @@ export interface CreateAnnouncementData {
   sort_order?: number;
 }
 
-export interface UpdateAnnouncementData extends Partial<CreateAnnouncementData> {}
+export type UpdateAnnouncementData = Partial<CreateAnnouncementData>;
 
 export interface UploadResponse {
   success: boolean;
