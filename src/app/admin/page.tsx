@@ -1,8 +1,8 @@
 // Server component - forces dynamic rendering
 export const dynamic = 'force-dynamic';
 
-import AdminDashboard from './admin-dashboard';
+import AdminLoginPage from './admin-login-page';
 
 export default function AdminPage() {
-  return <AdminDashboard />;
+  return <AdminLoginPage />;
 }
