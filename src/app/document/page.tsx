@@ -1,633 +1,406 @@
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import {
-  FileText,
-  PenTool,
-  Download,
-  Eye,
-  CheckCircle2,
-  AlertCircle,
-  Printer,
-  Copy,
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileText, Download, Loader2, CheckCircle, PlusCircle, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
-const documentTypes = [
-  {
-    id: 'complaint',
-    name: '民事起诉状',
-    description: '用于向人民法院提起民事诉讼',
-    icon: FileText,
-  },
-  {
-    id: 'support',
-    name: '支持起诉申请书',
-    description: '申请检察机关支持起诉',
-    icon: FileText,
-  },
-  {
-    id: 'legal_aid',
-    name: '法律援助申请书',
-    description: '申请免费法律援助服务',
-    icon: FileText,
-  },
-];
+interface TemplateField {
+  name: string;
+  type: string;
+  options?: string[];
+  required?: boolean;
+}
 
-const formSchema = z.object({
-  plaintiffName: z.string().min(2, '请输入姓名'),
-  plaintiffIdCard: z.string().length(18, '请输入正确的身份证号'),
-  plaintiffPhone: z.string().regex(/^1[3-9]\d{9}$/, '请输入正确的手机号'),
-  plaintiffAddress: z.string().min(5, '请输入详细地址'),
-  
-  defendantName: z.string().min(2, '请输入被告/被申请人名称'),
-  defendantAddress: z.string().min(5, '请输入地址'),
-  defendantPhone: z.string().optional(),
-  
-  claim: z.string().min(10, '请详细描述诉讼请求'),
-  facts: z.string().min(20, '请详细描述事实和理由'),
-  evidence: z.string().min(5, '请列出证据清单'),
-});
+interface Template {
+  id: number;
+  name: string;
+  category: string;
+  description?: string;
+  fields: TemplateField[];
+}
 
-type FormData = z.infer<typeof formSchema>;
+const categoryLabels: Record<string, string> = {
+  '民事起诉状': '民事起诉状',
+  '支持起诉': '支持起诉',
+  '支付令': '支付令申请',
+  '证据材料': '证据材料',
+  '法律援助': '法律援助',
+};
+
+const categoryDescriptions: Record<string, string> = {
+  '民事起诉状': '向人民法院提起民事诉讼',
+  '支持起诉': '向检察机关申请支持起诉',
+  '支付令': '申请法院发出支付令催讨工资',
+  '证据材料': '整理提交证据材料清单',
+  '法律援助': '申请免费法律援助服务',
+};
 
 export default function DocumentPage() {
-  const [selectedDoc, setSelectedDoc] = useState('complaint');
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('民事起诉状');
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [formData, setFormData] = useState<Record<string, string>>({});
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedDoc, setGeneratedDoc] = useState<string | null>(null);
-  
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      plaintiffName: '',
-      plaintiffIdCard: '',
-      plaintiffPhone: '',
-      plaintiffAddress: '',
-      defendantName: '',
-      defendantAddress: '',
-      defendantPhone: '',
-      claim: '',
-      facts: '',
-      evidence: '',
-    },
-  });
+  const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const docTypeMapping: Record<string, string> = {
-    complaint: '民事起诉状',
-    support: '支持起诉申请书',
-    legal_aid: '法律援助申请表',
-    payment_order: '支付令申请书',
-    evidence: '证据目录',
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  const loadTemplates = async () => {
+    try {
+      const res = await fetch('/api/document/templates');
+      const data = await res.json();
+      if (data.success && data.data) {
+        // API已返回正确格式的数据（category和fields字段）
+        // 只需确保 fields 是数组格式
+        const parsed = data.data.map((t: { fields?: string | TemplateField[]; variables?: string | string[] }) => {
+          let fields = t.fields;
+          // 如果 fields 是字符串（JSON），解析它
+          if (typeof fields === 'string') {
+            try {
+              fields = JSON.parse(fields);
+            } catch {
+              fields = [];
+            }
+          }
+          // 如果没有 fields 但有 variables（数据库旧格式），转换它
+          if ((!fields || fields.length === 0) && t.variables) {
+            let vars = t.variables;
+            if (typeof vars === 'string') {
+              try {
+                vars = JSON.parse(vars);
+              } catch {
+                vars = [];
+              }
+            }
+            // 将变量名数组转换为字段对象
+            fields = (vars as string[]).map((name: string) => ({
+              name,
+              type: 'text',
+              required: false
+            }));
+          }
+          return {
+            ...t,
+            fields: fields || []
+          };
+        });
+        setTemplates(parsed);
+        if (parsed.length > 0) {
+          setSelectedTemplate(parsed[0]);
+        }
+      }
+    } catch (error) {
+      console.error('加载模板失败:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  async function onSubmit(data: FormData) {
+  const categories = [...new Set(templates.map((t) => t.category))];
+  const filteredTemplates = templates.filter((t) => t.category === selectedCategory);
+
+  const handleSelectTemplate = (template: Template) => {
+    setSelectedTemplate(template);
+    setFormData({});
+    setGeneratedContent(null);
+  };
+
+  const handleFieldChange = (fieldName: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [fieldName]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTemplate) return;
+
     setIsGenerating(true);
     try {
-      const response = await fetch('/api/document', {
+      // 直接使用API返回的模板内容
+      const templateContent = selectedTemplate.content || '';
+      
+      // 填充模板
+      let content = templateContent;
+      
+      // 替换所有 {字段名} 占位符
+      for (const field of selectedTemplate.fields) {
+        const value = formData[field.name] || '';
+        // 处理条件字段（是否xxx）
+        if (field.name.startsWith('是否') && value === 'on') {
+          // 保留原占位符，让用户看到需要填写金额
+          continue;
+        }
+        content = content.replace(new RegExp(`\\{${field.name}\\}`, 'g'), value);
+      }
+      
+      // 处理 || 默认值表达式（如 {工作结束日期 || '今'}）
+      content = content.replace(/\{([^}]+)\s*\|\|\s*'([^']+)'\}/g, (_, expr, defaultVal) => {
+        // 检查表达式中的字段是否有值
+        const fieldMatch = expr.match(/\{([^}]+)\}/);
+        if (fieldMatch) {
+          const fieldName = fieldMatch[1];
+          return formData[fieldName] || defaultVal;
+        }
+        return defaultVal;
+      });
+
+      // 处理日期占位符
+      const now = new Date();
+      content = content.replace(/____年____月____日/g, `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`);
+
+      // 保存到数据库
+      const saveRes = await fetch('/api/document', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          document_type: docTypeMapping[selectedDoc] || selectedDoc,
-          applicant_name: data.plaintiffName,
-          applicant_phone: data.plaintiffPhone,
-          case_description: `${data.claim}\n\n${data.facts}\n\n证据：${data.evidence}`,
-          salary_info: `身份证：${data.plaintiffIdCard}\n电话：${data.plaintiffPhone}`,
-          employer_info: `单位：${data.defendantName}\n地址：${data.defendantAddress}\n电话：${data.defendantPhone || '无'}`
+          document_type: selectedTemplate.name,
+          applicant_name: formData['申请人姓名'] || formData['原告姓名'] || '',
+          applicant_phone: formData['联系电话'] || formData['联系方式'] || formData['原告联系电话'] || '',
+          case_description: content,
+          salary_info: '',
+          employer_info: '',
         }),
       });
 
-      const result = await response.json();
-
-      if (result.success && result.data) {
-        setGeneratedDoc(result.data.document_content);
+      const saveData = await saveRes.json();
+      if (saveData.success) {
+        setGeneratedContent(content);
       } else {
-        alert(result.error || '生成失败，请重试');
+        // 即使保存失败也显示内容
+        setGeneratedContent(content);
       }
     } catch (error) {
       console.error('生成文书失败:', error);
-      alert('网络错误，请重试');
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleDownload = () => {
+    if (!generatedContent) return;
+
+    const blob = new Blob([generatedContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedTemplate?.name || '法律文书'}_${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleNewDocument = () => {
+    setFormData({});
+    setGeneratedContent(null);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-6xl bg-background px-4 py-8 selection-primary select-text">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
   }
-
-  function generateDocument(type: string, data: FormData): string {
-    const templates: Record<string, string> = {
-      complaint: `
-民 事 起 诉 状
-
-原告：${data.plaintiffName}，男/女，身份证号：${data.plaintiffIdCard}
-住所：${data.plaintiffAddress}
-联系电话：${data.plaintiffPhone}
-
-被告：${data.defendantName}
-住所：${data.defendantAddress}
-${data.defendantPhone ? `联系电话：${data.defendantPhone}` : ''}
-
-诉讼请求：
-${data.claim}
-
-事实和理由：
-${data.facts}
-
-证据和证据来源：
-${data.evidence}
-
-法律依据：
-1.《中华人民共和国劳动法》第五十条：工资应当以货币形式按月支付给劳动者本人。
-2.《中华人民共和国劳动合同法》第三十条：用人单位应当按照劳动合同约定和国家规定，向劳动者及时足额支付劳动报酬。
-3.《保障农民工工资支付条例》第三条：农民工有按时足额获得工资的权利。
-
-此致
-北京市西城区人民法院
-
-                                        起诉人：${data.plaintiffName}
-                                        ${new Date().toLocaleDateString('zh-CN')}
-
-附：
-1. 本起诉状副本1份
-2. 证据材料复印件1套
-`,
-      support: `
-支 持 起 诉 申 请 书
-
-申请人：${data.plaintiffName}，男/女，身份证号：${data.plaintiffIdCard}
-住所：${data.plaintiffAddress}
-联系电话：${data.plaintiffPhone}
-
-被申请人：${data.defendantName}
-住所：${data.defendantAddress}
-${data.defendantPhone ? `联系电话：${data.defendantPhone}` : ''}
-
-申请事项：
-请求贵院支持申请人对被申请人提起的民事诉讼，追索劳动报酬。
-
-事实和理由：
-${data.facts}
-
-申请依据：
-根据《中华人民共和国民事诉讼法》第十五条规定："机关、社会团体、企业事业单位对损害国家、集体或者个人民事权益的行为，可以支持受损害的单位或者个人向人民法院起诉。"
-
-根据《人民检察院民事诉讼监督规则（试行）》相关规定，人民检察院可以对农民工等弱势群体起诉维权提供支持。
-
-证据材料：
-${data.evidence}
-
-此致
-北京市西城区人民检察院
-
-                                        申请人：${data.plaintiffName}
-                                        ${new Date().toLocaleDateString('zh-CN')}
-
-附：
-1. 身份证复印件1份
-2. 证据材料1套
-`,
-      legal_aid: `
-法律援助申请书
-
-申请人：${data.plaintiffName}，男/女，身份证号：${data.plaintiffIdCard}
-住所：${data.plaintiffAddress}
-联系电话：${data.plaintiffPhone}
-
-申请事项：
-申请法律援助，请求指派律师为申请人提供法律帮助。
-
-案件概况：
-${data.facts}
-
-法律援助理由：
-申请人系农民工，因被申请人${data.defendantName}拖欠劳动报酬，导致经济困难，无力支付律师费用。根据《法律援助条例》第十条规定，公民对需要代理的民事、行政诉讼事项，因经济困难没有委托代理人的，可以向法律援助机构申请法律援助。
-
-所需法律援助：
-${data.claim}
-
-现有证据：
-${data.evidence}
-
-此致
-北京市西城区法律援助中心
-
-                                        申请人：${data.plaintiffName}
-                                        ${new Date().toLocaleDateString('zh-CN')}
-`,
-    };
-
-    return templates[type] || templates.complaint;
-  }
-
-  const copyToClipboard = () => {
-    if (generatedDoc) {
-      navigator.clipboard.writeText(generatedDoc);
-    }
-  };
-
-  const downloadDocument = () => {
-    if (generatedDoc) {
-      const blob = new Blob([generatedDoc], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      const docNames: Record<string, string> = {
-        complaint: '民事起诉状',
-        support: '支持起诉申请书',
-        legal_aid: '法律援助申请书',
-      };
-      link.href = url;
-      link.download = `${docNames[selectedDoc] || '法律文书'}_${new Date().toISOString().split('T')[0]}.txt`;
-      link.click();
-      URL.revokeObjectURL(url);
-    }
-  };
-
-  const printDocument = () => {
-    if (generatedDoc) {
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head><title>打印文书</title></head>
-            <body style="font-family: 'SimSun', serif; padding: 40px; line-height: 1.8;">
-              <pre style="white-space: pre-wrap; font-size: 14px;">${generatedDoc}</pre>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-      }
-    }
-  };
 
   return (
     <div className="mx-auto max-w-6xl bg-background px-4 py-8 selection-primary select-text">
-      {/* Header */}
+      {/* 标题 */}
       <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold text-foreground">法律文书生成</h1>
-        <p className="text-muted-foreground">
-          一键生成起诉状、支持起诉书等法律文书，降低维权门槛
+        <h1 className="text-2xl font-bold text-foreground">法律文书生成</h1>
+        <p className="text-muted-foreground mt-1">
+          选择模板，填写信息，即可生成标准法律文书
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Side - Document Selection & Form */}
-        <div className="lg:col-span-2">
-          {/* Document Type Selection */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PenTool className="h-5 w-5 text-primary" />
-                选择文书类型
-              </CardTitle>
-              <CardDescription>
-                请根据您的需求选择要生成的法律文书类型
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {documentTypes.map((doc) => (
-                  <button
-                    key={doc.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDoc(doc.id);
-                      setGeneratedDoc(null);
-                    }}
-                    className={`flex flex-col items-start rounded-lg border p-4 text-left outline-none transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
-                      selectedDoc === doc.id
-                        ? 'border-primary bg-primary/5 shadow-md'
-                        : 'border-border hover:border-primary/50 hover:shadow-sm'
-                    }`}
-                  >
-                    <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <doc.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="font-medium">{doc.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {doc.description}
-                    </div>
-                    {selectedDoc === doc.id && (
-                      <Badge className="mt-2" variant="secondary">
-                        已选择
-                      </Badge>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Form */}
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Plaintiff Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">原告/申请人信息</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="plaintiffName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>姓名 *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="请输入姓名" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="plaintiffPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>联系电话 *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="请输入手机号码" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="plaintiffIdCard"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>身份证号 *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="请输入18位身份证号码" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="plaintiffAddress"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>住所地址 *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="请输入详细地址" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Defendant Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">被告/被申请人信息</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="defendantName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>名称 *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="请输入被告名称" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="defendantAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>地址 *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="请输入地址" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="defendantPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>联系电话</FormLabel>
-                          <FormControl>
-                            <Input placeholder="选填" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Case Details */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">案件详情</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="claim"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>诉讼请求/申请事项 *</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="例如：1. 判令被告支付拖欠工资XXX元；2. 判令被告支付经济补偿金XXX元；3. 本案诉讼费用由被告承担。"
-                            className="min-h-[80px]"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="facts"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>事实和理由 *</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="请详细描述案件事实经过、入职时间、工作内容、欠薪情况等..."
-                            className="min-h-[120px]"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="evidence"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>证据清单 *</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="例如：1. 劳动合同复印件；2. 工资条/银行转账记录；3. 考勤记录；4. 工作证..."
-                            className="min-h-[80px]"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              <Button type="submit" size="lg" className="w-full" disabled={isGenerating}>
-                {isGenerating ? (
-                  <>
-                    <span className="animate-pulse">生成中...</span>
-                  </>
-                ) : (
-                  <>
-                    <PenTool className="mr-2 h-4 w-4" />
-                    生成文书
-                  </>
-                )}
-              </Button>
-            </form>
-          </Form>
-        </div>
-
-        {/* Right Side - Preview & Tips */}
+      {generatedContent ? (
+        /* 生成结果 */
         <div className="space-y-6">
-          {/* Tips Card */}
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <AlertCircle className="h-4 w-4 text-primary" />
-                温馨提示
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>• 文书内容仅供参考，建议咨询专业律师</p>
-              <p>• 请确保填写信息真实准确</p>
-              <p>• 提交前请仔细核对各项内容</p>
-              <p>• 如有疑问可拨打12345热线咨询</p>
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-6 w-6 text-emerald-500" />
+            <h2 className="text-lg font-semibold">文书生成成功</h2>
+          </div>
 
-          {/* Preview Card */}
-          {generatedDoc && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    文书已生成
-                  </span>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={copyToClipboard}
-                    >
-                      <Copy className="mr-1 h-3 w-3" />
-                      复制
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={downloadDocument}
-                    >
-                      <Download className="mr-1 h-3 w-3" />
-                      下载
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={printDocument}
-                    >
-                      <Printer className="mr-1 h-3 w-3" />
-                      打印
-                    </Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="preview">
-                  <TabsList className="w-full">
-                    <TabsTrigger value="preview" className="flex-1">
-                      <Eye className="mr-1 h-3 w-3" />
-                      预览
-                    </TabsTrigger>
-                    <TabsTrigger value="download" className="flex-1">
-                      <Download className="mr-1 h-3 w-3" />
-                      下载
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="preview">
-                    <div className="mt-4 max-h-[500px] overflow-auto rounded-lg border bg-white p-4">
-                      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                        {generatedDoc}
-                      </pre>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="download">
-                    <div className="mt-4 space-y-3">
-                      <Button className="w-full" variant="outline">
-                        <Download className="mr-2 h-4 w-4" />
-                        下载 Word 格式
-                      </Button>
-                      <Button className="w-full" variant="outline">
-                        <Download className="mr-2 h-4 w-4" />
-                        下载 PDF 格式
-                      </Button>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          )}
+          <div className="bg-muted/50 rounded-lg p-6">
+            <pre className="whitespace-pre-wrap text-sm leading-relaxed font-mono">
+              {generatedContent}
+            </pre>
+          </div>
+
+          <div className="flex gap-4">
+            <Button onClick={handleDownload} className="gap-2">
+              <Download className="h-4 w-4" />
+              下载文书
+            </Button>
+            <Button variant="outline" onClick={handleNewDocument} className="gap-2">
+              <PlusCircle className="h-4 w-4" />
+              生成新文书
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* 模板选择和表单 */
+        <div className="grid lg:grid-cols-4 gap-6">
+          {/* 左侧：模板分类 */}
+          <div className="lg:col-span-1 space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">文书类型</h3>
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => {
+                  setSelectedCategory(category);
+                  setSelectedTemplate(templates.find((t) => t.category === category) || null);
+                }}
+                className={cn(
+                  'w-full text-left px-4 py-3 rounded-lg transition-all',
+                  selectedCategory === category
+                    ? 'bg-primary/10 text-primary border border-primary/20'
+                    : 'bg-muted/30 hover:bg-muted/50 text-foreground/80'
+                )}
+              >
+                <div className="font-medium">{categoryLabels[category] || category}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {categoryDescriptions[category] || ''}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* 中间：模板列表 */}
+          <div className="lg:col-span-1 space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">
+              {categoryLabels[selectedCategory] || selectedCategory} 模板
+            </h3>
+            {filteredTemplates.map((template) => (
+              <button
+                key={template.id}
+                onClick={() => handleSelectTemplate(template)}
+                className={cn(
+                  'w-full text-left px-4 py-3 rounded-lg transition-all flex items-center justify-between',
+                  selectedTemplate?.id === template.id
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted/30 hover:bg-muted/50'
+                )}
+              >
+                <div>
+                  <div className="font-medium text-sm">{template.name}</div>
+                  {template.description && (
+                    <div className={cn(
+                      'text-xs mt-0.5',
+                      selectedTemplate?.id === template.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                    )}>
+                      {template.description}
+                    </div>
+                  )}
+                </div>
+                <ChevronRight className={cn(
+                  'h-4 w-4 shrink-0',
+                  selectedTemplate?.id === template.id ? 'text-primary-foreground' : 'text-muted-foreground'
+                )} />
+              </button>
+            ))}
+          </div>
+
+          {/* 右侧：表单 */}
+          <div className="lg:col-span-2">
+            {selectedTemplate ? (
+              <form onSubmit={handleSubmit} className="space-y-6 bg-card rounded-lg p-6 border">
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">{selectedTemplate.name}</h3>
+                </div>
+
+                <div className="space-y-4">
+                  {selectedTemplate.fields.map((field) => (
+                    <div key={field.name}>
+                      <label className="block text-sm font-medium mb-1.5">
+                        {field.name}
+                        {field.required && <span className="text-destructive ml-1">*</span>}
+                      </label>
+                      {field.type === 'textarea' ? (
+                        <textarea
+                          value={formData[field.name] || ''}
+                          onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[100px] focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          placeholder={`请输入${field.name}`}
+                        />
+                      ) : field.type === 'checkbox' ? (
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={formData[field.name] === 'on'}
+                            onChange={(e) => handleFieldChange(field.name, e.target.checked ? 'on' : '')}
+                            className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
+                          />
+                          <span className="text-sm text-muted-foreground">是</span>
+                        </label>
+                      ) : field.type === 'select' && field.options ? (
+                        <select
+                          value={formData[field.name] || ''}
+                          onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        >
+                          <option value="">请选择</option>
+                          {field.options.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : field.type === 'number' ? (
+                        <input
+                          type="number"
+                          value={formData[field.name] || ''}
+                          onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          placeholder={`请输入金额`}
+                        />
+                      ) : field.type === 'phone' ? (
+                        <input
+                          type="tel"
+                          value={formData[field.name] || ''}
+                          onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          placeholder="请输入联系电话"
+                        />
+                      ) : (
+                        <input
+                          type={field.type === 'date' ? 'date' : 'text'}
+                          value={formData[field.name] || ''}
+                          onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          placeholder={`请输入${field.name}`}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <Button type="submit" disabled={isGenerating} className="gap-2">
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        生成中...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4" />
+                        生成文书
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                请选择一个模板开始
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
