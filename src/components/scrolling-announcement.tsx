@@ -270,23 +270,7 @@ export function ScrollingAnnouncementBanner() {
             </div>
           </div>
         )}
-
-        {/* Mobile Swipe Hint - First time */}
-        {announcements.length > 1 && (
-          <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 lg:left-8 z-30 hidden sm:block">
-            <div className="px-2.5 py-1 rounded-full bg-black/20 backdrop-blur-sm border border-white/10">
-              <span className="text-white/60 text-[10px]">左右滑动</span>
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* Swipe instruction for mobile - outside carousel */}
-      {announcements.length > 1 && (
-        <div className="sm:hidden bg-black/5 py-2 text-center">
-          <span className="text-[10px] text-gray-400">左右滑动查看更多</span>
-        </div>
-      )}
     </div>
   );
 }
