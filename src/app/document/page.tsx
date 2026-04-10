@@ -23,141 +23,102 @@ interface FormData {
   description: string;
 }
 
-// 智能问答流程
+// 问题定义
 const QUESTIONS = [
-  {
-    id: 'greeting',
-    question: '您好！我来帮您生成法律文书。请先告诉我您的姓名？',
-    field: 'name',
-    placeholder: '请输入您的姓名',
-    type: 'text',
-    skipPatterns: ['跳过', '不知道', '匿名', '随便']
-  },
-  {
-    id: 'phone',
-    question: '好的，请问您的联系电话是多少？方便检察院联系您。',
-    field: 'phone',
-    placeholder: '请输入手机号码',
-    type: 'text',
-    skipPatterns: ['跳过', '不知道', '没电话']
-  },
-  {
-    id: 'companyName',
-    question: '了解。请告诉我是哪家单位或个人拖欠了您的工资？',
-    field: 'companyName',
-    placeholder: '如：某某建筑公司、王老板等',
-    type: 'text',
-    skipPatterns: ['跳过', '不知道', '记不清']
-  },
-  {
-    id: 'owedAmount',
-    question: '被拖欠的工资金额大概是多少？',
-    field: 'owedAmount',
-    placeholder: '如：50000元、5万元',
-    type: 'text',
-    skipPatterns: ['跳过', '不知道', '不清楚']
-  },
-  {
-    id: 'workPeriod',
-    question: '您是什么时候开始在那工作的？大概做了多久？',
-    field: 'workPeriod',
-    placeholder: '如：2024年3月-2025年1月',
-    type: 'text',
-    skipPatterns: ['跳过', '不知道', '记不清']
-  },
-  {
-    id: 'hasContract',
-    question: '您和用人单位签订劳动合同了吗？',
-    field: 'hasContract',
-    placeholder: '有 / 没有 / 不确定',
-    type: 'select',
-    options: ['有', '没有', '不确定'],
-    skipPatterns: []
-  },
-  {
-    id: 'hasEvidence',
-    question: '您手上有工资条、聊天记录、考勤记录等证据吗？',
-    field: 'hasEvidence',
-    placeholder: '如：工资条、微信聊天记录、考勤表等',
-    type: 'text',
-    skipPatterns: ['跳过', '没有', '啥都没有']
-  },
-  {
-    id: 'description',
-    question: '最后，请简单描述一下拖欠工资的情况，越详细越好。',
-    field: 'description',
-    placeholder: '如：2024年6月完工后一直说资金紧张，至今未结清工资，老板电话也不接了',
-    type: 'textarea',
-    skipPatterns: []
-  }
+  { id: 'name', field: 'name', question: '请问您叫什么名字？', placeholder: '请输入您的姓名' },
+  { id: 'phone', field: 'phone', question: '请问您的联系电话是多少？', placeholder: '请输入手机号码' },
+  { id: 'companyName', field: 'companyName', question: '是哪家单位或个人拖欠了您的工资？', placeholder: '如：某某建筑公司、王老板' },
+  { id: 'owedAmount', field: 'owedAmount', question: '被拖欠的工资金额大概是多少？', placeholder: '如：5万元、50000元' },
+  { id: 'workPeriod', field: 'workPeriod', question: '您是什么时候开始在那工作的？', placeholder: '如：2024年3月至2025年1月' },
+  { id: 'hasContract', field: 'hasContract', question: '您和用人单位签订劳动合同了吗？', placeholder: '有 / 没有 / 不确定', options: ['有', '没有', '不确定'] },
+  { id: 'hasEvidence', field: 'hasEvidence', question: '您有哪些证据？（工资条、聊天记录等）', placeholder: '如：工资条、微信记录' },
+  { id: 'description', field: 'description', question: '请简单描述一下拖欠工资的情况', placeholder: '越详细越好' }
 ];
 
-// 意图识别
-const GREETING_PATTERNS = ['你好', '您好', 'hi', 'hello', '在', '在的', '好', '嗨', 'hey'];
-const RESTART_PATTERNS = ['重新开始', '再来', '重新', 'start'];
-const HELP_PATTERNS = ['怎么用', '帮助', '怎么操作', '怎么弄'];
-
+// 意图检测
 function detectIntent(text: string): 'greeting' | 'skip' | 'restart' | 'help' | 'normal' {
   const lower = text.toLowerCase().trim();
-  
-  if (GREETING_PATTERNS.some(p => lower.includes(p))) return 'greeting';
-  if (RESTART_PATTERNS.some(p => lower.includes(p))) return 'restart';
-  if (HELP_PATTERNS.some(p => lower.includes(p))) return 'help';
-  if (['跳过', '跳过这个', '不知道', '没有', '啥都没有', '记不清'].some(p => lower === p || lower.includes(p))) return 'skip';
-  
+  if (['你好', '您好', 'hi', 'hello', '在', '嗨'].some(p => lower.includes(p))) return 'greeting';
+  if (['重新开始', '再来', '重置'].some(p => lower.includes(p))) return 'restart';
+  if (['帮助', '怎么用', '怎么操作'].some(p => lower.includes(p))) return 'help';
+  if (['跳过', '不知道', '没有', '啥都'].some(p => lower.includes(p))) return 'skip';
   return 'normal';
 }
 
 export default function DocumentPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [currentQuestion, setCurrentQuestion] = useState(-1); // -1表示未开始
+  const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<Partial<FormData>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedDocument, setGeneratedDocument] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // 发送消息（助手）
+  // 发送消息到前端显示
   const sendMessage = (content: string) => {
     setMessages(prev => [...prev, { role: 'assistant', content, timestamp: new Date() }]);
   };
 
-  // 初始问候
+  // 调用后端AI对话API
+  const callAI = async (userMessage: string) => {
+    try {
+      const response = await fetch('/api/document/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: messages.map(m => ({ role: m.role, content: m.content })),
+          formData
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success && result.data.content) {
+        sendMessage(result.data.content);
+      }
+    } catch (error) {
+      sendMessage('抱歉，服务暂时不可用，请稍后重试。');
+    }
+  };
+
+  // 初始化对话
   useEffect(() => {
+    if (isInitialized) return;
+    setIsInitialized(true);
+    
     setIsTyping(true);
-    setTimeout(() => {
-      sendMessage('您好！我是文书生成助手，可以帮您生成起诉状等法律文书。\n\n请放心，我会根据您的情况量身定制。您可以直接回答我的问题，也可以随时说"跳过"跳过某个问题。\n\n我们开始吧——请问您叫什么名字？');
-      setCurrentQuestion(0);
-      setIsTyping(false);
-    }, 800);
+    sendMessage('您好！我是智能法律文书助手，可以帮您生成民事起诉状等法律文书。\n\n请放心，我会根据您的情况量身定制。准备好后请告诉我您的姓名？');
+    setCurrentStep(1);
+    setIsTyping(false);
   }, []);
 
-  // 自动滚动到底部
+  // 自动滚动
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
+  // 处理用户回答
   const handleAnswer = async (answer: string) => {
-    const trimmedAnswer = answer.trim();
-    if (!trimmedAnswer) return;
+    const trimmed = answer.trim();
+    if (!trimmed) return;
 
-    const intent = detectIntent(trimmedAnswer);
-    const currentQ = QUESTIONS[currentQuestion];
+    const intent = detectIntent(trimmed);
+    const currentQ = QUESTIONS[currentStep - 1];
 
     // 添加用户消息
-    sendMessage(trimmedAnswer);
+    sendMessage(trimmed);
 
     // 根据意图处理
     if (intent === 'greeting') {
       setIsTyping(true);
       await new Promise(r => setTimeout(r, 500));
-      sendMessage('您好！我们继续吧。' + (currentQ?.question || ''));
+      sendMessage('您好！我们继续吧。' + currentQ.question);
       setIsTyping(false);
       return;
     }
@@ -165,11 +126,11 @@ export default function DocumentPage() {
     if (intent === 'restart') {
       setMessages([]);
       setFormData({});
-      setCurrentQuestion(-1);
+      setCurrentStep(0);
       setIsTyping(true);
       await new Promise(r => setTimeout(r, 500));
-      sendMessage('好的，我们重新开始！\n\n请问您叫什么名字？');
-      setCurrentQuestion(0);
+      sendMessage('好的，我们重新开始！请问您叫什么名字？');
+      setCurrentStep(1);
       setIsTyping(false);
       return;
     }
@@ -177,24 +138,22 @@ export default function DocumentPage() {
     if (intent === 'help') {
       setIsTyping(true);
       await new Promise(r => setTimeout(r, 500));
-      sendMessage('我来帮您一步步生成法律文书。您只需要：\n\n1. 回答我的问题\n2. 回答不了的可以说"跳过"\n3. 想重新开始可以说"重新开始"\n\n准备好了吗？请告诉我您的姓名？');
+      sendMessage('我来帮您生成法律文书。您只需要回答我的问题，如果无法回答可以说"跳过"。\n\n请问您叫什么名字？');
+      setCurrentStep(1);
       setIsTyping(false);
       return;
     }
 
-    if (intent === 'skip' && currentQ?.skipPatterns) {
+    if (intent === 'skip' && currentQ) {
       setIsTyping(true);
       await new Promise(r => setTimeout(r, 500));
-      
-      // 跳过但记录为空
       setFormData(prev => ({ ...prev, [currentQ.field]: '未提供' }));
       
-      if (currentQuestion < QUESTIONS.length - 1) {
-        sendMessage('好的，跳过此项。' + QUESTIONS[currentQuestion + 1].question);
-        setCurrentQuestion(prev => prev + 1);
+      if (currentStep < QUESTIONS.length) {
+        sendMessage('好的，没关系。' + QUESTIONS[currentStep].question);
+        setCurrentStep(prev => prev + 1);
       } else {
-        // 最后一个问题，跳过直接生成
-        sendMessage('好的，信息收集完毕！正在为您生成法律文书...');
+        sendMessage('信息收集完毕，正在生成法律文书...');
         generateDocument({ ...formData, [currentQ.field]: '未提供' } as FormData);
       }
       setIsTyping(false);
@@ -203,22 +162,24 @@ export default function DocumentPage() {
 
     // 正常回答
     setIsTyping(true);
-    await new Promise(r => setTimeout(r, 300));
     
-    const newFormData = { ...formData, [currentQ.field]: trimmedAnswer };
-    setFormData(newFormData);
+    if (currentQ) {
+      setFormData(prev => ({ ...prev, [currentQ.field]: trimmed }));
+    }
 
-    if (currentQuestion < QUESTIONS.length - 1) {
-      sendMessage(QUESTIONS[currentQuestion + 1].question);
-      setCurrentQuestion(prev => prev + 1);
+    await new Promise(r => setTimeout(r, 300));
+
+    if (currentStep < QUESTIONS.length) {
+      sendMessage(QUESTIONS[currentStep].question);
+      setCurrentStep(prev => prev + 1);
     } else {
-      // 所有问题回答完毕
       sendMessage('太好了！信息收集完毕，正在为您生成法律文书，请稍候...');
-      generateDocument(newFormData as FormData);
+      generateDocument({ ...formData, [currentQ?.field || 'name']: trimmed } as FormData);
     }
     setIsTyping(false);
   };
 
+  // 生成法律文书
   const generateDocument = async (data: FormData) => {
     setIsGenerating(true);
     try {
@@ -234,7 +195,7 @@ export default function DocumentPage() {
         setGeneratedDocument(result.data.document);
         sendMessage('文书已生成完成！您可以查看、复制或下载。');
       } else {
-        sendMessage(`生成失败：${result.error}。请稍后重试。`);
+        sendMessage(`生成失败：${result.error}`);
       }
     } catch (error) {
       sendMessage('网络错误，请检查网络连接后重试。');
@@ -271,7 +232,6 @@ export default function DocumentPage() {
 
   const downloadDocument = () => {
     if (!generatedDocument) return;
-    
     const blob = new Blob([generatedDocument], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -283,8 +243,8 @@ export default function DocumentPage() {
     URL.revokeObjectURL(url);
   };
 
-  const currentQ = QUESTIONS[currentQuestion];
-  const progress = currentQuestion >= 0 ? ((currentQuestion + 1) / QUESTIONS.length) * 100 : 0;
+  const currentQ = QUESTIONS[currentStep - 1];
+  const progress = currentStep > 0 ? (currentStep / QUESTIONS.length) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50/50 to-white selection-primary flex flex-col">
@@ -390,12 +350,12 @@ export default function DocumentPage() {
           </div>
         </div>
 
-        {/* Fixed Bottom Input Area */}
+        {/* Fixed Bottom Input */}
         {!generatedDocument && (
           <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/95 backdrop-blur-sm border-t border-emerald-100/50 z-50">
             <div className="container mx-auto max-w-3xl px-4 py-4">
               {/* Quick Commands */}
-              {currentQuestion >= 0 && (
+              {currentStep > 0 && (
                 <div className="flex gap-2 mb-3 text-xs">
                   <button 
                     onClick={() => handleAnswer('跳过')}
@@ -424,8 +384,8 @@ export default function DocumentPage() {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={
-                    currentQ?.type === 'select' 
-                      ? `请选择：${currentQ.options?.join(' / ')}` 
+                    currentQ?.options 
+                      ? `请选择：${currentQ.options.join(' / ')}` 
                       : currentQ?.placeholder || '请输入您的回答'
                   }
                   className="flex-1 border-emerald-200 focus-visible:ring-emerald-500 focus-visible:border-emerald-300 bg-white/80"
@@ -441,8 +401,8 @@ export default function DocumentPage() {
                 </Button>
               </form>
               
-              {/* Quick Options for select type */}
-              {currentQ?.type === 'select' && currentQ.options && (
+              {/* Quick Options */}
+              {currentQ?.options && (
                 <div className="flex gap-2 mt-3 justify-center">
                   {currentQ.options.map(opt => (
                     <Button
@@ -459,7 +419,7 @@ export default function DocumentPage() {
               )}
               
               {/* Progress */}
-              {currentQuestion >= 0 && (
+              {currentStep > 0 && (
                 <div className="mt-3 flex items-center gap-2">
                   <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                     <div 
@@ -468,7 +428,7 @@ export default function DocumentPage() {
                     />
                   </div>
                   <span className="text-xs text-muted-foreground shrink-0">
-                    {currentQuestion + 1}/{QUESTIONS.length}
+                    {currentStep}/{QUESTIONS.length}
                   </span>
                 </div>
               )}
