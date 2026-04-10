@@ -109,9 +109,6 @@ function useAutoScroll(
   
   // 上次滚动时间戳
   const lastScrollTimeRef = useRef<number>(0);
-  
-  // 滚动容器引用
-  const container = containerRef.current;
 
   // --------------------------------------------------------
   // 核心滚动函数：使用 requestAnimationFrame 实现平滑滚动
@@ -131,9 +128,8 @@ function useAutoScroll(
       cancelAnimationFrame(scrollAnimationRef.current);
     }
 
-    const startScrollTop = el.scrollTop;
     const targetScrollTop = el.scrollHeight - el.clientHeight;
-    const distanceToScroll = targetScrollTop - startScrollTop;
+    const distanceToScroll = targetScrollTop - el.scrollTop;
     
     // 如果距离很小，直接滚动到底部
     if (Math.abs(distanceToScroll) < SCROLL_CONFIG.stopThreshold) {
@@ -184,10 +180,7 @@ function useAutoScroll(
     if (!el) return;
 
     const lastMessageEl = el.querySelector('[data-last-message]') as HTMLElement;
-    if (!lastMessageEl) {
-      setScrollState(prev => ({ ...prev, lastMessageVisible: true }));
-      return;
-    }
+    if (!lastMessageEl) return;
 
     const rect = lastMessageEl.getBoundingClientRect();
     const containerRect = el.getBoundingClientRect();
@@ -239,6 +232,8 @@ function useAutoScroll(
 
     // 滚动事件（检测手动滚动）
     const handleScroll = () => {
+      const el = containerRef.current;
+      if (!el) return;
       const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
       if (distanceFromBottom > SCROLL_CONFIG.showButtonThreshold) {
         setShowBackToBottom(true);
@@ -261,39 +256,59 @@ function useAutoScroll(
   // 自动滚动逻辑：当有新消息或正在生成时
   // --------------------------------------------------------
   useEffect(() => {
+    // 如果用户正在手动滚动，不干预
     if (!scrollState.isAutoScrollEnabled) return;
-    if (!isGenerating && scrollState.lastMessageVisible) return;
 
-    scrollToBottom(true);
-    
-    // 持续检测可见性
+    // 有新消息时，延迟执行滚动，等待 DOM 更新
+    const timer = setTimeout(() => {
+      scrollToBottom(true);
+    }, 50);
+
+    // 持续检测可见性，确保最后消息在可视区域
     const visibilityCheck = setInterval(() => {
       if (!scrollState.isAutoScrollEnabled) {
         clearInterval(visibilityCheck);
         return;
       }
-      checkLastMessageVisibility();
       
-      if (!scrollState.lastMessageVisible && scrollState.isAutoScrollEnabled) {
-        scrollToBottom(true);
+      // 检测可见性
+      const el = containerRef.current;
+      if (el) {
+        const lastMessageEl = el.querySelector('[data-last-message]') as HTMLElement;
+        if (lastMessageEl) {
+          const rect = lastMessageEl.getBoundingClientRect();
+          const containerRect = el.getBoundingClientRect();
+          const visibleHeight = Math.max(0, Math.min(rect.bottom, containerRect.bottom) - Math.max(rect.top, containerRect.top));
+          const visibilityRatio = visibleHeight / rect.height;
+          
+          if (visibilityRatio < SCROLL_CONFIG.targetVisibilityRatio && scrollState.isAutoScrollEnabled) {
+            scrollToBottom(true);
+          }
+        }
       }
-    }, SCROLL_CONFIG.throttleMs * 2);
+    }, SCROLL_CONFIG.throttleMs * 3);
 
-    return () => clearInterval(visibilityCheck);
-  }, [messagesLength, isGenerating, scrollState.isAutoScrollEnabled, scrollToBottom, checkLastMessageVisibility, scrollState.lastMessageVisible]);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(visibilityCheck);
+    };
+  }, [messagesLength, isGenerating, scrollState.isAutoScrollEnabled, scrollToBottom, containerRef]);
 
   // --------------------------------------------------------
   // 回到底部并恢复自动滚动
   // --------------------------------------------------------
   const scrollBackToBottom = useCallback(() => {
-    scrollToBottom(true);
+    const el = containerRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
     setScrollState(prev => ({
       ...prev,
       isAutoScrollEnabled: true,
       isUserScrolling: false,
     }));
     setShowBackToBottom(false);
-  }, [scrollToBottom]);
+  }, [containerRef]);
 
   return {
     scrollState,
