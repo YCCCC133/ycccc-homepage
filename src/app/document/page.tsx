@@ -98,12 +98,17 @@ export default function DocumentPage() {
     setIsTyping(false);
   }, []);
 
-  // 自动滚动
+  // 自动滚动到最新消息
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
+    // 延迟执行，确保 DOM 已更新
+    const timer = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'end' 
+      });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [messages, isTyping, isGenerating]);
 
   // 处理用户回答
   const handleAnswer = async (answer: string) => {
@@ -281,7 +286,7 @@ export default function DocumentPage() {
             </div>
 
             {/* Messages */}
-            <div className="space-y-4">
+            <div className="space-y-4 pb-4">
               {messages.map((msg, idx) => (
                 <div
                   key={idx}
@@ -293,7 +298,6 @@ export default function DocumentPage() {
                         ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
                         : 'bg-white/80 text-foreground border border-emerald-100/50 shadow-sm'
                     }`}
-                    style={{maxHeight: 'none', overflow: 'visible'}}
                   >
                     {msg.role === 'assistant' ? (
                       <div className="markdown-content text-sm leading-relaxed">
@@ -319,7 +323,8 @@ export default function DocumentPage() {
                 </div>
               )}
               
-              <div ref={messagesEndRef} />
+              {/* 滚动锚点 - 确保最新消息可见 */}
+              <div ref={messagesEndRef} style={{ height: '1px' }} />
             </div>
 
             {/* Generated Document */}
