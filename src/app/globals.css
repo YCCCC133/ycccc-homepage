@@ -1,148 +1,120 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-/* 字体变量定义 - 思源宋体 */
-:root {
-  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Source Han Serif CN', 
-                'Songti SC', 'SimSun', 'FangSong', 'STFangsong', serif;
-  --font-sans: 'Inter', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 
-               'Helvetica Neue', Arial, sans-serif;
-  --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Menlo', 'Monaco', 
-               'Consolas', ui-monospace, monospace;
-}
+/* ============================================================
+   全站统一宋体字体系统
+   ============================================================ */
 
-/* 禁用系统组件文本选中 */
-@layer base {
-  /* 全局字体设置 */
-  html {
-    font-family: var(--font-serif);
-  }
+/* 字体变量定义 - 完整宋体字体栈 */
+:root {
+  /* 主字体栈 - 宋体体系 */
+  --font-serif-cn: 
+    "Noto Serif SC",
+    "Source Han Serif SC", 
+    "Source Han Serif CN",
+    "Songti SC",
+    "STSong",
+    "SimSun",
+    "FangSong",
+    "STFangsong",
+    serif;
   
-  body {
-    font-family: var(--font-serif);
-    font-weight: 400;
-    line-height: 1.75;
-    letter-spacing: 0.01em;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+  /* 无衬线字体 - 仅用于按钮、标签等小字号场景 */
+  --font-ui: 
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Microsoft YaHei",
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
   
-  /* 标题使用较粗字重 */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-serif);
-    font-weight: 600;
-    line-height: 1.4;
-  }
-  
-  /* 按钮和表单元素使用无衬线字体 */
-  button, input, textarea, select, label {
-    font-family: var(--font-sans);
-  }
-  
-  /* 代码使用等宽字体 */
-  code, pre, kbd, samp {
-    font-family: var(--font-mono);
-  }
-  
-  /* 全局禁用系统组件的文本选中 */
-  .no-select,
-  nav,
-  header,
-  [role="navigation"],
-  [role="banner"] {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    user-select: none;
-  }
-  
-  /* 确保禁用选中后仍可点击和访问 */
-  .no-select button,
-  .no-select a,
-  .no-select [role="button"],
-  nav button,
-  nav a,
-  nav [role="button"] {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    user-select: none;
-  }
-  
-  /* 内容区域允许选中 */
-  .select-text,
-  .select-text p,
-  .select-text span:not(button span),
-  .select-text div:not([role="button"] div),
-  .content-area,
-  article,
-  .message-content,
-  [data-selectable] {
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    user-select: text;
-  }
+  /* 等宽字体 - 仅用于代码块 */
+  --font-mono-cn:
+    "SF Mono",
+    "Fira Code",
+    "Fira Mono",
+    "Menlo",
+    "Monaco",
+    "Consolas",
+    "Liberation Mono",
+    ui-monospace,
+    monospace;
 }
 
 @theme inline {
+  --font-sans:
+    "Noto Serif SC",
+    "Source Han Serif SC",
+    "Source Han Serif CN",
+    "Songti SC",
+    "STSong",
+    "SimSun",
+    "FangSong",
+    "STFangsong",
+    serif;
+  
+  --font-serif:
+    "Noto Serif SC",
+    "Source Han Serif SC",
+    "Source Han Serif CN",
+    "Songti SC",
+    "STSong",
+    "SimSun",
+    "FangSong",
+    "STFangsong",
+    serif;
+  
+  --font-mono:
+    "SF Mono",
+    "Fira Code",
+    "Fira Mono",
+    "Menlo",
+    "Monaco",
+    "Consolas",
+    "Liberation Mono",
+    ui-monospace,
+    monospace;
+  
+  /* 颜色变量 */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
-  --font-sans:
-    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', ui-sans-serif,
-    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
-  --font-mono:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-    'Courier New', monospace;
-  --font-serif:
-    'Noto Serif SC', 'Songti SC', 'SimSun', ui-serif, Georgia, Cambria,
-    'Times New Roman', Times, serif;
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* ============================================================
+   全局变量定义
+   ============================================================ */
 :root {
   --radius: 0.75rem;
-  /* 护薪平台专业配色 - 深蓝墨绿渐变，主基调绿色 */
   --background: oklch(0.98 0.005 180);
   --foreground: oklch(0.15 0.02 180);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.15 0.02 180);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.15 0.02 180);
-  /* 主色调：墨绿色 */
   --primary: oklch(0.45 0.12 160);
   --primary-foreground: oklch(0.98 0.005 180);
   --secondary: oklch(0.95 0.01 180);
@@ -155,12 +127,6 @@
   --border: oklch(0.9 0.01 180);
   --input: oklch(0.9 0.01 180);
   --ring: oklch(0.45 0.12 160);
-  /* 深蓝色辅助色 */
-  --deep-blue: oklch(0.35 0.15 250);
-  --deep-blue-foreground: oklch(0.98 0.005 250);
-  /* 金色点缀色 */
-  --gold: oklch(0.75 0.15 85);
-  --gold-foreground: oklch(0.15 0.02 85);
   --chart-1: oklch(0.45 0.12 160);
   --chart-2: oklch(0.35 0.15 250);
   --chart-3: oklch(0.75 0.15 85);
@@ -210,263 +176,559 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  html {
-    @apply bg-background;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+/* ============================================================
+   第一层：根节点强制字体继承
+   ============================================================ */
+html {
+  font-family: var(--font-serif-cn);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  @apply font-sans;
+  font-family: var(--font-serif-cn);
+  font-weight: 400;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* 表单优化样式 */
-@layer components {
-  /* 文字选中高亮 - 品牌色系 */
-  /* 使用 ::selection 实现半透明背景，符合品牌视觉 */
-  .selection-primary ::selection,
-  .selection-primary ::-moz-selection {
-    background-color: rgba(60, 140, 120, 0.25);
-    color: inherit;
-  }
-  
-  .selection-gold ::selection,
-  .selection-gold ::-moz-selection {
-    background-color: rgba(180, 150, 60, 0.3);
-    color: inherit;
-  }
-  
-  /* 内容区域默认选中样式 - 半透明墨绿色 */
-  .prose-content ::selection,
-  .prose-content ::-moz-selection {
-    background-color: rgba(60, 140, 120, 0.2);
-    color: inherit;
-  }
-  
-  /* 表单标签样式优化 */
-  label {
-    @apply font-medium text-foreground;
-  }
-  
-  /* 必填字段标记 */
-  .required::after {
-    content: " *";
-    @apply text-destructive;
-  }
-  
-  /* 表单错误提示动画 */
-  .form-error {
-    @apply text-destructive text-sm mt-1 animate-in slide-in-from-top-1 duration-200;
-  }
-  
-  /* 加载状态优化 */
-  .loading-shimmer {
-    background: linear-gradient(
-      90deg,
-      transparent,
-      oklch(1 0 0 / 20%),
-      transparent
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-  }
-  
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-  
-  /* 按钮点击反馈 */
-  .btn-press {
-    @apply transition-transform active:scale-[0.98];
-  }
-  
-  /* 卡片悬浮效果优化 */
-  .card-hover {
-    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
-  }
-  
-  /* Focus可见性优化 */
-  .focus-ring {
-    @apply outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
-  }
-  
-  /* 滚动条样式 - 极细 */
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: oklch(0.85 0.02 180 / 0.3);
-    border-radius: 4px;
-  }
-  
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background-color: oklch(0.75 0.02 180 / 0.5);
-  }
+/* ============================================================
+   第二层：HTML 元素批量覆盖
+   ============================================================ */
+/* 文本级元素 */
+html, body, div, span, p, a, small, strong, em, b, i, u, s, 
+mark, del, ins, sub, sup, q, cite, data, time, abbr, figcaption, 
+blockquote, figure, main, article, section, aside, header, footer, 
+nav, address, details, summary {
+  font-family: var(--font-serif-cn);
+}
 
-  /* Markdown 内容样式 */
-  .markdown-content h1 {
-    font-size: 1.125rem;
-    font-weight: 700;
-    margin-top: 12px;
-    margin-bottom: 8px;
-    color: oklch(0.2 0.02 180);
-  }
+/* 标题元素 */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif-cn);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
 
-  .markdown-content h2 {
-    font-size: 1rem;
-    font-weight: 700;
-    margin-top: 12px;
-    margin-bottom: 8px;
-    color: oklch(0.25 0.02 180);
-  }
+/* 列表元素 */
+ul, ol, li, dl, dt, dd {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content h3 {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    margin-top: 10px;
-    margin-bottom: 6px;
-    color: oklch(0.3 0.02 180);
-  }
+/* 表格元素 */
+table, thead, tbody, tfoot, tr, th, td, caption, colgroup, col {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content p {
-    margin-bottom: 8px;
-    line-height: 1.6;
-  }
+/* 表单元素 */
+button, input, textarea, select, option, optgroup, label, legend, 
+fieldset, datalist, output, meter, progress {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content ul,
-  .markdown-content ol {
-    padding-left: 1.25rem;
-    margin: 8px 0;
-  }
+/* 链接元素 */
+a, area, link {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content ul {
-    list-style-type: disc;
-  }
+/* 代码元素 - 例外：保持等宽 */
+code, pre, kbd, samp, var {
+  font-family: var(--font-mono-cn);
+}
 
-  .markdown-content ol {
-    list-style-type: decimal;
-  }
+/* 占位符 */
+::placeholder {
+  font-family: var(--font-serif-cn);
+  opacity: 0.5;
+}
 
-  .markdown-content li {
-    margin-bottom: 4px;
-    line-height: 1.5;
-  }
+/* SVG */
+svg text, svg tspan {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content strong {
-    font-weight: 600;
-    color: oklch(0.2 0.02 180);
-  }
+/* ============================================================
+   第三层：组件库覆盖
+   ============================================================ */
+/* Tailwind prose */
+.prose, .prose * {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content em {
-    font-style: italic;
-  }
+/* 通用容器 */
+.container, .wrapper, .card, .modal, .dialog, .drawer, .sheet {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content code {
-    background-color: oklch(0.95 0.01 180);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.8125rem;
-    font-family: ui-monospace, monospace;
-  }
+.popover, .tooltip, .dropdown, .menu, .tabs, .accordion {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content pre {
-    background-color: oklch(0.95 0.01 180);
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    margin: 8px 0;
-  }
+.collapsible, .alert, .toast, .notification, .badge, .chip, .tag {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content pre code {
-    background: none;
-    padding: 0;
-  }
+/* 按钮和输入 */
+button, [role="button"], .btn, .button {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content blockquote {
-    border-left: 3px solid oklch(0.55 0.12 160);
-    padding-left: 12px;
-    font-style: italic;
-    color: oklch(0.45 0.02 180);
-    margin: 8px 0;
-  }
+.input, .input-field, .text-field, .search-input, .form-input {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content hr {
-    border: none;
-    border-top: 1px solid oklch(0.9 0.01 180);
-    margin: 12px 0;
-  }
+/* 下拉菜单 */
+.select, .select-trigger, .select-content, .select-item {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content a {
-    color: oklch(0.5 0.12 160);
-    text-decoration: underline;
-  }
+/* 表格 */
+.table, .data-table {
+  font-family: var(--font-serif-cn);
+}
 
-  .markdown-content a:hover {
-    color: oklch(0.45 0.12 160);
+/* 分页 */
+.pagination, .pager, .page-item, .page-link {
+  font-family: var(--font-serif-cn);
+}
+
+/* 状态 */
+.empty-state, .loading-state, .error-state, .skeleton, .placeholder {
+  font-family: var(--font-serif-cn);
+}
+
+/* ============================================================
+   第四层：Shadcn/ui 组件覆盖
+   ============================================================ */
+/* 所有包含 radix- 的元素 */
+[class*="radix-"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* shadcn 组件 */
+[class*="shadcn-"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* 按钮 */
+.shadcn-button, button {
+  font-family: var(--font-serif-cn);
+}
+
+/* 输入 */
+.shadcn-input, input {
+  font-family: var(--font-serif-cn);
+}
+
+/* 文本域 */
+.shadcn-textarea, textarea {
+  font-family: var(--font-serif-cn);
+}
+
+/* 选择器 */
+.shadcn-select, select {
+  font-family: var(--font-serif-cn);
+}
+
+/* 标签 */
+.shadcn-label, label {
+  font-family: var(--font-serif-cn);
+}
+
+/* 卡片 */
+.shadcn-card, [class*="card"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* 对话框 */
+.shadcn-dialog, [class*="dialog"], .shadcn-modal, [class*="modal"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* 下拉菜单 */
+.shadcn-dropdown-menu, [class*="dropdown"], [class*="menu"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* 弹出层 */
+.shadcn-popover, [class*="popover"], .shadcn-tooltip, [class*="tooltip"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* 标签页 */
+.shadcn-tabs, [class*="tabs"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* 表格 */
+.shadcn-table, [class*="table"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* ============================================================
+   第五层：特殊内容区域
+   ============================================================ */
+/* Markdown 内容 */
+.markdown-content, .markdown-content *, 
+.markdown-body, .markdown-body *,
+.prose-content, .prose-content * {
+  font-family: var(--font-serif-cn);
+}
+
+/* 聊天消息 */
+.chat-message, .chat-message *, 
+.message-bubble, .message-bubble *,
+.conversation-message, .conversation-message * {
+  font-family: var(--font-serif-cn);
+}
+
+/* 富文本编辑 */
+.rich-text, .rich-text *, 
+.editor-content, .editor-content *,
+.text-editor, .text-editor * {
+  font-family: var(--font-serif-cn);
+}
+
+/* 法律文书 */
+.legal-document, .legal-document *, 
+.contract-text, .contract-text * {
+  font-family: var(--font-serif-cn);
+}
+
+/* 表单内容 */
+.form-content, .form-content *, 
+.form-body, .form-body * {
+  font-family: var(--font-serif-cn);
+}
+
+/* 详情描述 */
+.description, .description *, 
+.summary-text, .summary-text * {
+  font-family: var(--font-serif-cn);
+}
+
+/* ============================================================
+   第六层：工具类
+   ============================================================ */
+.font-serif-cn {
+  font-family: var(--font-serif-cn) !important;
+}
+
+.font-ui {
+  font-family: var(--font-ui) !important;
+}
+
+.font-mono-cn {
+  font-family: var(--font-mono-cn) !important;
+}
+
+.text-body, .text-content, .text-paragraph {
+  font-family: var(--font-serif-cn) !important;
+}
+
+/* ============================================================
+   组件样式
+   ============================================================ */
+/* 文字选中高亮 */
+.selection-primary ::selection {
+  background-color: rgba(60, 140, 120, 0.25);
+  color: inherit;
+}
+
+/* 表单标签 */
+label {
+  font-family: var(--font-serif-cn);
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+/* 必填标记 */
+.required::after {
+  content: " *";
+  color: var(--destructive);
+}
+
+/* 表单错误 */
+.form-error {
+  font-family: var(--font-serif-cn);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  color: var(--destructive);
+  animation: slideInTop 0.2s ease-out;
+}
+
+/* 加载动画 */
+.loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(1 0 0 / 20%),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes slideInTop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
   }
-  
-  /* 中文排版优化 - 宋体 */
-  .text-balance {
-    text-wrap: balance;
-  }
-  
-  /* 段落首行缩进（可选） */
-  .indent-paragraph p:not(:first-child) {
-    text-indent: 2em;
-  }
-  
-  /* 中英文混排优化 */
-  .text-mixed {
-    font-family: var(--font-serif), var(--font-sans);
-    font-feature-settings: 'liga' 1, 'kern' 1;
-  }
-  
-  /* 标题与正文间距优化 */
-  .prose-heading {
-    margin-top: 1.5em;
-    margin-bottom: 0.75em;
-  }
-  
-  /* 引用块样式 - 适合法律文书 */
-  .legal-quote {
-    font-family: var(--font-serif);
-    border-left: 3px solid oklch(0.55 0.12 160);
-    padding-left: 1rem;
-    margin: 1rem 0;
-    font-style: normal;
-    color: oklch(0.4 0.02 180);
-    background: linear-gradient(to right, oklch(0.98 0.01 180), transparent);
-    padding: 0.75rem 1rem;
-    border-radius: 0 4px 4px 0;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-/* 全局字体类 */
-.font-serif-chinese {
-  font-family: var(--font-serif) !important;
+/* Focus 环 */
+.focus-ring {
+  outline: none;
 }
 
-/* 打印样式 - 适合法律文书打印 */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* 滚动条 */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: oklch(0.85 0.02 180 / 0.3);
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.75 0.02 180 / 0.5);
+}
+
+/* ============================================================
+   Markdown 内容样式
+   ============================================================ */
+.markdown-content, .markdown-body {
+  font-family: var(--font-serif-cn);
+  line-height: 1.8;
+}
+
+.markdown-content h1, .markdown-body h1 {
+  font-family: var(--font-serif-cn);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 1rem;
+  margin-bottom: 0.75rem;
+  color: oklch(0.2 0.02 180);
+  line-height: 1.4;
+}
+
+.markdown-content h2, .markdown-body h2 {
+  font-family: var(--font-serif-cn);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: oklch(0.25 0.02 180);
+  line-height: 1.4;
+}
+
+.markdown-content h3, .markdown-body h3 {
+  font-family: var(--font-serif-cn);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  color: oklch(0.3 0.02 180);
+  line-height: 1.4;
+}
+
+.markdown-content h4, .markdown-content h5, .markdown-content h6,
+.markdown-body h4, .markdown-body h5, .markdown-body h6 {
+  font-family: var(--font-serif-cn);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.markdown-content p, .markdown-body p {
+  font-family: var(--font-serif-cn);
+  margin-bottom: 0.75rem;
+  line-height: 1.8;
+}
+
+.markdown-content ul, .markdown-content ol,
+.markdown-body ul, .markdown-body ol {
+  font-family: var(--font-serif-cn);
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+}
+
+.markdown-content li, .markdown-body li {
+  font-family: var(--font-serif-cn);
+  margin-bottom: 0.375rem;
+  line-height: 1.7;
+}
+
+.markdown-content strong, .markdown-body strong {
+  font-family: var(--font-serif-cn);
+  font-weight: 600;
+}
+
+.markdown-content em, .markdown-body em {
+  font-family: var(--font-serif-cn);
+  font-style: italic;
+}
+
+/* 代码块 - 等宽字体 */
+.markdown-content code, .markdown-body code {
+  font-family: var(--font-mono-cn);
+  background-color: oklch(0.95 0.01 180);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.markdown-content pre, .markdown-body pre {
+  font-family: var(--font-mono-cn);
+  background-color: oklch(0.95 0.01 180);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+.markdown-content pre code, .markdown-body pre code {
+  font-family: var(--font-mono-cn);
+  background: none;
+  padding: 0;
+  font-size: 0.875rem;
+}
+
+.markdown-content blockquote, .markdown-body blockquote {
+  font-family: var(--font-serif-cn);
+  border-left: 3px solid oklch(0.55 0.12 160);
+  padding-left: 1rem;
+  font-style: normal;
+  color: oklch(0.45 0.02 180);
+  margin: 0.75rem 0;
+  background: linear-gradient(to right, oklch(0.98 0.01 180), transparent);
+  padding: 0.75rem 1rem;
+  border-radius: 0 4px 4px 0;
+}
+
+.markdown-content hr, .markdown-body hr {
+  border: none;
+  border-top: 1px solid oklch(0.9 0.01 180);
+  margin: 1rem 0;
+}
+
+.markdown-content a, .markdown-body a {
+  font-family: var(--font-serif-cn);
+  color: oklch(0.5 0.12 160);
+  text-decoration: underline;
+}
+
+.markdown-content a:hover, .markdown-body a:hover {
+  color: oklch(0.45 0.12 160);
+}
+
+.markdown-content table, .markdown-body table {
+  font-family: var(--font-serif-cn);
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+}
+
+.markdown-content th, .markdown-content td,
+.markdown-body th, .markdown-body td {
+  font-family: var(--font-serif-cn);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid oklch(0.9 0.01 180);
+}
+
+.markdown-content th, .markdown-body th {
+  font-family: var(--font-serif-cn);
+  font-weight: 600;
+  background: oklch(0.96 0.01 180);
+}
+
+/* ============================================================
+   聊天消息样式
+   ============================================================ */
+.chat-message, .message-bubble {
+  font-family: var(--font-serif-cn);
+}
+
+.chat-message p, .message-bubble p,
+.chat-message li, .message-bubble li {
+  font-family: var(--font-serif-cn);
+  line-height: 1.7;
+}
+
+/* ============================================================
+   法律引用样式
+   ============================================================ */
+.legal-reference, .legal-quote {
+  font-family: var(--font-serif-cn);
+  border-left: 3px solid oklch(0.55 0.12 160);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: normal;
+  color: oklch(0.4 0.02 180);
+  background: linear-gradient(to right, oklch(0.98 0.01 180), transparent);
+  padding: 0.75rem 1rem;
+  border-radius: 0 4px 4px 0;
+}
+
+/* ============================================================
+   中文排版优化
+   ============================================================ */
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-mixed {
+  font-family: var(--font-serif-cn), var(--font-ui);
+  font-feature-settings: 'liga' 1, 'kern' 1;
+}
+
+/* ============================================================
+   禁用选中
+   ============================================================ */
+.no-select, .no-select *, nav, header {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+/* 内容区域允许选中 */
+.select-text, .select-text *, .content-area, .content-area *,
+.message-content, .message-content *, article, article * {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+}
+
+/* ============================================================
+   打印样式
+   ============================================================ */
 @media print {
   body {
-    font-family: var(--font-serif) !important;
+    font-family: var(--font-serif-cn) !important;
     font-size: 12pt;
     line-height: 1.8;
   }
