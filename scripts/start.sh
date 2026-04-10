@@ -1,17 +1,10 @@
 #!/bin/bash
-set -Eeuo pipefail
+set -e
 
-COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
+# Ensure production mode for the entire script
+export NODE_ENV=production
 
-PORT=5000
-DEPLOY_RUN_PORT="${DEPLOY_RUN_PORT:-$PORT}"
+cd /workspace/projects
 
-
-start_service() {
-    cd "${COZE_WORKSPACE_PATH}"
-    echo "Starting HTTP service on port ${DEPLOY_RUN_PORT} for deploy..."
-    PORT=${DEPLOY_RUN_PORT} node dist/server.js
-}
-
-echo "Starting HTTP service on port ${DEPLOY_RUN_PORT} for deploy..."
-start_service
+# Start the server in production mode
+NODE_ENV=production node dist/server.js

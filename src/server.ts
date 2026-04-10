@@ -1,11 +1,13 @@
 import { createServer } from 'http';
 import next from 'next';
 
-const dev = process.env.COZE_PROJECT_ENV !== 'PROD';
+const isProd = process.env.NODE_ENV === 'production';
+const dev = !isProd;
 const hostname = process.env.HOSTNAME || 'localhost';
 const port = parseInt(process.env.DEPLOY_RUN_PORT || process.env.PORT || '5000', 10);
 
-// Create Next.js app
+console.log(`[server] Starting with NODE_ENV=${process.env.NODE_ENV}, dev=${dev}`);
+
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
@@ -32,9 +34,7 @@ app.prepare().then(() => {
 
   server.listen(port, () => {
     console.log(
-      `> Server listening at http://${hostname}:${port} as ${
-        dev ? 'development' : process.env.COZE_PROJECT_ENV
-      }`,
+      `> Server listening at http://${hostname}:${port} as ${dev ? 'development' : 'production'}`,
     );
   });
 });
