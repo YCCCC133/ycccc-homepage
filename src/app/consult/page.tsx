@@ -30,6 +30,7 @@ export default function ConsultPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showBackToBottom, setShowBackToBottom] = useState(false);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true); // 是否启用自动滚动
   
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -45,20 +46,21 @@ export default function ConsultPage() {
   }, []);
 
   // --------------------------------------------------------
-  // 消息变化时滚动
+  // 消息变化时滚动（仅当自动滚动启用时）
   // --------------------------------------------------------
   useEffect(() => {
+    if (!autoScrollEnabled) return;
     scrollToBottom();
-  }, [messages.length, scrollToBottom]);
+  }, [messages.length, scrollToBottom, autoScrollEnabled]);
 
   // --------------------------------------------------------
-  // AI加载时持续滚动
+  // AI加载时持续滚动（仅当自动滚动启用时）
   // --------------------------------------------------------
   useEffect(() => {
-    if (!isLoading) return;
+    if (!autoScrollEnabled || !isLoading) return;
     const id = setInterval(scrollToBottom, 100);
     return () => clearInterval(id);
-  }, [isLoading, scrollToBottom]);
+  }, [isLoading, scrollToBottom, autoScrollEnabled]);
 
   // --------------------------------------------------------
   // 滚动事件监听
@@ -69,11 +71,37 @@ export default function ConsultPage() {
 
     const onScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      setShowBackToBottom(scrollHeight - scrollTop - clientHeight > 150);
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      
+      // 只有在自动滚动启用时，才在距离底部较远时显示按钮
+      if (autoScrollEnabled && distanceFromBottom > 150) {
+        setShowBackToBottom(true);
+      } else {
+        // 用户发送消息，恢复自动滚动
+    setAutoScrollEnabled(true);
+    setShowBackToBottom(false);
+      }
     };
 
     container.addEventListener('scroll', onScroll, { passive: true });
     return () => container.removeEventListener('scroll', onScroll);
+  }, [autoScrollEnabled]);
+
+  // --------------------------------------------------------
+  // 点击回到底部按钮
+  // --------------------------------------------------------
+  const handleBackToBottom = useCallback(() => {
+    scrollToBottom();
+    setShowBackToBottom(false);
+    setAutoScrollEnabled(true); // 恢复自动滚动
+  }, [scrollToBottom]);
+
+  // --------------------------------------------------------
+  // 用户手动停止自动滚动
+  // --------------------------------------------------------
+  const stopAutoScroll = useCallback(() => {
+    setAutoScrollEnabled(false);
+    setShowBackToBottom(true);
   }, []);
 
   const quickQuestions = [
@@ -334,7 +362,7 @@ export default function ConsultPage() {
         {/* Back to bottom button */}
         {showBackToBottom && (
           <button
-            onClick={scrollToBottom}
+            onClick={handleBackToBottom}
             className="fixed bottom-[180px] right-6 z-50 w-12 h-12 rounded-full bg-emerald-500 text-white shadow-lg hover:bg-emerald-600 flex items-center justify-center transition-all"
           >
             <ArrowDown className="h-5 w-5" />

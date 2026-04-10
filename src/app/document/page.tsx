@@ -27,40 +27,74 @@ export default function DocumentPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [showBackToBottom, setShowBackToBottom] = useState(false);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true); // 是否启用自动滚动
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  // --------------------------------------------------------
   // 滚动到底部
+  // --------------------------------------------------------
   const scrollToBottom = useCallback(() => {
     const container = chatContainerRef.current;
     if (!container) return;
     container.scrollTop = container.scrollHeight;
   }, []);
 
-  // 消息变化时滚动
+  // --------------------------------------------------------
+  // 消息变化时滚动（仅当自动滚动启用时）
+  // --------------------------------------------------------
   useEffect(() => {
+    if (!autoScrollEnabled) return;
     scrollToBottom();
-  }, [messages.length, scrollToBottom]);
+  }, [messages.length, scrollToBottom, autoScrollEnabled]);
 
-  // AI生成时持续滚动
+  // --------------------------------------------------------
+  // AI生成时持续滚动（仅当自动滚动启用时）
+  // --------------------------------------------------------
   useEffect(() => {
-    if (!isGenerating && !isTyping) return;
+    if (!autoScrollEnabled || (!isGenerating && !isTyping)) return;
     const id = setInterval(scrollToBottom, 100);
     return () => clearInterval(id);
-  }, [isGenerating, isTyping, scrollToBottom]);
+  }, [isGenerating, isTyping, scrollToBottom, autoScrollEnabled]);
 
+  // --------------------------------------------------------
   // 滚动事件监听
+  // --------------------------------------------------------
   useEffect(() => {
     const container = chatContainerRef.current;
     if (!container) return;
 
     const onScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      setShowBackToBottom(scrollHeight - scrollTop - clientHeight > 150);
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      
+      // 只有在自动滚动启用时，才在距离底部较远时显示按钮
+      if (autoScrollEnabled && distanceFromBottom > 150) {
+        setShowBackToBottom(true);
+      } else {
+        setShowBackToBottom(false);
+      }
     };
 
     container.addEventListener('scroll', onScroll, { passive: true });
     return () => container.removeEventListener('scroll', onScroll);
+  }, [autoScrollEnabled]);
+
+  // --------------------------------------------------------
+  // 点击回到底部按钮
+  // --------------------------------------------------------
+  const handleBackToBottom = useCallback(() => {
+    scrollToBottom();
+    setShowBackToBottom(false);
+    setAutoScrollEnabled(true); // 恢复自动滚动
+  }, [scrollToBottom]);
+
+  // --------------------------------------------------------
+  // 用户手动停止自动滚动
+  // --------------------------------------------------------
+  const stopAutoScroll = useCallback(() => {
+    setAutoScrollEnabled(false);
+    setShowBackToBottom(true);
   }, []);
 
   const sendMessage = useCallback((content: string, legalRefs?: LegalReference[]) => {
@@ -96,6 +130,10 @@ export default function DocumentPage() {
   const handleAnswer = async (answer: string) => {
     const trimmed = answer.trim();
     if (!trimmed) return;
+
+    // 恢复自动滚动
+    setAutoScrollEnabled(true);
+    setShowBackToBottom(false);
 
     const intent = detectIntent(trimmed);
     const currentQ = QUESTIONS[currentStep - 1];
@@ -329,7 +367,7 @@ export default function DocumentPage() {
         </div>
 
         {showBackToBottom && (
-          <button onClick={scrollToBottom} className="fixed bottom-[180px] right-6 z-50 w-12 h-12 rounded-full bg-emerald-500 text-white shadow-lg hover:bg-emerald-600 flex items-center justify-center transition-all">
+          <button onClick={handleBackToBottom} className="fixed bottom-[180px] right-6 z-50 w-12 h-12 rounded-full bg-emerald-500 text-white shadow-lg hover:bg-emerald-600 flex items-center justify-center transition-all">
             <ArrowDown className="h-5 w-5" />
           </button>
         )}
