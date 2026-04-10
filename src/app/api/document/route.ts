@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { uploadDocument } from '@/storage/s3-storage';
 
 // 获取文书列表
 export async function GET(request: NextRequest) {
@@ -73,9 +74,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
+    // 自动上传文书到对象存储
+    let fileKey = null;
+    let downloadUrl = null;
+    try {
+      const fileName = `${document_type}_${applicant_name}_${Date.now()}.txt`;
+      const uploadResult = await uploadDocument(content, fileName);
+      fileKey = uploadResult.key;
+      downloadUrl = uploadResult.url;
+
+      // 更新数据库记录，添加文件信息
+      await supabase
+        .from('documents')
+        .update({
+          file_key: fileKey,
+          file_name: fileName,
+          file_size: Buffer.byteLength(content, 'utf-8'),
+        })
+        .eq('id', data.id);
+    } catch (uploadError) {
+      console.error('上传文书到对象存储失败:', uploadError);
+      // 文件上传失败不影响主流程，继续返回成功
+    }
+
     return NextResponse.json({
       success: true,
-      data,
+      data: {
+        ...data,
+        file_key: fileKey,
+        download_url: downloadUrl,
+      },
       message: '文书生成成功'
     });
   } catch (error) {

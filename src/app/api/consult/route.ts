@@ -5,6 +5,26 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 // 使用 Node.js runtime 以支持 coze-coding-dev-sdk
 export const runtime = 'nodejs';
 
+// 保存咨询记录到数据库
+async function saveConsultation(sessionId: string, userQuestion: string, aiResponse: string) {
+  try {
+    const client = getSupabaseClient();
+    const { error } = await client
+      .from('consultations')
+      .insert({
+        session_id: sessionId,
+        user_question: userQuestion,
+        ai_response: aiResponse,
+      });
+
+    if (error) {
+      console.error('保存咨询记录失败:', error);
+    }
+  } catch (error) {
+    console.error('保存咨询记录异常:', error);
+  }
+}
+
 // 获取知识库内容
 async function getKnowledgeBase() {
   try {
@@ -101,11 +121,17 @@ export async function POST(request: NextRequest) {
     const readableStream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
+        let fullResponse = ''; // 累积完整回复
+        const sessionId = `session_${Date.now()}`; // 生成会话ID
+        const userQuestion = conversationHistory.length > 0 
+          ? conversationHistory[conversationHistory.length - 1].content?.toString() || '' 
+          : '';
 
         try {
           for await (const chunk of stream) {
             if (chunk.content) {
               const text = chunk.content.toString();
+              fullResponse += text; // 累积回复内容
               const data = `data: ${JSON.stringify({ content: text })}\n\n`;
               // 检查 controller 状态，避免 "Controller is already closed" 错误
               try {
@@ -122,6 +148,11 @@ export async function POST(request: NextRequest) {
             controller.close();
           } catch {
             // Controller 已关闭，忽略
+          }
+          
+          // 流结束后保存咨询记录到数据库
+          if (fullResponse) {
+            await saveConsultation(sessionId, userQuestion, fullResponse);
           }
         } catch (error) {
           console.error('Stream error:', error);
