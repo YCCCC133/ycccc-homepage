@@ -270,11 +270,15 @@ export default function DocumentPage() {
 
   const downloadDocument = () => {
     if (!generatedDocument) return;
-    const blob = new Blob([generatedDocument], { type: 'text/plain;charset=utf-8' });
+    // 导出为 .md 文件
+    const blob = new Blob([generatedDocument], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `民事起诉状_${formData.name || '未命名'}_${Date.now()}.txt`;
+    // 从文书内容中提取标题作为文件名
+    const titleMatch = generatedDocument.match(/^#\s+(.+)$/m);
+    const docTitle = titleMatch ? titleMatch[1] : '法律文书';
+    a.download = `${docTitle}_${formData.name || '未命名'}_${Date.now()}.md`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -393,16 +397,20 @@ export default function DocumentPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 sm:p-4">
-                <pre className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed font-mono bg-white/80 p-3 sm:p-4 rounded-xl border border-emerald-100/50 max-h-[300px] sm:max-h-[400px] overflow-y-auto">
-                  {generatedDocument}
-                </pre>
+                {/* 使用 Markdown 渲染器展示文书内容 */}
+                <div className="bg-white/80 p-3 sm:p-4 rounded-xl border border-emerald-100/50 max-h-[400px] sm:max-h-[500px] overflow-y-auto">
+                  <MarkdownRenderer 
+                    content={generatedDocument} 
+                    className="document-preview"
+                  />
+                </div>
                 <div className="flex gap-2 mt-3 sm:mt-4">
                   <Button variant="outline" size="sm" onClick={copyToClipboard} className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm border-emerald-200 hover:bg-emerald-50">
                     {copied ? <><Check className="h-3 w-3 sm:h-4 sm:w-4" /> 已复制</> : <><Copy className="h-3 w-3 sm:h-4 sm:w-4" /> 复制文书</>}
                   </Button>
                   <Button size="sm" onClick={downloadDocument} className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30">
                     <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                    下载文书
+                    下载.md
                   </Button>
                 </div>
               </CardContent>

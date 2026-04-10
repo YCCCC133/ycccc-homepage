@@ -259,6 +259,76 @@ export function MarkdownRenderer({ content, className = '', isStreaming = false 
         .markdown-renderer p:last-child {
           margin-bottom: 0 !important;
         }
+        
+        /* 文书预览专用样式 */
+        .document-preview {
+          font-size: 0.875rem;
+          line-height: 1.8;
+          color: #1f2937;
+        }
+        .document-preview h1 {
+          font-size: 1.5rem;
+          font-weight: 700;
+          text-align: center;
+          margin-bottom: 1.5rem;
+          padding-bottom: 0.75rem;
+          border-bottom: 2px solid #10b981;
+          color: #059669;
+        }
+        .document-preview h2 {
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin-top: 1.25rem;
+          margin-bottom: 0.75rem;
+          padding: 0.5rem 0;
+          border-left: 4px solid #10b981;
+          padding-left: 0.75rem;
+          background: linear-gradient(90deg, rgba(16,185,129,0.08) 0%, transparent 100%);
+          color: #047857;
+        }
+        .document-preview h3 {
+          font-size: 1rem;
+          font-weight: 600;
+          margin-top: 1rem;
+          margin-bottom: 0.5rem;
+          color: #059669;
+        }
+        .document-preview ul, .document-preview ol {
+          padding-left: 1.5rem;
+          margin-bottom: 0.75rem;
+        }
+        .document-preview li {
+          margin-bottom: 0.375rem;
+          line-height: 1.7;
+        }
+        .document-preview p {
+          margin-bottom: 0.5rem;
+          text-align: justify;
+        }
+        .document-preview table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 1rem;
+          font-size: 0.8125rem;
+        }
+        .document-preview th, .document-preview td {
+          border: 1px solid #e5e7eb;
+          padding: 0.5rem 0.75rem;
+          text-align: left;
+        }
+        .document-preview th {
+          background-color: #f3f4f6;
+          font-weight: 600;
+        }
+        .document-preview hr {
+          border: none;
+          border-top: 1px dashed #d1d5db;
+          margin: 1.5rem 0;
+        }
+        .document-preview strong {
+          font-weight: 600;
+          color: #1f2937;
+        }
       `}</style>
     </div>
   );
