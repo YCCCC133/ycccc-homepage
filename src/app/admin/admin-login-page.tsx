@@ -26,8 +26,8 @@ export default function AdminLoginPage() {
   // Initialize on mount
   useEffect(() => {
     setMounted(true);
-    // Check if already logged in via API
-    fetch('/api/admin/login')
+    // Check if already logged in via API (with credentials to include cookies)
+    fetch('/api/admin/login', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         if (data.authenticated) {
@@ -51,6 +51,7 @@ export default function AdminLoginPage() {
       const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ password }),
       });
 

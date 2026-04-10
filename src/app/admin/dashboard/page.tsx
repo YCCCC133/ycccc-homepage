@@ -127,7 +127,7 @@ export default function AdminDashboard() {
   // ============ 认证检查 ============
   const checkAuth = async () => {
     try {
-      const res = await fetch('/api/admin/login');
+      const res = await fetch('/api/admin/login', { credentials: 'include' });
       const data = await res.json();
       if (data.authenticated) {
         setIsAuthenticated(true);
@@ -144,12 +144,12 @@ export default function AdminDashboard() {
   const loadDashboardData = async () => {
     try {
       const [statsRes, announcementsRes, reportsRes, applicationsRes, documentsRes, consultationsRes] = await Promise.all([
-        fetch('/api/admin/data').then(r => r.json()),
-        fetch('/api/admin/announcements').then(r => r.json()),
-        fetch('/api/admin/reports').then(r => r.json()),
-        fetch('/api/admin/applications').then(r => r.json()),
-        fetch('/api/admin/documents').then(r => r.json()),
-        fetch('/api/admin/consultations').then(r => r.json()),
+        fetch('/api/admin/data', { credentials: 'include' }).then(r => r.json()),
+        fetch('/api/admin/announcements', { credentials: 'include' }).then(r => r.json()),
+        fetch('/api/admin/reports', { credentials: 'include' }).then(r => r.json()),
+        fetch('/api/admin/applications', { credentials: 'include' }).then(r => r.json()),
+        fetch('/api/admin/documents', { credentials: 'include' }).then(r => r.json()),
+        fetch('/api/admin/consultations', { credentials: 'include' }).then(r => r.json()),
       ]);
 
       if (statsRes.success) setStats(statsRes.data);
@@ -179,6 +179,7 @@ export default function AdminDashboard() {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ password }),
       });
       const data = await res.json();
@@ -200,7 +201,7 @@ export default function AdminDashboard() {
   // ============ 登出 ============
   const handleLogout = async () => {
     try {
-      await fetch('/api/admin/login', { method: 'DELETE' });
+      await fetch('/api/admin/login', { method: 'DELETE', credentials: 'include' });
       setIsAuthenticated(false);
       router.push('/');
     } catch (error) {
@@ -217,6 +218,7 @@ export default function AdminDashboard() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(editingItem || newAnnouncement),
       });
       const data = await res.json();
@@ -239,7 +241,7 @@ export default function AdminDashboard() {
   const handleDeleteAnnouncement = async (id: number) => {
     if (!confirm('确定要删除这条公告吗？')) return;
     try {
-      const res = await fetch(`/api/admin/announcements/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/announcements/${id}`, { method: 'DELETE', credentials: 'include' });
       const data = await res.json();
       if (data.success) {
         toast.success('删除成功');
@@ -254,6 +256,7 @@ export default function AdminDashboard() {
       const res = await fetch(`/api/admin/reports/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ status }),
       });
       const data = await res.json();
@@ -270,6 +273,7 @@ export default function AdminDashboard() {
       const res = await fetch(`/api/admin/applications/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ status }),
       });
       const data = await res.json();
@@ -319,6 +323,18 @@ export default function AdminDashboard() {
   }
 
   // ============ 登录页面 ============
+  // 必须先确保组件已挂载，否则服务端和客户端渲染不一致
+  if (!mounted || isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-background">
+        <div className="text-center">
+          <div className="h-10 w-10 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">加载中...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen">
