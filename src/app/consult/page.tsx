@@ -389,7 +389,7 @@ export default function ConsultPage() {
       <div className="border-b bg-white/80 backdrop-blur-md shrink-0">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
               <Bot className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -423,7 +423,7 @@ export default function ConsultPage() {
                       {/* Avatar */}
                       <div className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
                         msg.role === 'user' 
-                          ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
+                          ? 'bg-gradient-to-br from-emerald-500 to-emerald-600' 
                           : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
                       }`}>
                         {msg.role === 'user' ? (
@@ -438,7 +438,7 @@ export default function ConsultPage() {
                         <div
                           className={`rounded-2xl px-4 py-3 ${
                             msg.role === 'user'
-                              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
+                              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
                               : 'bg-white/80 text-foreground border border-slate-200/50 shadow-sm'
                           }`}
                         >
@@ -528,7 +528,7 @@ export default function ConsultPage() {
         {showBackToBottom && (
           <button
             onClick={handleBackToBottom}
-            className="fixed bottom-[180px] right-6 z-50 w-12 h-12 rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+            className="fixed bottom-[180px] right-6 z-50 w-12 h-12 rounded-full bg-emerald-500 text-white shadow-lg hover:bg-emerald-600 hover:shadow-xl transition-all duration-200 flex items-center justify-center"
             title="回到底部"
           >
             <ArrowDown className="h-5 w-5" />
@@ -561,7 +561,7 @@ export default function ConsultPage() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="输入您的法律问题..."
-                  className="w-full resize-none rounded-xl border border-slate-200 bg-white/80 px-4 py-3 pr-12 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all"
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-white/80 px-4 py-3 pr-12 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-300 transition-all"
                   rows={1}
                   style={{ maxHeight: '120px' }}
                   disabled={isLoading}
@@ -580,7 +580,7 @@ export default function ConsultPage() {
                 type="submit" 
                 size="icon"
                 disabled={isLoading || !input.trim()}
-                className="shrink-0 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30"
+                className="shrink-0 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30"
               >
                 <Send className="h-4 w-4" />
               </Button>

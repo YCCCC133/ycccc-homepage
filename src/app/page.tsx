@@ -24,20 +24,21 @@ import { ScrollingAnnouncementBanner } from '@/components/scrolling-announcement
 
 const features = [
   {
-    title: '线索填报',
-    description: '快速填报欠薪线索，多源数据智能整合，精准定位维权方向',
-    icon: FileText,
-    href: '/report',
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-  },
-  {
     title: '智能咨询',
     description: 'AI智能应答常见法律问题，24小时在线提供专业法律指引',
     icon: MessageSquare,
     href: '/consult',
-    color: 'text-green-600',
-    bgColor: 'bg-green-50',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+    highlight: true, // 特殊高亮
+  },
+  {
+    title: '线索填报',
+    description: '快速填报欠薪线索，多源数据智能整合，精准定位维权方向',
+    icon: FileText,
+    href: '/report',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
   },
   {
     title: '文书生成',
@@ -149,26 +150,26 @@ export default function HomePage() {
               保障劳动者（特别是<span className="text-emerald-600 font-semibold">农民工</span>）薪酬权益
             </p>
 
-            {/* CTA Buttons */}
+            {/* CTA Buttons - 智能咨询C位 */}
             <div className="flex flex-col gap-4 sm:flex-row">
-              <Link href="/report">
+              <Link href="/consult">
                 <Button
                   size="lg"
-                  className="gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:from-emerald-600 hover:to-emerald-600 transition-all duration-300"
+                  className="gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40 hover:from-emerald-600 hover:to-emerald-600 transition-all duration-300 text-lg px-8"
                 >
-                  <FileText className="h-5 w-5" />
-                  立即填报线索
+                  <MessageSquare className="h-5 w-5" />
+                  智能法律咨询
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/consult">
+              <Link href="/report">
                 <Button 
                   size="lg" 
                   variant="outline" 
-                  className="gap-2 border-2 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-all duration-300"
+                  className="gap-2 border-2 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 transition-all duration-300 text-lg px-8"
                 >
-                  <MessageSquare className="h-5 w-5 text-emerald-600" />
-                  智能法律咨询
+                  <FileText className="h-5 w-5 text-emerald-600" />
+                  立即填报线索
                 </Button>
               </Link>
             </div>
@@ -217,16 +218,32 @@ export default function HomePage() {
               <Link 
                 key={feature.title} 
                 href={feature.href}
-                className="outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-xl"
+                className={`outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 rounded-xl ${
+                  feature.highlight ? 'lg:col-span-2 lg:row-span-1' : ''
+                }`}
               >
-                <Card className="group relative h-full cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-2 border-emerald-100/50 hover:border-emerald-300/70 hover:ring-2 hover:ring-emerald-200/50 hover:ring-offset-0">
-                  {/* 背景渐变遮罩 - 使用非overflow裁剪方式 */}
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                <Card className={`group relative h-full cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-2 border-emerald-100/50 hover:border-emerald-300/70 hover:ring-2 hover:ring-emerald-200/50 hover:ring-offset-0 ${
+                  feature.highlight ? 'bg-gradient-to-br from-emerald-50/50 to-white border-emerald-200/50 hover:border-emerald-300/70 hover:ring-2 hover:ring-emerald-200/50 shadow-lg shadow-emerald-500/5' : ''
+                }`}>
+                  {/* 背景渐变遮罩 */}
+                  <div className={`absolute inset-0 rounded-xl transition-opacity duration-300 pointer-events-none ${
+                    feature.highlight 
+                      ? 'bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100' 
+                      : 'bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100'
+                  }`} />
                   <CardHeader className="relative z-10">
                     <div
-                      className={`relative mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${feature.bgColor} group-hover:scale-110 transition-transform duration-300`}
+                      className={`relative mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${feature.bgColor} group-hover:scale-110 transition-transform duration-300 ${
+                        feature.highlight ? 'bg-gradient-to-br from-emerald-100 to-emerald-50' : ''
+                      }`}
                     >
                       <feature.icon className={`h-6 w-6 ${feature.color}`} />
+                      {feature.highlight && (
+                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        </span>
+                      )}
                     </div>
                     <CardTitle className="flex items-center justify-between text-lg">
                       {feature.title}
@@ -237,6 +254,11 @@ export default function HomePage() {
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       {feature.description}
                     </p>
+                    {feature.highlight && (
+                      <p className="mt-2 text-xs text-emerald-600 font-medium">
+                        推荐首选服务 →
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </Link>

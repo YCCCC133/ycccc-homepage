@@ -137,20 +137,23 @@ export function Navigation() {
 
             {/* Right side actions - 毛玻璃按钮 */}
             <div className="hidden shrink-0 items-center gap-2 md:flex">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="gap-1.5 px-2 backdrop-blur-md bg-background/50 border-border/50 hover:bg-background/80 lg:gap-2 lg:px-3"
-              >
-                <Phone className="h-4 w-4" />
-                <span className="hidden lg:inline">紧急求助</span>
-              </Button>
-              <Link href="/report">
+              <Link href="/consult">
                 <Button
                   size="sm"
-                  className="gap-1.5 bg-gradient-to-r from-primary to-primary/90 px-3 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 lg:gap-2 lg:px-4 backdrop-blur-md"
+                  className="gap-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 hover:from-emerald-600 hover:to-emerald-700 lg:gap-2 lg:px-4"
                 >
-                  <span>立即填报</span>
+                  <MessageSquare className="h-4 w-4" />
+                  <span>智能咨询</span>
+                </Button>
+              </Link>
+              <Link href="/report">
+                <Button
+                  variant="outline"
+                  size="sm" 
+                  className="gap-1.5 backdrop-blur-md bg-background/50 border-border/50 hover:bg-background/80 lg:gap-2 lg:px-3"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden lg:inline">填报线索</span>
                 </Button>
               </Link>
             </div>
@@ -195,12 +198,17 @@ export function Navigation() {
                 );
               })}
               <div className="mt-4 flex gap-2">
-                <Button variant="outline" className="flex-1 gap-2 backdrop-blur-md bg-background/50 border-border/50">
-                  <Phone className="h-4 w-4" />
-                  紧急求助
-                </Button>
+                <Link href="/consult" className="flex-1">
+                  <Button className="w-full gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/30">
+                    <MessageSquare className="h-4 w-4" />
+                    智能咨询
+                  </Button>
+                </Link>
                 <Link href="/report" className="flex-1">
-                  <Button className="w-full gap-2 backdrop-blur-md">立即填报</Button>
+                  <Button variant="outline" className="w-full gap-2 backdrop-blur-md bg-background/50 border-border/50">
+                    <FileText className="h-4 w-4" />
+                    填报线索
+                  </Button>
                 </Link>
               </div>
             </div>
