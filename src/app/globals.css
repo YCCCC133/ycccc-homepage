@@ -75,35 +75,47 @@
     ui-monospace,
     monospace;
   
-  /* 颜色变量 */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --border: var(--border);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  /* 颜色变量 - 用于 shadcn/ui 组件 */
+  --color-background: oklch(0.98 0.005 180);
+  --color-foreground: oklch(0.15 0.02 180);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.15 0.02 180);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.15 0.02 180);
+  --color-primary: oklch(0.45 0.12 160);
+  --color-primary-foreground: oklch(0.98 0.005 180);
+  --color-secondary: oklch(0.95 0.01 180);
+  --color-secondary-foreground: oklch(0.25 0.02 180);
+  --color-muted: oklch(0.96 0.01 180);
+  --color-muted-foreground: oklch(0.5 0.02 180);
+  --color-accent: oklch(0.92 0.02 180);
+  --color-accent-foreground: oklch(0.2 0.02 180);
+  --color-destructive: oklch(0.55 0.22 25);
+  --color-border: oklch(0.9 0.01 180);
+  --color-input: oklch(0.9 0.01 180);
+  --color-ring: oklch(0.45 0.12 160);
+  --color-chart-1: oklch(0.45 0.12 160);
+  --color-chart-2: oklch(0.35 0.15 250);
+  --color-chart-3: oklch(0.75 0.15 85);
+  --color-chart-4: oklch(0.65 0.1 300);
+  --color-chart-5: oklch(0.55 0.12 120);
+  --color-sidebar: oklch(0.98 0.005 180);
+  --color-sidebar-foreground: oklch(0.15 0.02 180);
+  --color-sidebar-primary: oklch(0.45 0.12 160);
+  --color-sidebar-primary-foreground: oklch(0.98 0.005 180);
+  --color-sidebar-accent: oklch(0.95 0.01 180);
+  --color-sidebar-accent-foreground: oklch(0.25 0.02 180);
+  --color-sidebar-border: oklch(0.9 0.01 180);
+  --color-sidebar-ring: oklch(0.45 0.12 160);
+  
+  /* 边框颜色 - 用于 border-border 等工具类 */
+  --border: oklch(0.9 0.01 180);
+  
+  /* 圆角 */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 /* ============================================================

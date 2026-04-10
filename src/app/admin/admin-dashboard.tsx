@@ -306,8 +306,8 @@ export default function AdminDashboard() {
     }
   };
 
-  // ============ 加载状态 ============
-  if (!mounted || (isLoading && !isAuthenticated)) {
+  // ============ 加载状态 - 必须完全匹配 SSR ============
+  if (!mounted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-background">
         <div className="text-center">

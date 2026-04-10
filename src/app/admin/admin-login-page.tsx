@@ -1,91 +1,83 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+
+// Loading skeleton component for consistent SSR/CSR
+function LoginLoadingSkeleton() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-white">
+      <div className="text-center">
+        <div className="h-8 w-8 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-sm text-gray-500">加载中...</p>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Initialize on mount
   useEffect(() => {
     setMounted(true);
-    checkAuth();
+    // Check if already logged in
+    const adminLoggedIn = localStorage.getItem('admin_logged_in');
+    if (adminLoggedIn === 'true') {
+      setIsAuthenticated(true);
+    }
   }, []);
 
-  const checkAuth = async () => {
-    try {
-      const res = await fetch('/api/admin/login');
-      const data = await res.json();
-      if (data.success && data.isLoggedIn) {
-        setIsAuthenticated(true);
-      }
-    } catch (error) {
-      console.error('检查登录状态失败:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) {
-      setLoginError('请输入密码');
+      setLoginError('请输入管理员密码');
       return;
     }
 
     setLoginLoading(true);
-    setLoginError('');
+    setLoginError(null);
 
     try {
-      const res = await fetch('/api/admin/login', {
+      const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
       });
-      const data = await res.json();
 
-      if (data.success) {
-        router.push('/admin');
-        router.refresh();
+      const data = await response.json();
+
+      if (data.authenticated) {
+        localStorage.setItem('admin_logged_in', 'true');
+        setIsAuthenticated(true);
+        router.push('/admin/dashboard');
       } else {
-        setLoginError(data.error || '密码错误');
+        setLoginError('密码错误，请重试');
       }
-    } catch {
-      setLoginError('网络错误');
+    } catch (error) {
+      setLoginError('登录失败，请稍后重试');
     } finally {
       setLoginLoading(false);
     }
-  };
+  }, [password, router]);
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/admin/login', { method: 'DELETE' });
-      setIsAuthenticated(false);
-      router.push('/');
-    } catch (error) {
-      console.error('登出失败:', error);
-    }
-  };
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('admin_logged_in');
+    setIsAuthenticated(false);
+    setPassword('');
+  }, []);
 
-  // Consistent loading state for SSR/CSR
-  // Show loading until both mounted AND auth check completed
-  if (!mounted || isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-white">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-gray-500">加载中...</p>
-        </div>
-      </div>
-    );
+  // Show loading skeleton during SSR and initial CSR hydration
+  if (!mounted) {
+    return <LoginLoadingSkeleton />;
   }
 
-  // Logged in state
+  // Already logged in state
   if (isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-white">
@@ -176,6 +168,7 @@ export default function AdminLoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="请输入管理员密码"
                 className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-lg outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10"
+                disabled={loginLoading}
               />
             </div>
             
@@ -196,7 +189,9 @@ export default function AdminLoginPage() {
                   <span className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
                   登录中...
                 </span>
-              ) : '登录系统'}
+              ) : (
+                '登录'
+              )}
             </button>
           </form>
           
@@ -210,7 +205,6 @@ export default function AdminLoginPage() {
           </div>
         </div>
       </div>
-      
     </div>
   );
 }
