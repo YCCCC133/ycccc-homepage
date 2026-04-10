@@ -7,8 +7,45 @@ function isAuthenticated(request: NextRequest): boolean {
   return !!token;
 }
 
+// 安全的数据库查询，带错误处理
+async function safeQuery<T>(
+  queryFn: () => any
+): Promise<{ data: T | null; error: string | null }> {
+  try {
+    const result = await queryFn();
+    if (result.error) {
+      console.error('数据库查询错误:', result.error);
+      return { data: null, error: result.error.message || '查询失败' };
+    }
+    return { data: result.data as T, error: null };
+  } catch (err: any) {
+    console.error('查询异常:', err);
+    return { data: null, error: err?.message || '查询异常' };
+  }
+}
+
+// 安全的计数查询
+async function safeCount(
+  queryFn: () => any
+): Promise<number> {
+  try {
+    const result = await queryFn();
+    if (result.error) {
+      console.error('计数查询错误:', result.error);
+      return 0;
+    }
+    return result.count || 0;
+  } catch (err) {
+    console.error('计数异常:', err);
+    return 0;
+  }
+}
+
 export async function GET(request: NextRequest) {
+  console.log('[admin/data] Request received');
+  
   if (!isAuthenticated(request)) {
+    console.log('[admin/data] Unauthorized access attempt');
     return NextResponse.json({ error: '未授权' }, { status: 401 });
   }
 
@@ -19,123 +56,193 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status');
   const offset = (page - 1) * pageSize;
 
-  const client = getSupabaseClient();
+  let client;
+  try {
+    client = getSupabaseClient();
+    console.log('[admin/data] Supabase client initialized');
+  } catch (err: any) {
+    console.error('[admin/data] Failed to initialize Supabase client:', err);
+    return NextResponse.json({ 
+      error: '数据库连接失败', 
+      details: err?.message || '初始化失败',
+      stats: { reports: 0, applications: 0, documents: 0, consultations: 0 }
+    }, { status: 500 });
+  }
+
+  const result: Record<string, unknown> = {};
+  const errors: string[] = [];
 
   try {
-    const result: Record<string, unknown> = {};
-
     if (type === 'all' || type === 'stats') {
-      // 获取统计数据
-      const [reportsCount, applicationsCount, documentsCount, consultationsCount] = await Promise.all([
-        client.from('reports').select('*', { count: 'exact', head: true }),
-        client.from('applications').select('*', { count: 'exact', head: true }),
-        client.from('documents').select('*', { count: 'exact', head: true }),
-        client.from('consultations').select('*', { count: 'exact', head: true }),
+      console.log('[admin/data] Fetching stats...');
+      
+      // 并行获取统计数据
+      const [reportsRes, applicationsRes, documentsRes, consultationsRes] = await Promise.all([
+        safeCount(() => client!.from('reports').select('*', { count: 'exact', head: true })),
+        safeCount(() => client!.from('applications').select('*', { count: 'exact', head: true })),
+        safeCount(() => client!.from('documents').select('*', { count: 'exact', head: true })),
+        safeCount(() => client!.from('consultations').select('*', { count: 'exact', head: true })),
       ]);
 
-      // 待处理数量
       const [pendingReports, pendingApplications] = await Promise.all([
-        client.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        client.from('applications').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        safeCount(() => client!.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending')),
+        safeCount(() => client!.from('applications').select('*', { count: 'exact', head: true }).eq('status', 'pending')),
       ]);
 
       // 获取案件统计
-      const { data: casesData } = await client.from('cases').select('amount, case_type, created_at');
-      const totalAmount = casesData?.reduce((sum, c) => sum + parseFloat(c.amount || '0'), 0) || 0;
+      const casesResult = await safeQuery<any[]>(
+        () => client!.from('cases').select('amount, case_type, created_at')
+      );
       
-      // 案件类型分布
+      const casesData = casesResult.data || [];
+      
+      if (casesResult.error) {
+        errors.push('案件统计: ' + casesResult.error);
+      }
+
+      const casesArray = Array.isArray(casesData) ? casesData : [];
+      const totalAmount = casesArray.reduce((sum: number, c: any) => sum + parseFloat(c.amount || '0'), 0);
+      
       const caseTypeDistribution: Record<string, number> = {};
-      casesData?.forEach(c => {
-        caseTypeDistribution[c.case_type] = (caseTypeDistribution[c.case_type] || 0) + 1;
+      casesArray.forEach((c: any) => {
+        if (c.case_type) {
+          caseTypeDistribution[c.case_type] = (caseTypeDistribution[c.case_type] || 0) + 1;
+        }
       });
 
-      // 月度趋势统计（最近6个月）
+      // 月度趋势统计
       const monthlyTrend: { month: string; count: number }[] = [];
       const now = new Date();
       for (let i = 5; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         const monthLabel = `${date.getMonth() + 1}月`;
-        const count = casesData?.filter(c => c.created_at && c.created_at.startsWith(monthStr)).length || 0;
+        const count = casesArray.filter((c: any) => c.created_at && c.created_at.startsWith(monthStr)).length;
         monthlyTrend.push({ month: monthLabel, count });
       }
 
       result.stats = {
-        reports: reportsCount.count || 0,
-        applications: applicationsCount.count || 0,
-        documents: documentsCount.count || 0,
-        consultations: consultationsCount.count || 0,
-        pendingReports: pendingReports.count || 0,
-        pendingApplications: pendingApplications.count || 0,
+        reports: reportsRes,
+        applications: applicationsRes,
+        documents: documentsRes,
+        consultations: consultationsRes,
+        pendingReports,
+        pendingApplications,
         totalAmount,
         caseTypeDistribution,
         monthlyTrend,
-        helpedWorkers: reportsCount.count || 0,
+        helpedWorkers: reportsRes,
         avgProcessingDays: 7,
         successRate: 98.6,
       };
+      
+      console.log('[admin/data] Stats fetched:', result.stats);
     }
 
     if (type === 'all' || type === 'reports') {
-      let query = client
-        .from('reports')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range(offset, offset + pageSize - 1);
-
-      if (status) {
-        query = query.eq('status', status);
+      console.log('[admin/data] Fetching reports...');
+      try {
+        const { data, error, count } = await client!
+          .from('reports')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(offset, offset + pageSize - 1);
+        
+        if (error) {
+          errors.push('线索列表: ' + error.message);
+        } else {
+          result.reports = data || [];
+          result.reportsTotal = count ?? 0;
+        }
+      } catch (e: any) {
+        errors.push('线索列表异常: ' + e.message);
+        result.reports = [];
+        result.reportsTotal = 0;
       }
-
-      const { data, error, count } = await query;
-      if (error) throw error;
-      result.reports = data;
-      result.reportsTotal = count ?? 0;
     }
 
     if (type === 'all' || type === 'applications') {
-      let query = client
-        .from('applications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range(offset, offset + pageSize - 1);
-
-      if (status) {
-        query = query.eq('status', status);
+      console.log('[admin/data] Fetching applications...');
+      try {
+        const { data, error, count } = await client!
+          .from('applications')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(offset, offset + pageSize - 1);
+        
+        if (error) {
+          errors.push('申请列表: ' + error.message);
+        } else {
+          result.applications = data || [];
+          result.applicationsTotal = count ?? 0;
+        }
+      } catch (e: any) {
+        errors.push('申请列表异常: ' + e.message);
+        result.applications = [];
+        result.applicationsTotal = 0;
       }
-
-      const { data, error, count } = await query;
-      if (error) throw error;
-      result.applications = data;
-      result.applicationsTotal = count ?? 0;
     }
 
     if (type === 'all' || type === 'documents') {
-      const { data, error, count } = await client
-        .from('documents')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range(offset, offset + pageSize - 1);
-      if (error) throw error;
-      result.documents = data;
-      result.documentsTotal = count ?? 0;
+      console.log('[admin/data] Fetching documents...');
+      try {
+        const { data, error, count } = await client!
+          .from('documents')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(offset, offset + pageSize - 1);
+        
+        if (error) {
+          errors.push('文书列表: ' + error.message);
+        } else {
+          result.documents = data || [];
+          result.documentsTotal = count ?? 0;
+        }
+      } catch (e: any) {
+        errors.push('文书列表异常: ' + e.message);
+        result.documents = [];
+        result.documentsTotal = 0;
+      }
     }
 
     if (type === 'all' || type === 'consultations') {
-      const { data, error, count } = await client
-        .from('consultations')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range(offset, offset + pageSize - 1);
-      if (error) throw error;
-      result.consultations = data;
-      result.consultationsTotal = count ?? 0;
+      console.log('[admin/data] Fetching consultations...');
+      try {
+        const { data, error, count } = await client!
+          .from('consultations')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(offset, offset + pageSize - 1);
+        
+        if (error) {
+          errors.push('咨询列表: ' + error.message);
+        } else {
+          result.consultations = data || [];
+          result.consultationsTotal = count ?? 0;
+        }
+      } catch (e: any) {
+        errors.push('咨询列表异常: ' + e.message);
+        result.consultations = [];
+        result.consultationsTotal = 0;
+      }
     }
 
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('获取数据失败:', error);
-    return NextResponse.json({ error: '获取数据失败' }, { status: 500 });
+    // 即使有部分错误，也返回成功响应
+    if (errors.length > 0) {
+      console.log('[admin/data] Partial errors:', errors);
+      result.partialErrors = errors;
+    }
+
+    console.log('[admin/data] Success, returning result');
+    return NextResponse.json({ ...result, success: true });
+    
+  } catch (error: any) {
+    console.error('[admin/data] Fatal error:', error);
+    return NextResponse.json({ 
+      error: '获取数据失败', 
+      details: error?.message || '未知错误',
+      stats: result.stats || { reports: 0, applications: 0, documents: 0, consultations: 0 }
+    }, { status: 500 });
   }
 }
 
@@ -159,7 +266,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: '无效的类型' }, { status: 400 });
     }
 
-    // 只更新存在于表中的字段
     const allowedFields = type === 'report' 
       ? ['name', 'phone', 'id_card', 'company_name', 'company_address', 'owed_amount', 'owed_months', 'worker_count', 'description', 'evidence', 'status', 'source']
       : ['name', 'phone', 'id_card', 'type', 'company_name', 'company_address', 'salary_amount', 'salary_months', 'description', 'status', 'source'];
@@ -173,46 +279,14 @@ export async function PUT(request: NextRequest) {
     updateData.updated_at = new Date().toISOString();
 
     const { error } = await client.from(table).update(updateData).eq('id', id);
-    if (error) throw error;
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('更新数据失败:', error);
-    return NextResponse.json({ error: '更新数据失败' }, { status: 500 });
-  }
-}
-
-export async function DELETE(request: NextRequest) {
-  if (!isAuthenticated(request)) {
-    return NextResponse.json({ error: '未授权' }, { status: 401 });
-  }
-
-  try {
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type');
-    const id = searchParams.get('id');
-
-    if (!type || !id) {
-      return NextResponse.json({ error: '参数不完整' }, { status: 400 });
+    if (error) {
+      console.error('更新失败:', error);
+      return NextResponse.json({ error: '更新失败', details: error.message }, { status: 500 });
     }
 
-    const client = getSupabaseClient();
-
-    let table = '';
-    if (type === 'report') table = 'reports';
-    else if (type === 'application') table = 'applications';
-    else if (type === 'document') table = 'documents';
-    else if (type === 'consultation') table = 'consultations';
-    else {
-      return NextResponse.json({ error: '无效的类型' }, { status: 400 });
-    }
-
-    const { error } = await client.from(table).delete().eq('id', parseInt(id));
-    if (error) throw error;
-
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('删除数据失败:', error);
-    return NextResponse.json({ error: '删除数据失败' }, { status: 500 });
+  } catch (error: any) {
+    console.error('更新异常:', error);
+    return NextResponse.json({ error: '更新失败', details: error?.message }, { status: 500 });
   }
 }

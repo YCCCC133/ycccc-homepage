@@ -52,125 +52,139 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const isProduction = process.env.NODE_ENV === 'production';
   
+  console.log('[login] POST request received');
+  
   try {
     const { password } = await request.json();
+    console.log('[login] Password received:', password ? '***' : 'empty');
 
     if (!password) {
+      console.log('[login] No password provided');
       return NextResponse.json({ error: '请输入密码' }, { status: 400 });
     }
 
-    let client;
+    // 尝试获取 Supabase 客户端
+    let client = null;
     try {
       client = getSupabaseClient();
+      console.log('[login] Supabase client initialized');
     } catch (envError) {
-      console.error('Supabase 客户端初始化失败:', envError);
-      // 如果 Supabase 不可用，使用本地验证模式
-      const defaultPassword = 'huxin2026';
-      if (password === defaultPassword) {
-        const token = generateToken();
-        const response = NextResponse.json({ success: true, token, authenticated: true });
-        const opts = getCookieOptions(isProduction);
-        response.cookies.set('admin_token', token, opts);
-        return response;
-      } else {
-        return NextResponse.json({ error: '密码错误' }, { status: 401 });
-      }
+      console.error('[login] Failed to initialize Supabase client:', envError);
+      // 继续使用本地验证模式
     }
     
-    // 查询管理员
-    let admin = null;
-    let queryError = null;
-    
-    try {
-      const { data, error } = await client
-        .from('admins')
-        .select('id, password_hash')
-        .eq('username', 'admin')
-        .maybeSingle();
+    // 如果有 Supabase 客户端，尝试数据库验证
+    if (client) {
+      try {
+        console.log('[login] Attempting database authentication...');
+        const { data, error } = await client
+          .from('admins')
+          .select('id, password_hash')
+          .eq('username', 'admin')
+          .maybeSingle();
 
-      if (error) {
-        queryError = error;
-        console.error('查询管理员失败:', error);
-      } else {
-        admin = data;
-      }
-    } catch (dbError) {
-      queryError = dbError;
-      console.error('数据库查询异常:', dbError);
-    }
-
-    // 如果数据库查询失败或表不存在，使用本地验证模式
-    if (queryError || !admin) {
-      const defaultPassword = 'huxin2026';
-      
-      // 尝试创建 admins 表（如果使用 Supabase）
-      if (client && !queryError) {
-        try {
-          // 尝试插入管理员（如果表存在但没有数据）
-          const hashedDefaultPassword = hashPassword(defaultPassword);
-          const { error: insertError } = await client
-            .from('admins')
-            .upsert({
-              username: 'admin',
-              password_hash: hashedDefaultPassword,
-              last_login: new Date().toISOString()
-            }, { onConflict: 'username' });
+        if (!error && data) {
+          console.log('[login] Admin found in database');
+          const hashedPassword = hashPassword(password);
           
-          if (!insertError) {
-            // 管理员创建/更新成功
+          if (data.password_hash === hashedPassword) {
+            console.log('[login] Password verified');
+            
+            // 更新最后登录时间 - 忽略错误
+            try {
+              await client
+                .from('admins')
+                .update({ last_login: new Date().toISOString() })
+                .eq('id', data.id);
+            } catch (e) {
+              // 忽略更新错误
+            }
+
             const token = generateToken();
             const response = NextResponse.json({ success: true, token, authenticated: true });
             const opts = getCookieOptions(isProduction);
             response.cookies.set('admin_token', token, opts);
+            console.log('[login] Login successful (DB mode)');
             return response;
+          } else {
+            console.log('[login] Wrong password (DB mode)');
+            return NextResponse.json({ error: '密码错误' }, { status: 401 });
           }
-        } catch (upsertError) {
-          console.error('尝试创建管理员失败:', upsertError);
         }
-      }
-      
-      // 降级到本地验证
-      if (password === defaultPassword) {
-        const token = generateToken();
-        const response = NextResponse.json({ success: true, token, authenticated: true });
-        const opts = getCookieOptions(isProduction);
-        response.cookies.set('admin_token', token, opts);
-        return response;
-      } else {
-        return NextResponse.json({ error: '密码错误' }, { status: 401 });
+        
+        // 如果数据库中没有管理员，或者查询出错，尝试创建
+        if (error || !data) {
+          console.log('[login] No admin in DB, attempting to create...');
+          const defaultPassword = 'huxin2026';
+          const hashedDefaultPassword = hashPassword(defaultPassword);
+          
+          let insertError: any = null;
+          try {
+            const upsertResult = await client
+              .from('admins')
+              .upsert({
+                username: 'admin',
+                password_hash: hashedDefaultPassword,
+                last_login: new Date().toISOString()
+              }, { onConflict: 'username' });
+            
+            if (upsertResult.error) {
+              insertError = upsertResult.error;
+            }
+          } catch (e) {
+            console.error('[login] Failed to upsert admin:', e);
+            insertError = e;
+          }
+          
+          if (!insertError || insertError?.message?.includes('duplicate') || insertError?.code === '23505') {
+            // 创建成功或已存在，检查密码
+            if (password === defaultPassword) {
+              console.log('[login] First-time login, creating admin');
+              const token = generateToken();
+              const response = NextResponse.json({ success: true, token, authenticated: true });
+              const opts = getCookieOptions(isProduction);
+              response.cookies.set('admin_token', token, opts);
+              console.log('[login] Login successful (first-time)');
+              return response;
+            } else {
+              console.log('[login] Wrong password (first-time mode)');
+              return NextResponse.json({ error: '密码错误' }, { status: 401 });
+            }
+          }
+          
+          // 如果创建失败，继续使用本地验证
+          console.log('[login] DB upsert failed, falling back to local auth');
+        }
+      } catch (dbError) {
+        console.error('[login] Database error:', dbError);
+        // 继续使用本地验证
       }
     }
-
-    // 验证密码
-    const hashedPassword = hashPassword(password);
-    if (admin.password_hash !== hashedPassword) {
+    
+    // 本地验证模式（无论是否连接数据库）
+    console.log('[login] Using local authentication mode');
+    const defaultPassword = 'huxin2026';
+    
+    if (password === defaultPassword) {
+      console.log('[login] Local auth successful');
+      const token = generateToken();
+      const response = NextResponse.json({ success: true, token, authenticated: true });
+      const opts = getCookieOptions(isProduction);
+      response.cookies.set('admin_token', token, opts);
+      return response;
+    } else {
+      console.log('[login] Local auth failed - wrong password');
       return NextResponse.json({ error: '密码错误' }, { status: 401 });
     }
-
-    // 更新最后登录时间
-    try {
-      await client
-        .from('admins')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', admin.id);
-    } catch (updateError) {
-      console.error('更新登录时间失败:', updateError);
-      // 不影响登录流程继续
-    }
-
-    const token = generateToken();
-    const response = NextResponse.json({ success: true, token, authenticated: true });
-    const opts = getCookieOptions(isProduction);
-    response.cookies.set('admin_token', token, opts);
-    return response;
     
   } catch (error) {
-    console.error('登录错误:', error);
+    console.error('[login] Fatal error:', error);
     
     // 最后的降级方案：使用默认密码
     try {
-      const { password } = await request.json().catch(() => ({}));
-      if (password === 'huxin2026') {
+      const body = await request.json().catch(() => ({}));
+      if (body.password === 'huxin2026') {
+        console.log('[login] Emergency fallback - login successful');
         const token = generateToken();
         const response = NextResponse.json({ success: true, token, authenticated: true });
         const opts = getCookieOptions(isProduction);
@@ -181,15 +195,16 @@ export async function POST(request: NextRequest) {
       // ignore
     }
     
+    console.log('[login] Login failed completely');
     return NextResponse.json({ error: '服务器错误' }, { status: 500 });
   }
 }
 
 // DELETE - 退出登录
 export async function DELETE(request: NextRequest) {
+  console.log('[login] DELETE request (logout)');
   const response = NextResponse.json({ success: true });
   
-  // 清除 Cookie
   response.cookies.set('admin_token', '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
