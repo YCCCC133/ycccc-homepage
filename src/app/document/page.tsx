@@ -1,406 +1,393 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { FileText, Download, Loader2, CheckCircle, PlusCircle, ChevronRight } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Mic, Send, FileText, Loader2, Copy, Check, Download, Sparkles } from 'lucide-react';
 
-interface TemplateField {
-  name: string;
-  type: string;
-  options?: string[];
-  required?: boolean;
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
 }
 
-interface Template {
-  id: number;
+interface FormData {
   name: string;
-  category: string;
-  description?: string;
-  fields: TemplateField[];
+  phone: string;
+  companyName: string;
+  owedAmount: string;
+  workPeriod: string;
+  hasContract: string;
+  hasEvidence: string;
+  description: string;
 }
 
-const categoryLabels: Record<string, string> = {
-  '民事起诉状': '民事起诉状',
-  '支持起诉': '支持起诉',
-  '支付令': '支付令申请',
-  '证据材料': '证据材料',
-  '法律援助': '法律援助',
-};
-
-const categoryDescriptions: Record<string, string> = {
-  '民事起诉状': '向人民法院提起民事诉讼',
-  '支持起诉': '向检察机关申请支持起诉',
-  '支付令': '申请法院发出支付令催讨工资',
-  '证据材料': '整理提交证据材料清单',
-  '法律援助': '申请免费法律援助服务',
-};
+const QUESTIONS = [
+  {
+    id: 'name',
+    question: '请告诉我您的姓名',
+    field: 'name',
+    placeholder: '例如：张三',
+    type: 'text'
+  },
+  {
+    id: 'phone',
+    question: '您的联系电话是多少？',
+    field: 'phone',
+    placeholder: '例如：13800138000',
+    type: 'text'
+  },
+  {
+    id: 'companyName',
+    question: '欠您工资的公司或个人叫什么名字？',
+    field: 'companyName',
+    placeholder: '例如：某某建筑公司',
+    type: 'text'
+  },
+  {
+    id: 'owedAmount',
+    question: '被拖欠了多少工资？',
+    field: 'owedAmount',
+    placeholder: '例如：50000（元）',
+    type: 'text'
+  },
+  {
+    id: 'workPeriod',
+    question: '您从什么时候开始在那工作的？大概工作多久了？',
+    field: 'workPeriod',
+    placeholder: '例如：2024年3月至2025年1月',
+    type: 'text'
+  },
+  {
+    id: 'hasContract',
+    question: '您和公司签订劳动合同了吗？',
+    field: 'hasContract',
+    placeholder: '有 / 没有 / 不确定',
+    type: 'select',
+    options: ['有', '没有', '不确定']
+  },
+  {
+    id: 'hasEvidence',
+    question: '您有哪些证据？（工资条、聊天记录、考勤记录等）',
+    field: 'hasEvidence',
+    placeholder: '例如：微信聊天记录、工资条、考勤表',
+    type: 'text'
+  },
+  {
+    id: 'description',
+    question: '最后，请简单描述一下情况（什么时候开始欠薪、老板怎么说等）',
+    field: 'description',
+    placeholder: '越详细越好，可以分多条说',
+    type: 'textarea'
+  }
+];
 
 export default function DocumentPage() {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('民事起诉状');
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: 'assistant',
+      content: '您好！我是文书生成助手。我会通过几个简单的问题，帮您生成专业的法律文书。请放心回答，我会根据您的情况量身定制。',
+      timestamp: new Date()
+    }
+  ]);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [formData, setFormData] = useState<Partial<FormData>>({});
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedContent, setGeneratedContent] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [generatedDocument, setGeneratedDocument] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
-    loadTemplates();
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    // 第一个问题延迟显示
+    if (messages.length === 1) {
+      setTimeout(() => {
+        addMessage('assistant', QUESTIONS[0].question);
+      }, 500);
+    }
   }, []);
 
-  const loadTemplates = async () => {
-    try {
-      const res = await fetch('/api/document/templates');
-      const data = await res.json();
-      if (data.success && data.data) {
-        // API已返回正确格式的数据（category和fields字段）
-        // 只需确保 fields 是数组格式
-        const parsed = data.data.map((t: { fields?: string | TemplateField[]; variables?: string | string[] }) => {
-          let fields = t.fields;
-          // 如果 fields 是字符串（JSON），解析它
-          if (typeof fields === 'string') {
-            try {
-              fields = JSON.parse(fields);
-            } catch {
-              fields = [];
-            }
-          }
-          // 如果没有 fields 但有 variables（数据库旧格式），转换它
-          if ((!fields || fields.length === 0) && t.variables) {
-            let vars = t.variables;
-            if (typeof vars === 'string') {
-              try {
-                vars = JSON.parse(vars);
-              } catch {
-                vars = [];
-              }
-            }
-            // 将变量名数组转换为字段对象
-            fields = (vars as string[]).map((name: string) => ({
-              name,
-              type: 'text',
-              required: false
-            }));
-          }
-          return {
-            ...t,
-            fields: fields || []
-          };
-        });
-        setTemplates(parsed);
-        if (parsed.length > 0) {
-          setSelectedTemplate(parsed[0]);
-        }
-      }
-    } catch (error) {
-      console.error('加载模板失败:', error);
-    } finally {
-      setIsLoading(false);
+  const addMessage = (role: 'user' | 'assistant', content: string) => {
+    setMessages(prev => [...prev, { role, content, timestamp: new Date() }]);
+  };
+
+  const handleAnswer = async (answer: string) => {
+    const question = QUESTIONS[currentQuestion];
+    addMessage('user', answer);
+    
+    const newFormData = { ...formData, [question.field]: answer };
+    setFormData(newFormData);
+
+    if (currentQuestion < QUESTIONS.length - 1) {
+      setTimeout(() => {
+        addMessage('assistant', QUESTIONS[currentQuestion + 1].question);
+        setCurrentQuestion(prev => prev + 1);
+      }, 300);
+    } else {
+      // 所有问题回答完毕，开始生成文书
+      setTimeout(() => {
+        addMessage('assistant', '好的，信息收集完毕！正在为您生成法律文书，请稍候...');
+        generateDocument(newFormData as FormData);
+      }, 300);
     }
   };
 
-  const categories = [...new Set(templates.map((t) => t.category))];
-  const filteredTemplates = templates.filter((t) => t.category === selectedCategory);
-
-  const handleSelectTemplate = (template: Template) => {
-    setSelectedTemplate(template);
-    setFormData({});
-    setGeneratedContent(null);
-  };
-
-  const handleFieldChange = (fieldName: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [fieldName]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTemplate) return;
-
+  const generateDocument = async (data: FormData) => {
     setIsGenerating(true);
     try {
-      // 直接使用API返回的模板内容
-      const templateContent = selectedTemplate.content || '';
-      
-      // 填充模板
-      let content = templateContent;
-      
-      // 替换所有 {字段名} 占位符
-      for (const field of selectedTemplate.fields) {
-        const value = formData[field.name] || '';
-        // 处理条件字段（是否xxx）
-        if (field.name.startsWith('是否') && value === 'on') {
-          // 保留原占位符，让用户看到需要填写金额
-          continue;
-        }
-        content = content.replace(new RegExp(`\\{${field.name}\\}`, 'g'), value);
-      }
-      
-      // 处理 || 默认值表达式（如 {工作结束日期 || '今'}）
-      content = content.replace(/\{([^}]+)\s*\|\|\s*'([^']+)'\}/g, (_, expr, defaultVal) => {
-        // 检查表达式中的字段是否有值
-        const fieldMatch = expr.match(/\{([^}]+)\}/);
-        if (fieldMatch) {
-          const fieldName = fieldMatch[1];
-          return formData[fieldName] || defaultVal;
-        }
-        return defaultVal;
-      });
-
-      // 处理日期占位符
-      const now = new Date();
-      content = content.replace(/____年____月____日/g, `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`);
-
-      // 保存到数据库
-      const saveRes = await fetch('/api/document', {
+      const response = await fetch('/api/document/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          document_type: selectedTemplate.name,
-          applicant_name: formData['申请人姓名'] || formData['原告姓名'] || '',
-          applicant_phone: formData['联系电话'] || formData['联系方式'] || formData['原告联系电话'] || '',
-          case_description: content,
-          salary_info: '',
-          employer_info: '',
-        }),
+        body: JSON.stringify(data)
       });
-
-      const saveData = await saveRes.json();
-      if (saveData.success) {
-        setGeneratedContent(content);
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setGeneratedDocument(result.data.document);
+        addMessage('assistant', '文书已生成完成！您可以查看、复制或下载文书内容。');
       } else {
-        // 即使保存失败也显示内容
-        setGeneratedContent(content);
+        addMessage('assistant', `生成失败：${result.error}。请稍后重试。`);
       }
     } catch (error) {
-      console.error('生成文书失败:', error);
+      addMessage('assistant', '网络错误，请检查网络连接后重试。');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleDownload = () => {
-    if (!generatedContent) return;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const input = inputRef.current?.value.trim();
+    if (input && !isGenerating) {
+      handleAnswer(input);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
 
-    const blob = new Blob([generatedContent], { type: 'text/plain;charset=utf-8' });
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
+  const copyToClipboard = async () => {
+    if (generatedDocument) {
+      await navigator.clipboard.writeText(generatedDocument);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const downloadDocument = () => {
+    if (!generatedDocument) return;
+    
+    const blob = new Blob([generatedDocument], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${selectedTemplate?.name || '法律文书'}_${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `民事起诉状_${formData.name}_${Date.now()}.txt`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  const handleNewDocument = () => {
-    setFormData({});
-    setGeneratedContent(null);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="mx-auto max-w-6xl bg-background px-4 py-8 selection-primary select-text">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </div>
-    );
-  }
+  const currentQ = QUESTIONS[currentQuestion];
+  const isLastQuestion = currentQuestion === QUESTIONS.length - 1;
 
   return (
-    <div className="mx-auto max-w-6xl bg-background px-4 py-8 selection-primary select-text">
-      {/* 标题 */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">法律文书生成</h1>
-        <p className="text-muted-foreground mt-1">
-          选择模板，填写信息，即可生成标准法律文书
-        </p>
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50/50 to-white selection-primary">
+      {/* Header */}
+      <div className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <FileText className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-foreground">文书生成</h1>
+              <p className="text-xs text-muted-foreground">智能生成 · 专业规范</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {generatedContent ? (
-        /* 生成结果 */
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="h-6 w-6 text-emerald-500" />
-            <h2 className="text-lg font-semibold">文书生成成功</h2>
-          </div>
-
-          <div className="bg-muted/50 rounded-lg p-6">
-            <pre className="whitespace-pre-wrap text-sm leading-relaxed font-mono">
-              {generatedContent}
-            </pre>
-          </div>
-
-          <div className="flex gap-4">
-            <Button onClick={handleDownload} className="gap-2">
-              <Download className="h-4 w-4" />
-              下载文书
-            </Button>
-            <Button variant="outline" onClick={handleNewDocument} className="gap-2">
-              <PlusCircle className="h-4 w-4" />
-              生成新文书
-            </Button>
-          </div>
-        </div>
-      ) : (
-        /* 模板选择和表单 */
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* 左侧：模板分类 */}
-          <div className="lg:col-span-1 space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">文书类型</h3>
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => {
-                  setSelectedCategory(category);
-                  setSelectedTemplate(templates.find((t) => t.category === category) || null);
-                }}
-                className={cn(
-                  'w-full text-left px-4 py-3 rounded-lg transition-all',
-                  selectedCategory === category
-                    ? 'bg-primary/10 text-primary border border-primary/20'
-                    : 'bg-muted/30 hover:bg-muted/50 text-foreground/80'
-                )}
-              >
-                <div className="font-medium">{categoryLabels[category] || category}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  {categoryDescriptions[category] || ''}
+      <div className="container mx-auto px-4 py-6 max-w-3xl">
+        {/* Chat Area */}
+        <Card className="mb-4 border-emerald-100/50 shadow-xl shadow-emerald-500/5">
+          <CardHeader className="pb-2 border-b bg-gradient-to-r from-emerald-50/50 to-transparent">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-emerald-500" />
+              智能问答
+            </CardTitle>
+            <CardDescription>
+              回答几个简单问题，我帮您生成专业文书
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+              {messages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
+                        : 'bg-muted/80 text-foreground border border-emerald-100/50'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
                 </div>
-              </button>
-            ))}
-          </div>
-
-          {/* 中间：模板列表 */}
-          <div className="lg:col-span-1 space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">
-              {categoryLabels[selectedCategory] || selectedCategory} 模板
-            </h3>
-            {filteredTemplates.map((template) => (
-              <button
-                key={template.id}
-                onClick={() => handleSelectTemplate(template)}
-                className={cn(
-                  'w-full text-left px-4 py-3 rounded-lg transition-all flex items-center justify-between',
-                  selectedTemplate?.id === template.id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted/30 hover:bg-muted/50'
-                )}
-              >
-                <div>
-                  <div className="font-medium text-sm">{template.name}</div>
-                  {template.description && (
-                    <div className={cn(
-                      'text-xs mt-0.5',
-                      selectedTemplate?.id === template.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                    )}>
-                      {template.description}
+              ))}
+              
+              {isGenerating && (
+                <div className="flex justify-start">
+                  <div className="bg-muted/80 text-foreground border border-emerald-100/50 rounded-2xl px-4 py-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+                      正在生成文书...
                     </div>
+                  </div>
+                </div>
+              )}
+              
+              <div ref={messagesEndRef} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Generated Document */}
+        {generatedDocument && (
+          <Card className="mb-4 border-emerald-200 bg-gradient-to-br from-emerald-50/30 to-white shadow-xl shadow-emerald-500/10">
+            <CardHeader className="pb-2 border-b bg-gradient-to-r from-emerald-100/50 to-transparent">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-4 w-4 text-emerald-600" />
+                生成的法律文书
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <pre className="whitespace-pre-wrap text-sm leading-relaxed font-mono bg-white/80 p-4 rounded-xl border border-emerald-100/50 max-h-[500px] overflow-y-auto">
+                {generatedDocument}
+              </pre>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={copyToClipboard}
+                  className="flex-1 gap-2 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      已复制
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      复制文书
+                    </>
                   )}
-                </div>
-                <ChevronRight className={cn(
-                  'h-4 w-4 shrink-0',
-                  selectedTemplate?.id === template.id ? 'text-primary-foreground' : 'text-muted-foreground'
-                )} />
-              </button>
-            ))}
-          </div>
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={downloadDocument}
+                  className="flex-1 gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30"
+                >
+                  <Download className="h-4 w-4" />
+                  下载文书
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-          {/* 右侧：表单 */}
-          <div className="lg:col-span-2">
-            {selectedTemplate ? (
-              <form onSubmit={handleSubmit} className="space-y-6 bg-card rounded-lg p-6 border">
-                <div className="flex items-center gap-2 mb-4">
-                  <FileText className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold">{selectedTemplate.name}</h3>
-                </div>
-
-                <div className="space-y-4">
-                  {selectedTemplate.fields.map((field) => (
-                    <div key={field.name}>
-                      <label className="block text-sm font-medium mb-1.5">
-                        {field.name}
-                        {field.required && <span className="text-destructive ml-1">*</span>}
-                      </label>
-                      {field.type === 'textarea' ? (
-                        <textarea
-                          value={formData[field.name] || ''}
-                          onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[100px] focus:outline-none focus:ring-2 focus:ring-primary/50"
-                          placeholder={`请输入${field.name}`}
-                        />
-                      ) : field.type === 'checkbox' ? (
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={formData[field.name] === 'on'}
-                            onChange={(e) => handleFieldChange(field.name, e.target.checked ? 'on' : '')}
-                            className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
-                          />
-                          <span className="text-sm text-muted-foreground">是</span>
-                        </label>
-                      ) : field.type === 'select' && field.options ? (
-                        <select
-                          value={formData[field.name] || ''}
-                          onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        >
-                          <option value="">请选择</option>
-                          {field.options.map((opt) => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      ) : field.type === 'number' ? (
-                        <input
-                          type="number"
-                          value={formData[field.name] || ''}
-                          onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                          placeholder={`请输入金额`}
-                        />
-                      ) : field.type === 'phone' ? (
-                        <input
-                          type="tel"
-                          value={formData[field.name] || ''}
-                          onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                          placeholder="请输入联系电话"
-                        />
-                      ) : (
-                        <input
-                          type={field.type === 'date' ? 'date' : 'text'}
-                          value={formData[field.name] || ''}
-                          onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                          placeholder={`请输入${field.name}`}
-                        />
-                      )}
-                    </div>
+        {/* Input Area */}
+        {!generatedDocument && (
+          <Card className="border-emerald-100/50 shadow-xl shadow-emerald-500/5">
+            <CardContent className="p-4">
+              <form onSubmit={handleSubmit} className="flex gap-2">
+                <Input
+                  ref={inputRef as React.RefObject<HTMLInputElement>}
+                  placeholder={
+                    currentQ?.type === 'select' 
+                      ? `请回复：${currentQ.options?.join(' / ')}` 
+                      : currentQ?.placeholder || '请输入您的回答'
+                  }
+                  className="flex-1 border-emerald-200 focus-visible:ring-emerald-500 focus-visible:border-emerald-300"
+                  disabled={isGenerating}
+                  onKeyDown={handleKeyDown}
+                />
+                <Button 
+                  type="submit" 
+                  size="icon"
+                  disabled={isGenerating}
+                  className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </form>
+              
+              {/* Quick Options for select type */}
+              {currentQ?.type === 'select' && currentQ.options && (
+                <div className="flex gap-2 mt-3 flex-wrap">
+                  {currentQ.options.map(opt => (
+                    <Button
+                      key={opt}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAnswer(opt)}
+                      className="text-xs border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300"
+                    >
+                      {opt}
+                    </Button>
                   ))}
                 </div>
-
-                <div className="flex gap-4 pt-4">
-                  <Button type="submit" disabled={isGenerating} className="gap-2">
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        生成中...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="h-4 w-4" />
-                        生成文书
-                      </>
-                    )}
-                  </Button>
+              )}
+              
+              {/* Progress */}
+              <div className="mt-3 flex items-center gap-2">
+                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-300"
+                    style={{ width: `${((currentQuestion + 1) / QUESTIONS.length) * 100}%` }}
+                  />
                 </div>
-              </form>
-            ) : (
-              <div className="flex items-center justify-center h-64 text-muted-foreground">
-                请选择一个模板开始
+                <span className="text-xs text-muted-foreground">
+                  {currentQuestion + 1}/{QUESTIONS.length}
+                </span>
               </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Tips */}
+        <div className="mt-6 p-4 rounded-xl bg-amber-50/50 border border-amber-100/50">
+          <h3 className="text-sm font-medium text-amber-800 mb-2">温馨提示</h3>
+          <ul className="text-xs text-amber-700/80 space-y-1">
+            <li>• 请尽量详细描述您的遭遇，有助于生成更准确的文书</li>
+            <li>• 文书生成后可自行修改或咨询专业人士</li>
+            <li>• 如需进一步帮助，可联系当地法律援助中心</li>
+          </ul>
         </div>
-      )}
+      </div>
     </div>
   );
 }
