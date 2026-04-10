@@ -152,7 +152,7 @@ export default function AdminDashboard() {
         fetch('/api/admin/consultations', { credentials: 'include' }).then(r => r.json()),
       ]);
 
-      if (statsRes.success) setStats(statsRes.data);
+      if (statsRes.success) setStats(statsRes.stats);
       if (announcementsRes.success) setAnnouncements(announcementsRes.data || []);
       if (reportsRes.success) setReports(reportsRes.data || []);
       if (applicationsRes.success) setApplications(applicationsRes.data || []);
