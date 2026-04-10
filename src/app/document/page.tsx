@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Send, FileText, Loader2, Copy, Check, Download, Sparkles, ExternalLink } from 'lucide-react';
+import { Send, FileText, Loader2, Copy, Check, Download, Sparkles, ExternalLink, ArrowDown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-// 法律引用类型
+// ============================================================
+// 类型定义
+// ============================================================
 interface LegalReference {
   name: string;
   fullName: string;
@@ -22,6 +24,13 @@ interface ChatMessage {
   legalReferences?: LegalReference[];
 }
 
+interface ScrollState {
+  isAutoScrollEnabled: boolean;
+  isUserScrolling: boolean;
+  lastMessageVisible: boolean;
+  needsScrollToBottom: boolean;
+}
+
 interface FormData {
   name: string;
   phone: string;
@@ -33,7 +42,27 @@ interface FormData {
   description: string;
 }
 
-// 问题定义
+// ============================================================
+// 常量配置
+// ============================================================
+const SCROLL_CONFIG = {
+  // 滚动系数：每帧滚动距离 = 剩余距离 × 系数 (0.08~0.15)
+  // 值越大滚动越快，建议范围 0.08~0.15
+  scrollFactor: 0.12,
+  
+  // 目标可见比例：最后一个气泡至少露出 70%
+  targetVisibilityRatio: 0.7,
+  
+  // 节流时间(ms)：避免频繁触发滚动计算
+  throttleMs: 16,
+  
+  // 滚动停止阈值(px)：距离底部小于此值时停止自动滚动
+  stopThreshold: 50,
+  
+  // 回到底部按钮显示阈值(px)：距离底部大于此值时显示按钮
+  showButtonThreshold: 100,
+};
+
 const QUESTIONS = [
   { id: 'name', field: 'name', question: '请问您叫什么名字？', placeholder: '请输入您的姓名' },
   { id: 'phone', field: 'phone', question: '请问您的联系电话是多少？', placeholder: '请输入手机号码' },
@@ -45,7 +74,9 @@ const QUESTIONS = [
   { id: 'description', field: 'description', question: '请简单描述一下拖欠工资的情况', placeholder: '越详细越好' }
 ];
 
-// 意图检测
+// ============================================================
+// 工具函数
+// ============================================================
 function detectIntent(text: string): 'greeting' | 'skip' | 'restart' | 'help' | 'normal' {
   const lower = text.toLowerCase().trim();
   if (['你好', '您好', 'hi', 'hello', '在', '嗨'].some(p => lower.includes(p))) return 'greeting';
@@ -55,6 +86,226 @@ function detectIntent(text: string): 'greeting' | 'skip' | 'restart' | 'help' | 
   return 'normal';
 }
 
+// ============================================================
+// 自定义 Hook：受控自动滚动系统
+// ============================================================
+function useAutoScroll(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  messagesLength: number,
+  isGenerating: boolean
+) {
+  // 滚动状态
+  const [scrollState, setScrollState] = useState<ScrollState>({
+    isAutoScrollEnabled: true,
+    isUserScrolling: false,
+    lastMessageVisible: true,
+    needsScrollToBottom: false,
+  });
+  
+  const [showBackToBottom, setShowBackToBottom] = useState(false);
+  
+  // 滚动动画帧 ID
+  const scrollAnimationRef = useRef<number | null>(null);
+  
+  // 上次滚动时间戳
+  const lastScrollTimeRef = useRef<number>(0);
+  
+  // 滚动容器引用
+  const container = containerRef.current;
+
+  // --------------------------------------------------------
+  // 核心滚动函数：使用 requestAnimationFrame 实现平滑滚动
+  // --------------------------------------------------------
+  const scrollToBottom = useCallback((smooth: boolean = true) => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    if (!smooth) {
+      // 立即滚动
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+
+    // 取消之前的动画
+    if (scrollAnimationRef.current) {
+      cancelAnimationFrame(scrollAnimationRef.current);
+    }
+
+    const startScrollTop = el.scrollTop;
+    const targetScrollTop = el.scrollHeight - el.clientHeight;
+    const distanceToScroll = targetScrollTop - startScrollTop;
+    
+    // 如果距离很小，直接滚动到底部
+    if (Math.abs(distanceToScroll) < SCROLL_CONFIG.stopThreshold) {
+      el.scrollTop = targetScrollTop;
+      return;
+    }
+
+    // 使用 requestAnimationFrame 实现非线性滚动
+    const animate = (timestamp: number) => {
+      // 节流处理
+      if (timestamp - lastScrollTimeRef.current < SCROLL_CONFIG.throttleMs) {
+        scrollAnimationRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      lastScrollTimeRef.current = timestamp;
+
+      const el = containerRef.current;
+      if (!el) return;
+
+      const currentScrollTop = el.scrollTop;
+      const currentTarget = el.scrollHeight - el.clientHeight;
+      const remaining = currentTarget - currentScrollTop;
+
+      // 检查是否到达目标位置
+      if (Math.abs(remaining) < SCROLL_CONFIG.stopThreshold) {
+        el.scrollTop = currentTarget;
+        scrollAnimationRef.current = null;
+        return;
+      }
+
+      // 渐进跟随：每帧滚动距离 = 剩余距离 × 系数
+      // 这是实现"与阅读速度一致"的关键
+      const step = remaining * SCROLL_CONFIG.scrollFactor;
+      el.scrollTop = currentScrollTop + step;
+
+      // 继续动画
+      scrollAnimationRef.current = requestAnimationFrame(animate);
+    };
+
+    scrollAnimationRef.current = requestAnimationFrame(animate);
+  }, [containerRef]);
+
+  // --------------------------------------------------------
+  // 检测最后一条消息的可见性
+  // --------------------------------------------------------
+  const checkLastMessageVisibility = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const lastMessageEl = el.querySelector('[data-last-message]') as HTMLElement;
+    if (!lastMessageEl) {
+      setScrollState(prev => ({ ...prev, lastMessageVisible: true }));
+      return;
+    }
+
+    const rect = lastMessageEl.getBoundingClientRect();
+    const containerRect = el.getBoundingClientRect();
+
+    // 计算可见比例
+    const visibleTop = Math.max(rect.top, containerRect.top);
+    const visibleBottom = Math.min(rect.bottom, containerRect.bottom);
+    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+    const visibilityRatio = visibleHeight / rect.height;
+
+    const isVisible = visibilityRatio >= SCROLL_CONFIG.targetVisibilityRatio;
+    
+    setScrollState(prev => ({
+      ...prev,
+      lastMessageVisible: isVisible,
+      needsScrollToBottom: !isVisible && prev.isAutoScrollEnabled,
+    }));
+
+    // 检查是否需要显示"回到底部"按钮
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowBackToBottom(distanceFromBottom > SCROLL_CONFIG.showButtonThreshold);
+  }, [containerRef]);
+
+  // --------------------------------------------------------
+  // 用户中断监听：停止自动滚动
+  // --------------------------------------------------------
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    // 鼠标滚轮事件
+    const handleWheel = () => {
+      setScrollState(prev => ({
+        ...prev,
+        isAutoScrollEnabled: false,
+        isUserScrolling: true,
+      }));
+      setShowBackToBottom(true);
+    };
+
+    // 触摸开始事件
+    const handleTouchStart = () => {
+      setScrollState(prev => ({
+        ...prev,
+        isAutoScrollEnabled: false,
+        isUserScrolling: true,
+      }));
+    };
+
+    // 滚动事件（检测手动滚动）
+    const handleScroll = () => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (distanceFromBottom > SCROLL_CONFIG.showButtonThreshold) {
+        setShowBackToBottom(true);
+      }
+      checkLastMessageVisibility();
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: true });
+    el.addEventListener('touchstart', handleTouchStart, { passive: true });
+    el.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+      el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('scroll', handleScroll);
+    };
+  }, [containerRef, checkLastMessageVisibility]);
+
+  // --------------------------------------------------------
+  // 自动滚动逻辑：当有新消息或正在生成时
+  // --------------------------------------------------------
+  useEffect(() => {
+    if (!scrollState.isAutoScrollEnabled) return;
+    if (!isGenerating && scrollState.lastMessageVisible) return;
+
+    scrollToBottom(true);
+    
+    // 持续检测可见性
+    const visibilityCheck = setInterval(() => {
+      if (!scrollState.isAutoScrollEnabled) {
+        clearInterval(visibilityCheck);
+        return;
+      }
+      checkLastMessageVisibility();
+      
+      if (!scrollState.lastMessageVisible && scrollState.isAutoScrollEnabled) {
+        scrollToBottom(true);
+      }
+    }, SCROLL_CONFIG.throttleMs * 2);
+
+    return () => clearInterval(visibilityCheck);
+  }, [messagesLength, isGenerating, scrollState.isAutoScrollEnabled, scrollToBottom, checkLastMessageVisibility, scrollState.lastMessageVisible]);
+
+  // --------------------------------------------------------
+  // 回到底部并恢复自动滚动
+  // --------------------------------------------------------
+  const scrollBackToBottom = useCallback(() => {
+    scrollToBottom(true);
+    setScrollState(prev => ({
+      ...prev,
+      isAutoScrollEnabled: true,
+      isUserScrolling: false,
+    }));
+    setShowBackToBottom(false);
+  }, [scrollToBottom]);
+
+  return {
+    scrollState,
+    showBackToBottom,
+    scrollBackToBottom,
+    checkLastMessageVisibility,
+  };
+}
+
+// ============================================================
+// 主组件
+// ============================================================
 export default function DocumentPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -66,18 +317,42 @@ export default function DocumentPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 使用受控自动滚动 Hook
+  const { 
+    scrollState, 
+    showBackToBottom, 
+    scrollBackToBottom,
+    checkLastMessageVisibility 
+  } = useAutoScroll(chatContainerRef, messages.length, isGenerating || isTyping);
 
   // 发送消息到前端显示
-  const sendMessage = (content: string, legalRefs?: LegalReference[]) => {
+  const sendMessage = useCallback((content: string, legalRefs?: LegalReference[]) => {
     setMessages(prev => [...prev, { 
       role: 'assistant', 
       content, 
       timestamp: new Date(),
       legalReferences: legalRefs 
     }]);
-  };
+  }, []);
+
+  // 初始化对话
+  useEffect(() => {
+    if (isInitialized) return;
+    setIsInitialized(true);
+    
+    setIsTyping(true);
+    sendMessage('您好！我是智能法律文书助手，可以帮您生成民事起诉状等法律文书。\n\n请放心，我会根据您的情况量身定制。准备好后请告诉我您的姓名？');
+    setCurrentStep(1);
+    setIsTyping(false);
+  }, [isInitialized, sendMessage]);
+
+  // 消息更新后检查可见性
+  useEffect(() => {
+    checkLastMessageVisibility();
+  }, [messages.length, checkLastMessageVisibility]);
 
   // 调用后端AI对话API
   const callAI = async (userMessage: string) => {
@@ -100,29 +375,6 @@ export default function DocumentPage() {
     }
   };
 
-  // 初始化对话
-  useEffect(() => {
-    if (isInitialized) return;
-    setIsInitialized(true);
-    
-    setIsTyping(true);
-    sendMessage('您好！我是智能法律文书助手，可以帮您生成民事起诉状等法律文书。\n\n请放心，我会根据您的情况量身定制。准备好后请告诉我您的姓名？');
-    setCurrentStep(1);
-    setIsTyping(false);
-  }, []);
-
-  // 自动滚动到最新消息
-  useEffect(() => {
-    // 延迟执行，确保 DOM 已更新
-    const timer = setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'end' 
-      });
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [messages, isTyping, isGenerating]);
-
   // 处理用户回答
   const handleAnswer = async (answer: string) => {
     const trimmed = answer.trim();
@@ -131,10 +383,8 @@ export default function DocumentPage() {
     const intent = detectIntent(trimmed);
     const currentQ = QUESTIONS[currentStep - 1];
 
-    // 添加用户消息
     sendMessage(trimmed);
 
-    // 根据意图处理
     if (intent === 'greeting') {
       setIsTyping(true);
       await new Promise(r => setTimeout(r, 500));
@@ -180,7 +430,6 @@ export default function DocumentPage() {
       return;
     }
 
-    // 正常回答
     setIsTyping(true);
     
     if (currentQ) {
@@ -288,7 +537,7 @@ export default function DocumentPage() {
         {/* Chat Area */}
         <div 
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto px-4 py-6 pb-[200px]"
+          className="flex-1 overflow-y-auto px-4 py-6 pb-[200px] scroll-smooth"
         >
           <div className="container mx-auto max-w-3xl space-y-4">
             {/* Chat Header */}
@@ -300,60 +549,67 @@ export default function DocumentPage() {
 
             {/* Messages */}
             <div className="space-y-4 pb-4">
-              {messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className="max-w-[85%]">
-                    <div
-                      className={`rounded-2xl px-4 py-3 ${
-                        msg.role === 'user'
-                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
-                          : 'bg-white/80 text-foreground border border-emerald-100/50 shadow-sm'
-                      }`}
-                    >
-                      {msg.role === 'assistant' ? (
-                        <div className="markdown-content text-sm leading-relaxed">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {msg.content}
-                          </ReactMarkdown>
+              {messages.map((msg, idx) => {
+                const isLastMessage = idx === messages.length - 1;
+                return (
+                  <div
+                    key={idx}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className="max-w-[85%]">
+                      <div
+                        className={`rounded-2xl px-4 py-3 ${
+                          msg.role === 'user'
+                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
+                            : 'bg-white/80 text-foreground border border-emerald-100/50 shadow-sm'
+                        }`}
+                        {...(isLastMessage ? { 'data-last-message': true } : {})}
+                      >
+                        {msg.role === 'assistant' ? (
+                          <div className="markdown-content text-sm leading-relaxed">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {msg.content}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                        )}
+                      </div>
+                      
+                      {/* 法律引用标注 - 弱化显示 */}
+                      {msg.role === 'assistant' && msg.legalReferences && msg.legalReferences.length > 0 && (
+                        <div className="mt-2 px-1">
+                          <div className="text-[10px] text-gray-400 leading-relaxed">
+                            <span className="mr-1">📖 参考：</span>
+                            {msg.legalReferences.map((ref, i) => (
+                              <span key={i}>
+                                {i > 0 && <span className="mx-1">·</span>}
+                                <a 
+                                  href={ref.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="hover:text-gray-500 underline underline-offset-2 transition-colors"
+                                  title={ref.fullName}
+                                >
+                                  {ref.name}
+                                </a>
+                                <ExternalLink className="inline-block ml-0.5 h-2.5 w-2.5 opacity-50" />
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      ) : (
-                        <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
                       )}
                     </div>
-                    
-                    {/* 法律引用标注 - 弱化显示 */}
-                    {msg.role === 'assistant' && msg.legalReferences && msg.legalReferences.length > 0 && (
-                      <div className="mt-2 px-1">
-                        <div className="text-[10px] text-gray-400 leading-relaxed">
-                          <span className="mr-1">📖 参考：</span>
-                          {msg.legalReferences.map((ref, i) => (
-                            <span key={i}>
-                              {i > 0 && <span className="mx-1">·</span>}
-                              <a 
-                                href={ref.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="hover:text-gray-500 underline underline-offset-2 transition-colors"
-                                title={ref.fullName}
-                              >
-                                {ref.name}
-                              </a>
-                              <ExternalLink className="inline-block ml-0.5 h-2.5 w-2.5 opacity-50" />
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
               
               {(isGenerating || isTyping) && (
                 <div className="flex justify-start">
-                  <div className="bg-white/80 text-foreground border border-emerald-100/50 rounded-2xl px-4 py-3 shadow-sm">
+                  <div 
+                    className="bg-white/80 text-foreground border border-emerald-100/50 rounded-2xl px-4 py-3 shadow-sm"
+                    data-last-message="true"
+                  >
                     <div className="flex items-center gap-2 text-sm">
                       <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
                       {isGenerating ? '正在生成文书...' : '思考中...'}
@@ -362,7 +618,6 @@ export default function DocumentPage() {
                 </div>
               )}
               
-              {/* 滚动锚点 - 确保最新消息可见 */}
               <div ref={messagesEndRef} style={{ height: '1px' }} />
             </div>
 
@@ -402,6 +657,17 @@ export default function DocumentPage() {
             )}
           </div>
         </div>
+
+        {/* 回到底部按钮 */}
+        {showBackToBottom && (
+          <button
+            onClick={scrollBackToBottom}
+            className="fixed bottom-[180px] right-6 z-50 w-10 h-10 rounded-full bg-white border border-emerald-200 shadow-lg hover:shadow-xl hover:bg-emerald-50 transition-all duration-200 flex items-center justify-center group"
+            title="回到底部"
+          >
+            <ArrowDown className="h-5 w-5 text-emerald-600 group-hover:translate-y-0.5 transition-transform" />
+          </button>
+        )}
 
         {/* Fixed Bottom Input */}
         {!generatedDocument && (
