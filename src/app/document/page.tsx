@@ -28,6 +28,7 @@ export default function DocumentPage() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [showBackToBottom, setShowBackToBottom] = useState(false);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true); // 是否启用自动滚动
+  const [userStoppedScroll, setUserStoppedScroll] = useState(false); // 用户是否手动停止了自动滚动
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -58,7 +59,7 @@ export default function DocumentPage() {
   }, [isGenerating, isTyping, scrollToBottom, autoScrollEnabled]);
 
   // --------------------------------------------------------
-  // 滚动事件监听
+  // 滚动事件监听 - 只显示/隐藏按钮，不停止自动滚动
   // --------------------------------------------------------
   useEffect(() => {
     const container = chatContainerRef.current;
@@ -68,7 +69,7 @@ export default function DocumentPage() {
       const { scrollTop, scrollHeight, clientHeight } = container;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       
-      // 如果用户向上滚动超过阈值，显示按钮
+      // 只显示/隐藏按钮，不改变 autoScrollEnabled
       if (distanceFromBottom > 150) {
         setShowBackToBottom(true);
       } else {
@@ -81,21 +82,14 @@ export default function DocumentPage() {
   }, []);
 
   // --------------------------------------------------------
-  // 点击回到底部按钮
+  // 点击回到底部按钮 - 停止自动滚动
   // --------------------------------------------------------
   const handleBackToBottom = useCallback(() => {
     scrollToBottom();
     setShowBackToBottom(false);
-    setAutoScrollEnabled(true); // 恢复自动滚动
+    setAutoScrollEnabled(false); // 停止自动滚动
+    setUserStoppedScroll(true); // 标记用户手动停止了
   }, [scrollToBottom]);
-
-  // --------------------------------------------------------
-  // 用户手动停止自动滚动
-  // --------------------------------------------------------
-  const stopAutoScroll = useCallback(() => {
-    setAutoScrollEnabled(false);
-    setShowBackToBottom(true);
-  }, []);
 
   const sendMessage = useCallback((content: string, legalRefs?: LegalReference[]) => {
     setMessages(prev => [...prev, { role: 'assistant', content, timestamp: new Date(), legalReferences: legalRefs }]);
@@ -134,6 +128,7 @@ export default function DocumentPage() {
     // 恢复自动滚动
     setAutoScrollEnabled(true);
     setShowBackToBottom(false);
+    setUserStoppedScroll(false); // 重置用户停止标记
 
     const intent = detectIntent(trimmed);
     const currentQ = QUESTIONS[currentStep - 1];

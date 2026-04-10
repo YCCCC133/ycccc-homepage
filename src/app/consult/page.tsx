@@ -31,6 +31,7 @@ export default function ConsultPage() {
   const [error, setError] = useState<string | null>(null);
   const [showBackToBottom, setShowBackToBottom] = useState(false);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true); // 是否启用自动滚动
+  const [userStoppedScroll, setUserStoppedScroll] = useState(false); // 用户是否手动停止了自动滚动
   
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -63,7 +64,7 @@ export default function ConsultPage() {
   }, [isLoading, scrollToBottom, autoScrollEnabled]);
 
   // --------------------------------------------------------
-  // 滚动事件监听
+  // 滚动事件监听 - 只显示/隐藏按钮，不停止自动滚动
   // --------------------------------------------------------
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -73,7 +74,7 @@ export default function ConsultPage() {
       const { scrollTop, scrollHeight, clientHeight } = container;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       
-      // 如果用户向上滚动超过阈值，显示按钮（但不改变自动滚动状态）
+      // 只显示/隐藏按钮，不改变 autoScrollEnabled
       if (distanceFromBottom > 150) {
         setShowBackToBottom(true);
       } else {
@@ -86,21 +87,14 @@ export default function ConsultPage() {
   }, []);
 
   // --------------------------------------------------------
-  // 点击回到底部按钮
+  // 点击回到底部按钮 - 停止自动滚动
   // --------------------------------------------------------
   const handleBackToBottom = useCallback(() => {
     scrollToBottom();
     setShowBackToBottom(false);
-    setAutoScrollEnabled(true); // 恢复自动滚动
+    setAutoScrollEnabled(false); // 停止自动滚动
+    setUserStoppedScroll(true); // 标记用户手动停止了
   }, [scrollToBottom]);
-
-  // --------------------------------------------------------
-  // 用户手动停止自动滚动
-  // --------------------------------------------------------
-  const stopAutoScroll = useCallback(() => {
-    setAutoScrollEnabled(false);
-    setShowBackToBottom(true);
-  }, []);
 
   const quickQuestions = [
     { icon: '💰', text: '老板拖欠工资怎么办？' },
@@ -123,6 +117,8 @@ export default function ConsultPage() {
     if (!trimmedInput || isLoading) return;
 
     setShowBackToBottom(false);
+    setAutoScrollEnabled(true); // 用户发送消息，恢复自动滚动
+    setUserStoppedScroll(false); // 重置用户停止标记
 
     const userMessage: Message = {
       id: Date.now().toString(),
