@@ -73,25 +73,13 @@ export default function AdminLoginPage() {
   };
 
   // Consistent loading state for SSR/CSR
-  if (!mounted) {
+  // Show loading until both mounted AND auth check completed
+  if (!mounted || isLoading) {
     return (
-      <div style={{
-        display: 'flex',
-        minHeight: '100vh',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(to bottom right, rgba(16, 185, 129, 0.05), white)'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: 32,
-            height: 32,
-            border: '3px solid #e5e7eb',
-            borderTopColor: '#10b981',
-            borderRadius: '50%',
-            margin: '0 auto 16px'
-          }} className="animate-spin" />
-          <p style={{ color: '#6b7280', fontSize: 14 }}>加载中...</p>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-white">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm text-gray-500">加载中...</p>
         </div>
       </div>
     );
@@ -100,49 +88,18 @@ export default function AdminLoginPage() {
   // Logged in state
   if (isAuthenticated) {
     return (
-      <div style={{
-        display: 'flex',
-        minHeight: '100vh',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(to bottom right, rgba(16, 185, 129, 0.05), white)'
-      }}>
-        <div style={{
-          background: 'white',
-          padding: 32,
-          borderRadius: 12,
-          boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-          textAlign: 'center',
-          maxWidth: 400
-        }}>
-          <div style={{
-            width: 48,
-            height: 48,
-            background: 'linear-gradient(to bottom right, #10b981, #059669)',
-            borderRadius: 12,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px'
-          }}>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-white">
+        <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md">
+          <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-4">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             </svg>
           </div>
-          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>已登录</h2>
-          <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 24 }}>正在进入后台...</p>
+          <h2 className="text-xl font-semibold mb-2">已登录</h2>
+          <p className="text-sm text-gray-500 mb-6">正在进入后台...</p>
           <button
             onClick={handleLogout}
-            style={{
-              width: '100%',
-              padding: '10px 16px',
-              background: '#f3f4f6',
-              border: '1px solid #e5e7eb',
-              borderRadius: 8,
-              cursor: 'pointer',
-              fontSize: 14,
-              color: '#374151'
-            }}
+            className="w-full py-2.5 bg-gray-100 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-200 transition-colors"
           >
             退出登录
           </button>
@@ -153,116 +110,64 @@ export default function AdminLoginPage() {
 
   // Login form
   return (
-    <div style={{
-      display: 'flex',
-      minHeight: '100vh'
-    }}>
-      {/* Left side - Brand */}
-      <div style={{
-        display: 'none',
-        flex: 1,
-        background: 'linear-gradient(to bottom right, #1a3a5c, #1e4d5c, #1a5c4c)',
-        padding: 32,
-        flexDirection: 'column',
-        justifyContent: 'space-between'
-      }} className="lg:flex">
+    <div className="flex min-h-screen">
+      {/* Left side - Brand (hidden on mobile, visible on lg+) */}
+      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-[#1a3a5c] via-[#1e4d5c] to-[#1a5c4c] p-8 flex-col justify-between">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
-            <div style={{
-              width: 48,
-              height: 48,
-              background: 'rgba(255,255,255,0.2)',
-              borderRadius: 12,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
+          <div className="flex items-center gap-3 mb-8">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               </svg>
             </div>
-            <span style={{ fontSize: 24, fontWeight: 700, color: 'white' }}>护薪平台</span>
+            <span className="text-2xl font-bold text-white">护薪平台</span>
           </div>
-          <h1 style={{ fontSize: 36, fontWeight: 700, color: 'white', marginBottom: 16 }}>
+          <h1 className="text-4xl font-bold text-white mb-4">
             检察支持起诉智能平台
           </h1>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.8)', marginBottom: 32 }}>
+          <p className="text-lg text-white/80 mb-8">
             为农民工群体提供薪酬权益保障服务
           </p>
         </div>
         
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="grid grid-cols-2 gap-4">
           {[
             { icon: '👥', value: '2,458+', label: '帮助劳动者' },
             { icon: '📊', value: '1,200+', label: '成功案例' },
             { icon: '💰', value: '¥860万+', label: '追回金额' },
             { icon: '✓', value: '98.6%', label: '成功维权率' },
           ].map((stat, i) => (
-            <div key={i} style={{
-              background: 'rgba(255,255,255,0.1)',
-              borderRadius: 12,
-              padding: 16,
-              backdropFilter: 'blur(8px)'
-            }}>
-              <div style={{ fontSize: 24, marginBottom: 8 }}>{stat.icon}</div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: 'white' }}>{stat.value}</div>
-              <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>{stat.label}</div>
+            <div key={i} className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+              <div className="text-2xl mb-2">{stat.icon}</div>
+              <div className="text-2xl font-bold text-white">{stat.value}</div>
+              <div className="text-sm text-white/60">{stat.label}</div>
             </div>
           ))}
         </div>
         
-        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>© 2026 护薪平台</p>
+        <p className="text-sm text-white/50">© 2026 护薪平台</p>
       </div>
       
       {/* Right side - Login form */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 32,
-        background: 'linear-gradient(to bottom right, rgba(16, 185, 129, 0.05), white)'
-      }}>
-        <div style={{
-          width: '100%',
-          maxWidth: 400,
-          background: 'white',
-          borderRadius: 12,
-          boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-          padding: 32
-        }}>
-          {/* Mobile logo */}
-          <div style={{
-            width: 56,
-            height: 56,
-            background: 'linear-gradient(to bottom right, #1a3a5c, #1a5c4c)',
-            borderRadius: 12,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 24px'
-          }} className="lg:hidden">
+      <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-emerald-50/50 to-white">
+        <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+          {/* Mobile logo - hidden on lg */}
+          <div className="lg:hidden flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-[#1a3a5c] to-[#1a5c4c] mx-auto mb-6">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             </svg>
           </div>
           
-          <h2 style={{ fontSize: 20, fontWeight: 600, textAlign: 'center', marginBottom: 8 }}>
+          <h2 className="text-xl font-semibold text-center mb-2">
             管理员登录
           </h2>
-          <p style={{ fontSize: 14, color: '#6b7280', textAlign: 'center', marginBottom: 24 }}>
+          <p className="text-sm text-gray-500 text-center mb-6">
             请输入密码进入后台管理系统
           </p>
           
           <form onSubmit={handleLogin}>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{
-                display: 'block',
-                fontSize: 14,
-                fontWeight: 500,
-                marginBottom: 6,
-                color: '#374151'
-              }}>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 管理员密码
               </label>
               <input
@@ -270,40 +175,12 @@ export default function AdminLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="请输入管理员密码"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  fontSize: 14,
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 8,
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.2s, box-shadow 0.2s'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#10b981';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#e5e7eb';
-                  e.target.style.boxShadow = 'none';
-                }}
+                className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-lg outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10"
               />
             </div>
             
             {loginError && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: 12,
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                borderRadius: 8,
-                marginBottom: 16,
-                color: '#dc2626',
-                fontSize: 14
-              }}>
+              <div className="flex items-center gap-2 p-3 mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg">
                 <span>⚠</span>
                 <span>{loginError}</span>
               </div>
@@ -312,51 +189,21 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loginLoading}
-              style={{
-                width: '100%',
-                padding: '10px 16px',
-                background: 'linear-gradient(to right, #1a3a5c, #1a5c4c)',
-                color: 'white',
-                border: 'none',
-                borderRadius: 8,
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: loginLoading ? 'not-allowed' : 'pointer',
-                opacity: loginLoading ? 0.7 : 1,
-                transition: 'opacity 0.2s'
-              }}
+              className="w-full py-2.5 bg-gradient-to-r from-[#1a3a5c] to-[#1a5c4c] text-white rounded-lg text-sm font-medium cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loginLoading ? (
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  <span style={{
-                    width: 16,
-                    height: 16,
-                    border: '2px solid rgba(255,255,255,0.3)',
-                    borderTopColor: 'white',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }} />
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
                   登录中...
                 </span>
               ) : '登录系统'}
             </button>
           </form>
           
-          <div style={{
-            marginTop: 24,
-            paddingTop: 24,
-            borderTop: '1px solid #e5e7eb',
-            textAlign: 'center'
-          }}>
+          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
             <button
               onClick={() => router.push('/')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#6b7280',
-                fontSize: 14,
-                cursor: 'pointer'
-              }}
+              className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors bg-transparent border-none cursor-pointer"
             >
               ← 返回首页
             </button>
