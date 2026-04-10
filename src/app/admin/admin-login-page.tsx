@@ -89,15 +89,9 @@ export default function AdminLoginPage() {
             border: '3px solid #e5e7eb',
             borderTopColor: '#10b981',
             borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
-          }} />
+          }} className="animate-spin" />
           <p style={{ color: '#6b7280', fontSize: 14 }}>加载中...</p>
-          <style>{`
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
         </div>
       </div>
     );
@@ -370,15 +364,6 @@ export default function AdminLoginPage() {
         </div>
       </div>
       
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        @media (min-width: 1024px) {
-          .lg\\:flex { display: flex !important; }
-          .lg\\:hidden { display: none !important; }
-        }
-      `}</style>
     </div>
   );
 }
