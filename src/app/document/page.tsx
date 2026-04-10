@@ -151,22 +151,6 @@ export default function DocumentPage() {
     setIsTyping(false);
   }, [isInitialized, sendMessage]);
 
-  const callAI = async (userMessage: string) => {
-    try {
-      const response = await fetch('/api/document/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: messages.map(m => ({ role: m.role, content: m.content })), formData })
-      });
-      const result = await response.json();
-      if (result.success && result.data.content) {
-        sendMessage(result.data.content, result.data.legalReferences);
-      }
-    } catch {
-      sendMessage('抱歉，服务暂时不可用，请稍后重试。');
-    }
-  };
-
   const handleAnswer = async (answer: string) => {
     const trimmed = answer.trim();
     if (!trimmed) return;

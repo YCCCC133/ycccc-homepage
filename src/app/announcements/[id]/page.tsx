@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Calendar, Tag, Loader2, User, Pin, AlertCircle, Share2, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Calendar, Tag, Loader2, User, Pin, AlertCircle, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
