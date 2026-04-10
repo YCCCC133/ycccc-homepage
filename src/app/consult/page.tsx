@@ -176,19 +176,22 @@ export default function ConsultPage() {
   useEffect(() => {
     if (messages.length === 0) return;
 
-    // 延迟执行，等待 DOM 更新
-    const timer = setTimeout(() => {
-      // 始终滚动到底部，不管用户之前是否手动滚动过
-      scrollToBottom();
-      
-      // 更新按钮显示状态
-      setTimeout(() => {
-        checkShowBackButton();
-      }, 100);
-    }, 30);
+    // 立即执行滚动，不延迟
+    scrollToBottomImmediate();
+  }, [messages.length, scrollToBottomImmediate]);
 
-    return () => clearTimeout(timer);
-  }, [messages.length, scrollToBottom, checkShowBackButton]);
+  // --------------------------------------------------------
+  // 流式输出时持续滚动
+  // --------------------------------------------------------
+  useEffect(() => {
+    if (!isLoading) return;
+
+    const intervalId = setInterval(() => {
+      scrollToBottomImmediate();
+    }, 100);
+
+    return () => clearInterval(intervalId);
+  }, [isLoading, scrollToBottomImmediate]);
 
   // --------------------------------------------------------
   // 回到底部按钮点击
