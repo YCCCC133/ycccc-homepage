@@ -130,6 +130,7 @@ const navGroups = [
 // ============ 主组件 ============
 export default function AdminPage() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [password, setPassword] = useState('');
@@ -194,7 +195,10 @@ export default function AdminPage() {
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
 
   // ============ 初始化 ============
-  useEffect(() => { checkAuth(); }, []);
+  useEffect(() => { 
+    setMounted(true);
+    checkAuth(); 
+  }, []);
 
   const checkAuth = async () => {
     try {
@@ -766,7 +770,7 @@ export default function AdminPage() {
   };
 
   // ============ 加载状态 ============
-  if (isLoading && !isAuthenticated) {
+  if (!mounted || (isLoading && !isAuthenticated)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 to-background">
         <div className="text-center">
