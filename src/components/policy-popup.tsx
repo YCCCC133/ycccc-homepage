@@ -9,11 +9,13 @@ interface PolicyPopupProps {
 }
 
 export default function PolicyPopup({ onAccept }: PolicyPopupProps) {
+  const [mounted, setMounted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasAccepted, setHasAccepted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     // 检查是否已同意
     const accepted = localStorage.getItem('policy_accepted');
     if (!accepted) {
@@ -24,6 +26,9 @@ export default function PolicyPopup({ onAccept }: PolicyPopupProps) {
       setHasAccepted(true);
     }
   }, []);
+
+  // 如果未挂载或已同意，不显示任何内容
+  if (!mounted || hasAccepted) return null;
 
   const handleAccept = () => {
     localStorage.setItem('policy_accepted', 'true');
@@ -39,9 +44,6 @@ export default function PolicyPopup({ onAccept }: PolicyPopupProps) {
     // 3秒后重新显示
     setTimeout(() => setIsVisible(true), 3000);
   };
-
-  // 如果已同意，不显示
-  if (hasAccepted) return null;
 
   return (
     <>
