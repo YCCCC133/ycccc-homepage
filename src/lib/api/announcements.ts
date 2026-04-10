@@ -100,7 +100,7 @@ export async function getAnnouncementList(params?: {
   banner_only?: boolean;
   category?: string;
   search?: string;
-  sortBy?: 'created_at' | 'updated_at' | 'sort_order' | 'title';
+  sortBy?: 'created_at' | 'updated_at' | 'sort_order' | 'title' | 'is_top';
   sortOrder?: 'ASC' | 'DESC';
 }): Promise<AnnouncementListResponse> {
   const searchParams = new URLSearchParams();
