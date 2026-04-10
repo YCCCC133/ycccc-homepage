@@ -311,30 +311,27 @@ export default function AdminDashboard() {
   };
 
   // ============ 加载状态 - 必须完全匹配 SSR ============
-  if (!mounted) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-background">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mx-auto mb-4" />
-          <p className="text-muted-foreground">加载中...</p>
-        </div>
+  // ============ Hydration-safe loading skeleton ==========
+  // SSR: mounted=false → renders skeleton
+  // CSR first render: mounted=false → renders skeleton (MUST match SSR)
+  const LoadingSkeleton = () => (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-background">
+      <div className="text-center">
+        <div className="h-10 w-10 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-muted-foreground">加载中...</p>
       </div>
-    );
+    </div>
+  );
+
+  if (!mounted) {
+    return <LoadingSkeleton />;
+  }
+
+  if (isLoading) {
+    return <LoadingSkeleton />;
   }
 
   // ============ 登录页面 ============
-  // 必须先确保组件已挂载，否则服务端和客户端渲染不一致
-  if (!mounted || isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-background">
-        <div className="text-center">
-          <div className="h-10 w-10 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">加载中...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen">

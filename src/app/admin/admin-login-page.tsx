@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 // Loading skeleton component for consistent SSR/CSR
+// This MUST match the structure that will be rendered after mount
 function LoginLoadingSkeleton() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-white">
@@ -15,30 +16,50 @@ function LoginLoadingSkeleton() {
   );
 }
 
+// Statistics data - stable, no random values
+const STATISTICS = [
+  { id: 'workers', icon: '👥', value: '2,458+', label: '帮助劳动者' },
+  { id: 'cases', icon: '📊', value: '1,200+', label: '成功案例' },
+  { id: 'amount', icon: '💰', value: '¥860万+', label: '追回金额' },
+  { id: 'rate', icon: '✓', value: '98.6%', label: '成功维权率' },
+] as const;
+
 export default function AdminLoginPage() {
   const router = useRouter();
+  
+  // ========== Hydration-safe state initialization ==========
+  // All states MUST have stable initial values that match SSR output
   const [mounted, setMounted] = useState(false);
   const [password, setPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Initialize on mount
+  // ========== Client-side initialization ==========
+  // This runs ONLY after hydration is complete
   useEffect(() => {
     setMounted(true);
-    // Check if already logged in via API (with credentials to include cookies)
+    
+    // Check authentication status via Cookie (not localStorage)
     fetch('/api/admin/login', { credentials: 'include' })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('HTTP error');
+        return res.json();
+      })
       .then(data => {
         if (data.authenticated) {
           setIsAuthenticated(true);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        // Silently fail - user will see login form
+      });
   }, []);
 
+  // ========== Login handler ==========
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!password.trim()) {
       setLoginError('请输入管理员密码');
       return;
@@ -51,38 +72,56 @@ export default function AdminLoginPage() {
       const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        credentials: 'include', // CRITICAL: Ensure cookies are sent
         body: JSON.stringify({ password }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        localStorage.setItem('admin_logged_in', 'true');
+        // Authentication successful - Cookie is set by the API
+        // No need for localStorage since we rely on Cookie
         setIsAuthenticated(true);
-        router.push('/admin/dashboard');
+        
+        // Brief delay to show success state before redirect
+        setTimeout(() => {
+          router.push('/admin/dashboard');
+        }, 500);
       } else {
+        // Login failed - show error message
         setLoginError(data.error || '密码错误，请重试');
       }
     } catch (error) {
-      setLoginError('登录失败，请稍后重试');
+      console.error('登录请求失败:', error);
+      setLoginError('网络错误，请稍后重试');
     } finally {
       setLoginLoading(false);
     }
   }, [password, router]);
 
+  // ========== Logout handler ==========
   const handleLogout = useCallback(() => {
-    localStorage.removeItem('admin_logged_in');
+    // Clear state (Cookie is managed by API)
     setIsAuthenticated(false);
     setPassword('');
+    
+    // Call API to clear cookie
+    fetch('/api/admin/login', { 
+      method: 'DELETE', 
+      credentials: 'include' 
+    }).catch(() => {});
   }, []);
 
-  // Show loading skeleton during SSR and initial CSR hydration
+  // ========== SSR/CSR Consistency ==========
+  // CRITICAL: This MUST match what renders after hydration
+  // SSR: mounted=false → renders skeleton
+  // CSR first render: mounted=false → renders skeleton (MUST match SSR)
+  // After useEffect: mounted=true → renders actual content
   if (!mounted) {
     return <LoginLoadingSkeleton />;
   }
 
-  // Already logged in state
+  // ========== Authenticated state ==========
   if (isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-white">
@@ -105,7 +144,7 @@ export default function AdminLoginPage() {
     );
   }
 
-  // Login form
+  // ========== Login form ==========
   return (
     <div className="flex min-h-screen">
       {/* Left side - Brand (hidden on mobile, visible on lg+) */}
@@ -127,14 +166,13 @@ export default function AdminLoginPage() {
           </p>
         </div>
         
+        {/* Statistics - Using stable ID as key */}
         <div className="grid grid-cols-2 gap-4">
-          {[
-            { icon: '👥', value: '2,458+', label: '帮助劳动者' },
-            { icon: '📊', value: '1,200+', label: '成功案例' },
-            { icon: '💰', value: '¥860万+', label: '追回金额' },
-            { icon: '✓', value: '98.6%', label: '成功维权率' },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+          {STATISTICS.map((stat) => (
+            <div 
+              key={stat.id} 
+              className="bg-white/10 rounded-xl p-4 backdrop-blur-sm"
+            >
               <div className="text-2xl mb-2">{stat.icon}</div>
               <div className="text-2xl font-bold text-white">{stat.value}</div>
               <div className="text-sm text-white/60">{stat.label}</div>
@@ -174,6 +212,7 @@ export default function AdminLoginPage() {
                 placeholder="请输入管理员密码"
                 className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-lg outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10"
                 disabled={loginLoading}
+                autoComplete="current-password"
               />
             </div>
             
@@ -195,19 +234,14 @@ export default function AdminLoginPage() {
                   登录中...
                 </span>
               ) : (
-                '登录'
+                <span>登录</span>
               )}
             </button>
           </form>
           
-          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-            <button
-              onClick={() => router.push('/')}
-              className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors bg-transparent border-none cursor-pointer"
-            >
-              ← 返回首页
-            </button>
-          </div>
+          <p className="text-xs text-center text-gray-400 mt-6">
+            护薪平台 · 管理员后台
+          </p>
         </div>
       </div>
     </div>
