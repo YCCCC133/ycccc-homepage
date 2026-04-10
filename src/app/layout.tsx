@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { LayoutClient } from '@/components/layout-client';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -43,11 +42,14 @@ export const metadata: Metadata = {
   },
 };
 
+// Root layout: HTML shell only
+// Public pages wrapped by (public)/layout.tsx (with Navigation/Footer)
+// Admin pages use admin/layout.tsx (no wrapper)
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head suppressHydrationWarning>
@@ -59,7 +61,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased bg-background font-serif">
-        <LayoutClient>{children}</LayoutClient>
+        {children}
       </body>
     </html>
   );
