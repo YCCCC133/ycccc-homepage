@@ -140,6 +140,7 @@ export default function ReportPage() {
   ];
 
   const [reportNumber, setReportNumber] = useState<string>('');
+  const [submittedAt, setSubmittedAt] = useState<string>('');
 
   async function onSubmit(data: FormData) {
     setIsSubmitting(true);
@@ -168,6 +169,9 @@ export default function ReportPage() {
       
       if (result.success && result.data) {
         setReportNumber(result.data.reportNumber || `XC${result.data.id}`);
+        // Use a consistent date format for display
+        const now = new Date();
+        setSubmittedAt(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
         setSubmitSuccess(true);
       } else {
         alert(result.error || '提交失败，请重试');
@@ -199,7 +203,7 @@ export default function ReportPage() {
                 线索编号：<span className="font-mono font-medium text-foreground">{reportNumber || 'XC' + Date.now().toString().slice(-10)}</span>
               </div>
               <div className="text-sm text-muted-foreground">
-                提交时间：{new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
+                提交时间：{submittedAt || '刚刚'}
               </div>
             </div>
             <div className="flex gap-4 justify-center">

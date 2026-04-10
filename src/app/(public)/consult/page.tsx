@@ -18,12 +18,14 @@ interface Message {
 }
 
 export default function ConsultPage() {
+  // Use a stable timestamp for SSR/CSR consistency
+  // The actual timestamp will be updated client-side
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
       role: 'assistant',
       content: '您好，我是护薪平台的法律智能助手，专门为您提供劳动法律咨询和维权指导服务。请问有什么可以帮助您的？',
-      timestamp: new Date(),
+      timestamp: new Date(0), // Stable initial date for hydration
     },
   ]);
   const [input, setInput] = useState('');
