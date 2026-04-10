@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -99,17 +98,7 @@ export default function DocumentPage() {
   const [generatedDocument, setGeneratedDocument] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const [inputValue, setInputValue] = useState('');
 
   useEffect(() => {
     // 第一个问题延迟显示
@@ -171,17 +160,21 @@ export default function DocumentPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const input = inputRef.current?.value.trim();
+    const input = inputValue.trim();
     if (input && !isGenerating) {
       handleAnswer(input);
-      if (inputRef.current) inputRef.current.value = '';
+      setInputValue('');
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      const input = inputValue.trim();
+      if (input && !isGenerating) {
+        handleAnswer(input);
+        setInputValue('');
+      }
     }
   };
 
@@ -268,8 +261,6 @@ export default function DocumentPage() {
                   </div>
                 </div>
               )}
-              
-              <div ref={messagesEndRef} />
             </div>
           </CardContent>
         </Card>
@@ -325,7 +316,8 @@ export default function DocumentPage() {
             <CardContent className="p-4">
               <form onSubmit={handleSubmit} className="flex gap-2">
                 <Input
-                  ref={inputRef as React.RefObject<HTMLInputElement>}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
                   placeholder={
                     currentQ?.type === 'select' 
                       ? `请回复：${currentQ.options?.join(' / ')}` 
@@ -333,7 +325,6 @@ export default function DocumentPage() {
                   }
                   className="flex-1 border-emerald-200 focus-visible:ring-emerald-500 focus-visible:border-emerald-300"
                   disabled={isGenerating}
-                  onKeyDown={handleKeyDown}
                 />
                 <Button 
                   type="submit" 
