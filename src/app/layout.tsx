@@ -3,6 +3,7 @@ import { Inspector } from 'react-dev-inspector';
 import './globals.css';
 import { Navigation } from '@/components/navigation';
 import { Footer } from '@/components/footer';
+import PolicyPopup from '@/components/policy-popup';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -66,6 +67,8 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
         </div>
+        {/* 用户协议浮窗 */}
+        <PolicyPopup />
       </body>
     </html>
   );

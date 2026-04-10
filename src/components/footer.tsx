@@ -152,25 +152,12 @@ export function Footer() {
                 <span className="hidden sm:inline">管理</span>
               </button>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground md:gap-4">
-              <Link href="/privacy" className="rounded outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">
-                隐私政策
-              </Link>
-              <span className="hidden md:inline">|</span>
-              <Link href="/terms" className="rounded outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">
-                使用条款
-              </Link>
-              <span className="hidden md:inline">|</span>
-              <Link href="/sitemap" className="rounded outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">
-                网站地图
-              </Link>
+            {/* 技术支持 */}
+            <div className="text-center md:text-right">
+              <p className="text-[10px] text-muted-foreground/50">
+                Technical Support by <span className="font-medium">ycccc</span> © 2026
+              </p>
             </div>
-          </div>
-          {/* 技术支持 */}
-          <div className="mt-4 text-center">
-            <p className="text-[10px] text-muted-foreground/50">
-              Technical Support by <span className="font-medium">ycccc</span> © 2026
-            </p>
           </div>
         </div>
       </div>
