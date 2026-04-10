@@ -26,11 +26,15 @@ export default function AdminLoginPage() {
   // Initialize on mount
   useEffect(() => {
     setMounted(true);
-    // Check if already logged in
-    const adminLoggedIn = localStorage.getItem('admin_logged_in');
-    if (adminLoggedIn === 'true') {
-      setIsAuthenticated(true);
-    }
+    // Check if already logged in via API
+    fetch('/api/admin/login')
+      .then(res => res.json())
+      .then(data => {
+        if (data.authenticated) {
+          setIsAuthenticated(true);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleLogin = useCallback(async (e: React.FormEvent) => {
@@ -52,12 +56,12 @@ export default function AdminLoginPage() {
 
       const data = await response.json();
 
-      if (data.authenticated) {
+      if (data.success) {
         localStorage.setItem('admin_logged_in', 'true');
         setIsAuthenticated(true);
         router.push('/admin/dashboard');
       } else {
-        setLoginError('密码错误，请重试');
+        setLoginError(data.error || '密码错误，请重试');
       }
     } catch (error) {
       setLoginError('登录失败，请稍后重试');

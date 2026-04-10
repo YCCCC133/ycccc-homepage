@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inspector } from 'react-dev-inspector';
+import { headers } from 'next/headers';
 import './globals.css';
 import { Navigation } from '@/components/navigation';
 import { Footer } from '@/components/footer';
@@ -46,34 +46,40 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+function isAdminRoute(pathname: string | null): boolean {
+  return pathname ? pathname.startsWith('/admin') : false;
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const isDev = process.env.COZE_PROJECT_ENV === 'DEV';
+  const headersList = await headers();
+  const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || '/';
+  const isAdmin = isAdminRoute(pathname);
 
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head suppressHydrationWarning>
-        {/* DNS 预连接优化 */}
         <link rel="preconnect" href="https://fonts.googleapis.cn" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.gstatic.cn" crossOrigin="anonymous" />
-        {/* 思源宋体 - 高级中文衬线字体 */}
         <link 
           href="https://fonts.googleapis.cn/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=swap" 
           rel="stylesheet" 
         />
       </head>
       <body className="antialiased bg-background font-serif">
-        {isDev && <Inspector />}
-        <div className="flex min-h-screen flex-col bg-background">
-          <Navigation />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
-        {/* 用户协议浮窗 */}
-        <PolicyPopup />
+        {isAdmin ? (
+          children
+        ) : (
+          <div className="flex min-h-screen flex-col bg-background">
+            <Navigation />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <PolicyPopup />
+          </div>
+        )}
       </body>
     </html>
   );
