@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Bot, User, Loader2, AlertCircle, BookOpen } from 'lucide-react';
+import { MarkdownRenderer } from '@/components/markdown';
 
 interface Message {
   id: string;
@@ -497,18 +498,15 @@ export default function ConsultPage() {
                     : 'bg-white border shadow-sm'
                 }`}
               >
-                <div
-                  className={`text-sm leading-relaxed whitespace-pre-wrap select-text ${
-                    message.role === 'user' ? '' : 'text-gray-700'
-                  }`}
-                >
-                  {message.content || (
-                    <span className="flex items-center gap-2 text-gray-400">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      正在思考...
-                    </span>
-                  )}
-                </div>
+                {message.role === 'assistant' ? (
+                  <div className="text-sm leading-relaxed select-text text-gray-700">
+                    <MarkdownRenderer content={message.content} />
+                  </div>
+                ) : (
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap select-text">
+                    {message.content}
+                  </div>
+                )}
               </div>
               {message.role === 'user' && (
                 <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">

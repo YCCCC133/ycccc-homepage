@@ -4,9 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Send, FileText, Loader2, Copy, Check, Download, Sparkles, ExternalLink, ArrowDown } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { Send, FileText, Loader2, Copy, Check, Download, Sparkles, ArrowDown } from 'lucide-react';
+import { MarkdownRenderer } from '@/components/markdown';
 
 // ============================================================
 // 类型定义
@@ -424,6 +423,7 @@ export default function DocumentPage() {
             <div className="space-y-4 pb-4">
               {messages.map((msg, idx) => {
                 const isLastMessage = idx === messages.length - 1;
+                const isStreaming = idx === messages.length - 1 && (isGenerating || isTyping);
                 return (
                   <div
                     key={idx}
@@ -439,13 +439,19 @@ export default function DocumentPage() {
                         data-is-last={isLastMessage}
                       >
                         {msg.role === 'assistant' ? (
-                          <div className="markdown-content text-sm leading-relaxed">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {msg.content}
-                            </ReactMarkdown>
+                          <div className="text-sm leading-relaxed">
+                            <MarkdownRenderer 
+                              content={msg.content} 
+                              isStreaming={isStreaming}
+                            />
                           </div>
                         ) : (
                           <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                        )}
+                        
+                        {/* 流式输出光标 */}
+                        {isStreaming && (
+                          <span className="inline-block w-2 h-4 ml-1 bg-emerald-500 animate-pulse vertical-align-middle" />
                         )}
                       </div>
                       
@@ -466,7 +472,6 @@ export default function DocumentPage() {
                                 >
                                   {ref.name}
                                 </a>
-                                <ExternalLink className="inline-block ml-0.5 h-2.5 w-2.5 opacity-50" />
                               </span>
                             ))}
                           </div>
