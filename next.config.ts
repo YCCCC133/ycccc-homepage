@@ -1,8 +1,11 @@
 import type { NextConfig } from 'next';
+import path from 'path';
 
 const nextConfig: NextConfig = {
-  // outputFileTracingRoot: path.resolve(__dirname, '../../'),  // Uncomment and add 'import path from "path"' if needed
-  /* config options here */
+  // Set turbopack root to silence workspace root warning
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   allowedDevOrigins: ['*.dev.coze.site'],
   images: {
     remotePatterns: [
@@ -12,18 +15,18 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
-    // 图片优化配置
     formats: ['image/avif', 'image/webp'],
   },
   // 性能优化
   experimental: {
-    // 优化包大小
     optimizePackageImports: ['lucide-react', 'recharts'],
   },
-  // 压缩配置
   compress: true,
-  // 生产环境优化
   poweredByHeader: false,
+  // 严格模式确保 SSR/CSR 一致性
+  reactStrictMode: true,
+  // 生产环境优化
+  productionBrowserSourceMaps: false,
 };
 
 export default nextConfig;

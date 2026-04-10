@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { execSync } from 'child_process';
 
 let envLoaded = false;
+let initError: string | null = null;
 
 interface SupabaseCredentials {
   url: string;
@@ -9,7 +9,10 @@ interface SupabaseCredentials {
 }
 
 function loadEnv(): void {
-  if (envLoaded || (process.env.COZE_SUPABASE_URL && process.env.COZE_SUPABASE_ANON_KEY)) {
+  if (envLoaded) return;
+  
+  if (process.env.COZE_SUPABASE_URL && process.env.COZE_SUPABASE_ANON_KEY) {
+    envLoaded = true;
     return;
   }
 
@@ -25,7 +28,10 @@ function loadEnv(): void {
       // dotenv not available
     }
 
-    const pythonCode = `
+    // Try coze_workload_identity only if env vars still not set
+    try {
+      const { execSync } = require('child_process');
+      const pythonCode = `
 import os
 import sys
 try:
@@ -39,33 +45,36 @@ except Exception as e:
     print(f"# Error: {e}", file=sys.stderr)
 `;
 
-    const output = execSync(`python3 -c '${pythonCode.replace(/'/g, "'\"'\"'")}'`, {
-      encoding: 'utf-8',
-      timeout: 10000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+      const output = execSync(`python3 -c '${pythonCode.replace(/'/g, "'\"'\"'")}'`, {
+        encoding: 'utf-8',
+        timeout: 10000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
 
-    const lines = output.trim().split('\n');
-    for (const line of lines) {
-      if (line.startsWith('#')) continue;
-      const eqIndex = line.indexOf('=');
-      if (eqIndex > 0) {
-        const key = line.substring(0, eqIndex);
-        let value = line.substring(eqIndex + 1);
-        if ((value.startsWith("'") && value.endsWith("'")) ||
-            (value.startsWith('"') && value.endsWith('"'))) {
-          value = value.slice(1, -1);
-        }
-        if (!process.env[key]) {
-          process.env[key] = value;
+      const lines = output.trim().split('\n');
+      for (const line of lines) {
+        if (line.startsWith('#')) continue;
+        const eqIndex = line.indexOf('=');
+        if (eqIndex > 0) {
+          const key = line.substring(0, eqIndex);
+          let value = line.substring(eqIndex + 1);
+          if ((value.startsWith("'") && value.endsWith("'")) ||
+              (value.startsWith('"') && value.endsWith('"'))) {
+            value = value.slice(1, -1);
+          }
+          if (!process.env[key]) {
+            process.env[key] = value;
+          }
         }
       }
+    } catch {
+      // coze_workload_identity not available
     }
-
-    envLoaded = true;
   } catch {
     // Silently fail
   }
+
+  envLoaded = true;
 }
 
 function getSupabaseCredentials(): SupabaseCredentials {
@@ -74,11 +83,10 @@ function getSupabaseCredentials(): SupabaseCredentials {
   const url = process.env.COZE_SUPABASE_URL;
   const anonKey = process.env.COZE_SUPABASE_ANON_KEY;
 
-  if (!url) {
-    throw new Error('COZE_SUPABASE_URL is not set');
-  }
-  if (!anonKey) {
-    throw new Error('COZE_SUPABASE_ANON_KEY is not set');
+  if (!url || !anonKey) {
+    initError = `Supabase credentials missing: COZE_SUPABASE_URL=${url ? 'SET' : 'MISSING'}, COZE_SUPABASE_ANON_KEY=${anonKey ? 'SET' : 'MISSING'}`;
+    console.error(`[supabase-client] ${initError}`);
+    throw new Error(initError);
   }
 
   return { url, anonKey };
@@ -106,7 +114,7 @@ function getSupabaseClient(token?: string): SupabaseClient {
         headers: { Authorization: `Bearer ${token}` },
       },
       db: {
-        timeout: 60000,
+        timeout: 30000,
       },
       auth: {
         autoRefreshToken: false,
@@ -117,7 +125,7 @@ function getSupabaseClient(token?: string): SupabaseClient {
 
   return createClient(url, key, {
     db: {
-      timeout: 60000,
+      timeout: 30000,
     },
     auth: {
       autoRefreshToken: false,

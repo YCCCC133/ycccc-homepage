@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { pool } from '@/storage/database/pg-pool';
 import { S3Storage } from 'coze-coding-dev-sdk';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
 
 // 初始化存储
 const storage = process.env.COZE_BUCKET_ENDPOINT_URL ? new S3Storage({

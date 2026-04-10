@@ -1,9 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import { headers } from 'next/headers';
 import './globals.css';
-import { Navigation } from '@/components/navigation';
-import { Footer } from '@/components/footer';
-import PolicyPopup from '@/components/policy-popup';
+import { LayoutClient } from '@/components/layout-client';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -46,19 +43,11 @@ export const metadata: Metadata = {
   },
 };
 
-function isAdminRoute(pathname: string | null): boolean {
-  return pathname ? pathname.startsWith('/admin') : false;
-}
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const headersList = await headers();
-  const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || '/';
-  const isAdmin = isAdminRoute(pathname);
-
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head suppressHydrationWarning>
@@ -70,16 +59,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="antialiased bg-background font-serif">
-        {isAdmin ? (
-          children
-        ) : (
-          <div className="flex min-h-screen flex-col bg-background">
-            <Navigation />
-            <main className="flex-1">{children}</main>
-            <Footer />
-            <PolicyPopup />
-          </div>
-        )}
+        <LayoutClient>{children}</LayoutClient>
       </body>
     </html>
   );

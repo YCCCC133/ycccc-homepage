@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Pool } from 'pg';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+import { pool } from '@/storage/database/pg-pool';
 
 // 验证管理员身份
 function isAuthenticated(request: NextRequest): boolean {
