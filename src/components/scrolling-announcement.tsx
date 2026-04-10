@@ -3,29 +3,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, Volume2, Clock, User, ArrowRight } from 'lucide-react';
-
-interface Announcement {
-  id: number;
-  title: string;
-  content: string;
-  category: string;
-  image_url: string | null;
-  created_at: string;
-}
-
-// Fallback gradient backgrounds by category
-const categoryGradients: Record<string, string> = {
-  '通知': 'from-slate-800 via-slate-700 to-emerald-900',
-  '公告': 'from-emerald-900 via-emerald-800 to-teal-900',
-  '指南': 'from-blue-900 via-blue-800 to-indigo-900',
-  '案例': 'from-amber-900 via-amber-800 to-orange-900',
-  '警告': 'from-red-900 via-red-800 to-rose-900',
-  'default': 'from-slate-800 via-slate-700 to-emerald-900',
-};
+import { ChevronLeft, ChevronRight, Volume2, Clock, User, ArrowRight, Megaphone } from 'lucide-react';
+import {
+  getAnnouncementList,
+  AnnouncementListItem,
+  formatAnnouncementDate,
+  getCategoryGradient,
+  stripHtml,
+} from '@/lib/api/announcements';
 
 export function ScrollingAnnouncementBanner() {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcements, setAnnouncements] = useState<AnnouncementListItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,35 +21,23 @@ export function ScrollingAnnouncementBanner() {
 
   const fetchAnnouncements = useCallback(async () => {
     try {
-      const response = await fetch('/api/announcements?limit=10&published_only=true');
-      const data = await response.json();
-      if (data.success && data.data && data.data.length > 0) {
-        setAnnouncements(data.data);
+      setIsLoading(true);
+      const response = await getAnnouncementList({
+        limit: 10,
+        published_only: true,
+      });
+
+      if (response.success && response.data && response.data.length > 0) {
+        setAnnouncements(response.data);
         setError(null);
-      } else if (data.success && data.data && data.data.length === 0) {
-        // 没有公告，使用默认公告
-        setAnnouncements([{
-          id: 0,
-          title: '护薪平台 - 检察支持起诉智能平台',
-          content: '为农民工群体提供薪酬权益保障服务，线索填报、智能咨询、文书生成、在线申请、案件查询等一站式服务。',
-          category: '通知',
-          image_url: null,
-          created_at: new Date().toISOString(),
-        }]);
+      } else {
+        // 没有轮播公告时不显示组件
+        setAnnouncements([]);
         setError(null);
       }
     } catch (err) {
       console.error('获取公告失败:', err);
       setError('获取公告失败');
-      // 即使失败也显示默认公告
-      setAnnouncements([{
-        id: 0,
-        title: '护薪平台 - 检察支持起诉智能平台',
-        content: '为农民工群体提供薪酬权益保障服务，线索填报、智能咨询、文书生成、在线申请、案件查询等一站式服务。',
-        category: '通知',
-        image_url: null,
-        created_at: new Date().toISOString(),
-      }]);
     } finally {
       setIsLoading(false);
     }
@@ -82,238 +58,159 @@ export function ScrollingAnnouncementBanner() {
     return () => clearInterval(interval);
   }, [announcements.length, isPaused]);
 
-  const goToSlide = (index: number) => {
-    setCurrentIndex(index);
-  };
-
-  const goToPrev = () => {
+  const handlePrev = () => {
     setCurrentIndex((prev) => (prev - 1 + announcements.length) % announcements.length);
   };
 
-  const goToNext = () => {
+  const handleNext = () => {
     setCurrentIndex((prev) => (prev + 1) % announcements.length);
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case '通知':
-        return 'bg-blue-500/80 text-white';
-      case '公告':
-        return 'bg-emerald-500/80 text-white';
-      case '指南':
-        return 'bg-violet-500/80 text-white';
-      case '案例':
-        return 'bg-amber-500/80 text-white';
-      case '警告':
-        return 'bg-red-500/80 text-white';
-      default:
-        return 'bg-slate-500/80 text-white';
-    }
-  };
-
+  // 没有数据时不渲染
   if (isLoading) {
     return (
-      <div className="relative h-[320px] sm:h-[380px] md:h-[420px] bg-gradient-to-br from-slate-800 to-emerald-900 animate-pulse">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-white/60">加载中...</div>
+      <div className="w-full bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100">
+        <div className="mx-auto max-w-7xl px-4 py-3">
+          <div className="flex items-center justify-center h-8">
+            <div className="animate-pulse flex items-center gap-2">
+              <Megaphone className="h-4 w-4 text-emerald-600" />
+              <span className="text-sm text-emerald-600">加载公告中...</span>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // 确保至少有公告显示
-  if (announcements.length === 0) {
-    setAnnouncements([{
-      id: 0,
-      title: '护薪平台 - 检察支持起诉智能平台',
-      content: '为农民工群体提供薪酬权益保障服务，线索填报、智能咨询、文书生成、在线申请、案件查询等一站式服务。',
-      category: '通知',
-      image_url: null,
-      created_at: new Date().toISOString(),
-    }]);
-    return (
-      <div className="relative h-[320px] sm:h-[380px] md:h-[420px] bg-gradient-to-br from-slate-800 to-emerald-900">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-white/60">暂无公告</div>
-        </div>
-      </div>
-    );
+  if (error || announcements.length === 0) {
+    return null;
   }
 
   const currentAnnouncement = announcements[currentIndex];
-  const gradient = categoryGradients[currentAnnouncement.category] || categoryGradients.default;
-  // 直接检查 image_url 是否存在，不再依赖 imagesLoaded 状态
+  const gradient = getCategoryGradient(currentAnnouncement.category);
   const hasImage = !!currentAnnouncement.image_url;
 
   return (
-    <div 
-      className="relative w-full h-[320px] sm:h-[380px] md:h-[420px] overflow-hidden"
+    <div
+      className="w-full bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {/* Background Image or Gradient */}
-      {hasImage ? (
-        <>
-          {/* 使用普通 img 标签以确保兼容性 */}
-          <img
-            src={currentAnnouncement.image_url || ''}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-            crossOrigin="anonymous"
-          />
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/30" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-        </>
-      ) : (
-        <>
-          <div className={`absolute inset-0 bg-gradient-to-br ${gradient} transition-all duration-700`} />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-        </>
-      )}
-
-      {/* Decorative Elements */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl" />
-
-      {/* Content */}
-      <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col justify-end h-full pb-8 sm:pb-12">
-          {/* Category Badge */}
-          <div className="mb-4">
-            <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm ${getCategoryColor(currentAnnouncement.category)}`}>
-              <Volume2 className="h-3.5 w-3.5" />
-              {currentAnnouncement.category}
-            </span>
+      <div className="mx-auto max-w-7xl px-4 py-3">
+        <div className="relative flex items-center gap-4">
+          {/* Icon */}
+          <div className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r ${gradient} text-white shadow-sm`}>
+            <Megaphone className="h-3.5 w-3.5" />
+            <span className="text-xs font-medium">公告</span>
           </div>
 
-          {/* Title */}
-          <Link href={`/announcements/${currentAnnouncement.id}`} className="group">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 group-hover:text-emerald-300 transition-colors duration-300 line-clamp-2">
-              {currentAnnouncement.title}
-            </h2>
-          </Link>
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3">
+              {hasImage && (
+                <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                  <Image
+                    src={currentAnnouncement.image_url || ''}
+                    alt={currentAnnouncement.title}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              )}
 
-          {/* Content Preview */}
-          <p className="text-white/70 text-sm sm:text-base md:text-lg mb-4 line-clamp-2 max-w-3xl">
-            {currentAnnouncement.content?.replace(/<[^>]*>/g, '').slice(0, 150)}...
-          </p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium backdrop-blur-sm ${getCategoryBadgeClass(currentAnnouncement.category)}`}>
+                    {currentAnnouncement.category}
+                  </span>
+                  <Link href={`/announcements/${currentAnnouncement.id}`} className="group flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-800 group-hover:text-emerald-600 transition-colors truncate">
+                      {currentAnnouncement.title}
+                    </span>
+                    <ArrowRight className="h-3 w-3 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  </Link>
+                </div>
+                {currentAnnouncement.summary && (
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">
+                    {currentAnnouncement.summary}
+                  </p>
+                )}
+              </div>
 
-          {/* Meta Info */}
-          <div className="flex items-center gap-4 text-white/60 text-sm">
-            <span className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4" />
-              {formatDate(currentAnnouncement.created_at)}
-            </span>
-            <span className="hidden sm:flex items-center gap-1.5">
-              <User className="h-4 w-4" />
-              管理员
-            </span>
+              <div className="flex-shrink-0 flex items-center gap-3 text-xs text-gray-400">
+                <div className="hidden sm:flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <span>{formatAnnouncementDate(currentAnnouncement.created_at)}</span>
+                </div>
+
+                {announcements.length > 1 && (
+                  <>
+                    <button
+                      onClick={handlePrev}
+                      className="p-1 rounded hover:bg-emerald-100 transition-colors"
+                      aria-label="上一条"
+                    >
+                      <ChevronLeft className="h-4 w-4 text-gray-500" />
+                    </button>
+                    <span className="text-gray-400 min-w-[2rem] text-center">
+                      {currentIndex + 1}/{announcements.length}
+                    </span>
+                    <button
+                      onClick={handleNext}
+                      className="p-1 rounded hover:bg-emerald-100 transition-colors"
+                      aria-label="下一条"
+                    >
+                      <ChevronRight className="h-4 w-4 text-gray-500" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* CTA Button */}
-          <Link 
-            href={`/announcements/${currentAnnouncement.id}`}
-            className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full text-white font-medium transition-all duration-300 w-fit"
-          >
-            查看详情
-            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
+          {/* Progress bar */}
+          {announcements.length > 1 && !isPaused && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-100">
+              <div
+                className="h-full bg-emerald-500 transition-all duration-300"
+                style={{
+                  width: `${((currentIndex + 1) / announcements.length) * 100}%`,
+                }}
+              />
+            </div>
+          )}
         </div>
+
+        {/* Dot indicators */}
+        {announcements.length > 1 && (
+          <div className="flex justify-center gap-1.5 mt-2">
+            {announcements.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentIndex(index)}
+                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                  index === currentIndex
+                    ? 'bg-emerald-500 w-4'
+                    : 'bg-gray-300 hover:bg-emerald-300'
+                }`}
+                aria-label={`跳转到第 ${index + 1} 条公告`}
+              />
+            ))}
+          </div>
+        )}
       </div>
-
-      {/* Navigation Arrows */}
-      {announcements.length > 1 && (
-        <>
-          <button
-            onClick={goToPrev}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white transition-all duration-300 hover:scale-110"
-            aria-label="上一条"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white transition-all duration-300 hover:scale-110"
-            aria-label="下一条"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </>
-      )}
-
-      {/* Bottom Navigation */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
-        {announcements.map((announcement, index) => (
-          <button
-            key={announcement.id}
-            onClick={() => goToSlide(index)}
-            className={`transition-all duration-300 rounded-full ${
-              index === currentIndex 
-                ? 'w-8 h-2.5 bg-white' 
-                : 'w-2.5 h-2.5 bg-white/40 hover:bg-white/60'
-            }`}
-            aria-label={`跳转到公告 ${index + 1}`}
-          />
-        ))}
-      </div>
-
-      {/* Progress Bar */}
-      {announcements.length > 1 && !isPaused && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
-          <div 
-            className="h-full bg-gradient-to-r from-emerald-400 to-emerald-300 transition-all duration-300"
-            style={{
-              width: `${((currentIndex + 1) / announcements.length) * 100}%`,
-            }}
-          />
-        </div>
-      )}
     </div>
   );
 }
 
-// Thumbnail version for sidebar or compact display
-export function AnnouncementThumbnails({ announcements }: { announcements: Announcement[] }) {
-  if (!announcements || announcements.length === 0) return null;
-
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-      {announcements.slice(0, 6).map((announcement) => (
-        <Link
-          key={announcement.id}
-          href={`/announcements/${announcement.id}`}
-          className="group relative aspect-[16/9] rounded-lg overflow-hidden"
-        >
-          {announcement.image_url ? (
-            <Image
-              src={announcement.image_url}
-              alt={announcement.title}
-              fill
-              className="object-cover group-hover:scale-105 transition-transform duration-500"
-              sizes="(max-width: 640px) 50vw, 33vw"
-            />
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-emerald-800" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-2">
-            <span className="text-[10px] text-white/80 bg-black/30 px-1.5 py-0.5 rounded">
-              {announcement.category}
-            </span>
-          </div>
-        </Link>
-      ))}
-    </div>
-  );
+// Helper function for category badge
+function getCategoryBadgeClass(category: string): string {
+  const colorMap: Record<string, string> = {
+    '通知': 'bg-blue-100/80 text-blue-700',
+    '公告': 'bg-emerald-100/80 text-emerald-700',
+    '指南': 'bg-indigo-100/80 text-indigo-700',
+    '案例': 'bg-amber-100/80 text-amber-700',
+    '警告': 'bg-red-100/80 text-red-700',
+  };
+  return colorMap[category] || 'bg-gray-100/80 text-gray-700';
 }

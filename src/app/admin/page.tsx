@@ -424,18 +424,22 @@ export default function AdminPage() {
     try {
       const formData = new FormData();
       formData.append('file', fileList[0]);
+      formData.append('type', 'announcement');
 
-      const res = await fetch('/api/admin/upload-image', {
+      const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
       const data = await res.json();
-      if (data.success && editingItem) {
-        setEditingItem({ ...editingItem, image_url: data.url });
+      if (data.success && data.data?.url && editingItem) {
+        setEditingItem({ ...editingItem, image_url: data.data.url });
+      } else if (data.error) {
+        alert(data.error || '上传失败');
       }
     } catch (error) {
       console.error('上传图片失败:', error);
+      alert('上传图片失败');
     } finally {
       setIsUploadingImage(false);
     }
@@ -510,10 +514,24 @@ export default function AdminPage() {
 
   const handleSaveAnnouncement = async () => {
     if (!editingItem?.title || !editingItem?.content) { alert('请填写标题和内容'); return; }
+    
+    const payload = {
+      title: editingItem.title,
+      content: editingItem.content,
+      category: (editingItem as Record<string, unknown>).category || '通知',
+      is_published: editingItem.is_published ?? false,
+      is_top: (editingItem as Record<string, unknown>).is_top ?? false,
+      is_banner: (editingItem as Record<string, unknown>).is_banner ?? false,
+      summary: (editingItem as Record<string, unknown>).summary || null,
+      author: (editingItem as Record<string, unknown>).author || '管理员',
+      sort_order: (editingItem as Record<string, unknown>).sort_order || 0,
+      image_url: editingItem.image_url || null,
+    };
+    
     const url = editingItem.id ? `/api/announcements/${editingItem.id}` : '/api/announcements';
     const method = editingItem.id ? 'PUT' : 'POST';
     try {
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editingItem) });
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if ((await res.json()).success) { setShowModal(null); setEditingItem(null); fetchData(); }
     } catch (error) { console.error('保存失败:', error); }
   };
@@ -1617,10 +1635,10 @@ export default function AdminPage() {
           {activeTab === 'announcements' && (
             <div className="space-y-4">
               <div className="flex justify-end">
-                <Button size="sm" onClick={() => { setEditingItem({ id: 0, title: '', content: '', category: '通知', is_published: true, created_at: '', updated_at: '' }); setShowModal('form'); }} className="gap-1.5"><PlusCircle className="h-4 w-4" />新建公告</Button>
+                <Button size="sm" onClick={() => { setEditingItem({ id: 0, title: '', content: '', category: '通知', is_published: false, is_top: false, is_banner: false, summary: '', author: '管理员', sort_order: 0, created_at: '', updated_at: '' }); setShowModal('form'); }} className="gap-1.5"><PlusCircle className="h-4 w-4" />新建公告</Button>
               </div>
               <DataTable
-                columns={['封面', '标题', '分类', '状态', '时间', '操作']}
+                columns={['封面', '标题', '分类', '置顶', '轮播', '发布状态', '时间', '操作']}
                 data={announcements}
                 isLoading={isLoading}
                 renderRow={(a) => (
@@ -1632,8 +1650,10 @@ export default function AdminPage() {
                         <div className="w-12 h-8 bg-muted rounded flex items-center justify-center"><Bell className="h-4 w-4 text-muted-foreground" /></div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium">{a.title}</td>
+                    <td className="px-4 py-3 text-sm font-medium max-w-[200px] truncate">{a.title}</td>
                     <td className="px-4 py-3"><Badge variant="outline" className="text-xs">{a.category}</Badge></td>
+                    <td className="px-4 py-3">{a.is_top ? <Badge variant="default" className="text-xs bg-amber-500">置顶</Badge> : <span className="text-xs text-muted-foreground">-</span>}</td>
+                    <td className="px-4 py-3">{a.is_banner ? <Badge variant="default" className="text-xs bg-blue-500">轮播</Badge> : <span className="text-xs text-muted-foreground">-</span>}</td>
                     <td className="px-4 py-3"><Badge variant={a.is_published ? 'default' : 'secondary'} className="text-xs">{a.is_published ? '已发布' : '草稿'}</Badge></td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(a.created_at)}</td>
                     <td className="px-4 py-3">
@@ -2119,8 +2139,30 @@ export default function AdminPage() {
               )}
               {showModal === 'form' && editingItem && (
                 <div className="space-y-4">
-                  <div><label className="text-sm font-medium">标题</label><input type="text" value={String(editingItem.title || '')} onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" /></div>
-                  <div><label className="text-sm font-medium">分类</label><select value={String(editingItem.category || '')} onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"><option value="通知">通知</option><option value="指南">指南</option><option value="案例">案例</option></select></div>
+                  <div>
+                    <label className="text-sm font-medium">标题 *</label>
+                    <input type="text" value={String(editingItem.title || '')} onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="请输入公告标题" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">分类</label>
+                      <select value={String(editingItem.category || '通知')} onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                        <option value="通知">通知</option>
+                        <option value="公告">公告</option>
+                        <option value="指南">指南</option>
+                        <option value="案例">案例</option>
+                        <option value="警告">警告</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">作者</label>
+                      <input type="text" value={String((editingItem as Record<string, unknown>).author || '管理员')} onChange={(e) => setEditingItem({ ...editingItem, author: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="发布人" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">摘要</label>
+                    <textarea value={String((editingItem as Record<string, unknown>).summary || '')} onChange={(e) => setEditingItem({ ...editingItem, summary: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[60px]" placeholder="简要描述公告内容（可选）" />
+                  </div>
                   <div>
                     <label className="text-sm font-medium">封面图片</label>
                     <input ref={announcementImageRef} type="file" accept="image/*" className="hidden" onChange={handleAnnouncementImageUpload} />
@@ -2136,8 +2178,50 @@ export default function AdminPage() {
                       </Button>
                     </div>
                   </div>
-                  <div><label className="text-sm font-medium">内容</label><textarea value={String(editingItem.content || '')} onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[150px]" /></div>
-                  <div className="flex items-center gap-2"><input type="checkbox" id="is_published" checked={Boolean(editingItem.is_published)} onChange={(e) => setEditingItem({ ...editingItem, is_published: e.target.checked })} /><label htmlFor="is_published" className="text-sm">立即发布</label></div>
+                  <div>
+                    <label className="text-sm font-medium">内容 *</label>
+                    <input type="file" id="contentImageUpload" accept="image/*" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !editingItem) return;
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      formData.append('type', 'content');
+                      setIsUploadingImage(true);
+                      try {
+                        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                        const data = await res.json();
+                        if (data.success && data.data?.url) {
+                          const imgTag = `<img src="${data.data.url}" alt="图片" style="max-width:100%;height:auto;border-radius:8px;margin:16px 0;" />`;
+                          setEditingItem({ ...editingItem, content: (editingItem.content || '') + imgTag });
+                        }
+                      } finally { setIsUploadingImage(false); e.target.value = ''; }
+                    }} />
+                    <div className="mt-1 flex gap-2 mb-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('contentImageUpload')?.click()} disabled={isUploadingImage} className="gap-1.5 text-xs">
+                        {isUploadingImage ? <><Loader2 className="h-3 w-3 animate-spin" />上传中</> : <><Upload className="h-3 w-3" />插入图片</>}
+                      </Button>
+                      <span className="text-xs text-muted-foreground self-center">支持在正文中插入多张图片</span>
+                    </div>
+                    <textarea value={String(editingItem.content || '')} onChange={(e) => setEditingItem({ ...editingItem, content: e.target.value })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[200px]" placeholder="支持富文本内容，可使用 HTML 标签或插入图片" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id="is_published" checked={Boolean(editingItem.is_published)} onChange={(e) => setEditingItem({ ...editingItem, is_published: e.target.checked })} className="h-4 w-4" />
+                      <label htmlFor="is_published" className="text-sm">立即发布</label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id="is_top" checked={Boolean((editingItem as Record<string, unknown>).is_top)} onChange={(e) => setEditingItem({ ...editingItem, is_top: e.target.checked })} className="h-4 w-4" />
+                      <label htmlFor="is_top" className="text-sm">置顶显示</label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id="is_banner" checked={Boolean((editingItem as Record<string, unknown>).is_banner)} onChange={(e) => setEditingItem({ ...editingItem, is_banner: e.target.checked })} className="h-4 w-4" />
+                      <label htmlFor="is_banner" className="text-sm">首页轮播</label>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">排序值</label>
+                      <input type="number" value={Number((editingItem as Record<string, unknown>).sort_order) || 0} onChange={(e) => setEditingItem({ ...editingItem, sort_order: parseInt(e.target.value) || 0 })} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" placeholder="数值越大越靠前" />
+                    </div>
+                  </div>
                   <div className="flex justify-end gap-2 pt-4"><Button variant="outline" onClick={() => setShowModal(null)}>取消</Button><Button onClick={handleSaveAnnouncement}>保存</Button></div>
                 </div>
               )}
