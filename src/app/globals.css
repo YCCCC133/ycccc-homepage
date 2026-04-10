@@ -1,8 +1,49 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* 字体变量定义 - 思源宋体 */
+:root {
+  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Source Han Serif CN', 
+                'Songti SC', 'SimSun', 'FangSong', 'STFangsong', serif;
+  --font-sans: 'Inter', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 
+               'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Menlo', 'Monaco', 
+               'Consolas', ui-monospace, monospace;
+}
+
 /* 禁用系统组件文本选中 */
 @layer base {
+  /* 全局字体设置 */
+  html {
+    font-family: var(--font-serif);
+  }
+  
+  body {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    line-height: 1.75;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* 标题使用较粗字重 */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  
+  /* 按钮和表单元素使用无衬线字体 */
+  button, input, textarea, select, label {
+    font-family: var(--font-sans);
+  }
+  
+  /* 代码使用等宽字体 */
+  code, pre, kbd, samp {
+    font-family: var(--font-mono);
+  }
+  
   /* 全局禁用系统组件的文本选中 */
   .no-select,
   nav,
@@ -379,5 +420,62 @@ body {
 
   .markdown-content a:hover {
     color: oklch(0.45 0.12 160);
+  }
+  
+  /* 中文排版优化 - 宋体 */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* 段落首行缩进（可选） */
+  .indent-paragraph p:not(:first-child) {
+    text-indent: 2em;
+  }
+  
+  /* 中英文混排优化 */
+  .text-mixed {
+    font-family: var(--font-serif), var(--font-sans);
+    font-feature-settings: 'liga' 1, 'kern' 1;
+  }
+  
+  /* 标题与正文间距优化 */
+  .prose-heading {
+    margin-top: 1.5em;
+    margin-bottom: 0.75em;
+  }
+  
+  /* 引用块样式 - 适合法律文书 */
+  .legal-quote {
+    font-family: var(--font-serif);
+    border-left: 3px solid oklch(0.55 0.12 160);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: normal;
+    color: oklch(0.4 0.02 180);
+    background: linear-gradient(to right, oklch(0.98 0.01 180), transparent);
+    padding: 0.75rem 1rem;
+    border-radius: 0 4px 4px 0;
+  }
+}
+
+/* 全局字体类 */
+.font-serif-chinese {
+  font-family: var(--font-serif) !important;
+}
+
+/* 打印样式 - 适合法律文书打印 */
+@media print {
+  body {
+    font-family: var(--font-serif) !important;
+    font-size: 12pt;
+    line-height: 1.8;
+  }
+  
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+  
+  .no-print {
+    display: none !important;
   }
 }

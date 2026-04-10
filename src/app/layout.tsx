@@ -59,8 +59,13 @@ export default function RootLayout({
         {/* DNS 预连接优化 */}
         <link rel="preconnect" href="https://fonts.googleapis.cn" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.gstatic.cn" crossOrigin="anonymous" />
+        {/* 思源宋体 - 高级中文衬线字体 */}
+        <link 
+          href="https://fonts.googleapis.cn/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=swap" 
+          rel="stylesheet" 
+        />
       </head>
-      <body className="antialiased bg-background">
+      <body className="antialiased bg-background font-serif">
         {isDev && <Inspector />}
         <div className="flex min-h-screen flex-col bg-background">
           <Navigation />
