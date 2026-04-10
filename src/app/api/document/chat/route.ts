@@ -4,6 +4,76 @@ import { LLMClient, Config } from 'coze-coding-dev-sdk';
 // 使用 Node.js runtime
 export const runtime = 'nodejs';
 
+// 相关法律法规数据库
+const LEGAL_REFERENCES: Record<string, { name: string; fullName: string; url: string }[]> = {
+  default: [
+    { name: '劳动法', fullName: '《中华人民共和国劳动法》', url: 'https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk3Yjc1MGM4NjZjNDF%3D' },
+    { name: '劳动合同法', fullName: '《中华人民共和国劳动合同法》', url: 'https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk2YjI3OGNhNzk3OTU%3D' },
+    { name: '保障农民工工资支付条例', fullName: '《保障农民工工资支付条例》', url: 'https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk3OTY2MWNmNGJjNjc%3D' },
+  ],
+  contract: [
+    { name: '劳动合同法', fullName: '《中华人民共和国劳动合同法》', url: 'https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk2YjI3OGNhNzk3OTU%3D' },
+    { name: '劳动合同法实施条例', fullName: '《中华人民共和国劳动合同法实施条例》', url: 'https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk3OTZhYjUzYjhhMTY%3D' },
+  ],
+  wage: [
+    { name: '保障农民工工资支付条例', fullName: '《保障农民工工资支付条例》', url: 'https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk3OTY2MWNmNGJjNjc%3D' },
+    { name: '工资支付暂行规定', fullName: '《工资支付暂行规定》', url: 'https://www.mohrss.gov.cn/xxgk2020/gzk/gztz/201705/t20170527_272914.html' },
+  ],
+  complaint: [
+    { name: '劳动监察保障办法', fullName: '《劳动保障监察条例》', url: 'https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk3YjBiYjRhNzkwYzU%3D' },
+    { name: '劳动争议调解仲裁法', fullName: '《中华人民共和国劳动争议调解仲裁法》', url: 'https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk3YjY3YjNhNzk1MzY%3D' },
+  ],
+  injury: [
+    { name: '工伤保险条例', fullName: '《工伤保险条例》', url: 'https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk3YjY1OGNhNzhhMTU%3D' },
+    { name: '工伤认定办法', fullName: '《工伤认定办法》', url: 'https://www.mohrss.gov.cn/xxgk2020/gzk/gztz/201705/t20170527_272911.html' },
+  ],
+  legal_aid: [
+    { name: '法律援助法', fullName: '《中华人民共和国法律援助法》', url: 'https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk3ZTBhMGM4NzBhMjc%3D' },
+    { name: '法律援助条例', fullName: '《法律援助条例》', url: 'https://flk.npc.gov.cn/detail2.html?ZmY4MDgxODE3OTZhNjMyYTAxNzk2ZjFhMGM4NjkwNTM%3D' },
+  ]
+};
+
+// 根据消息内容匹配相关法规
+function matchLegalReferences(content: string): { name: string; fullName: string; url: string }[] {
+  const lowerContent = content.toLowerCase();
+  const refs: { name: string; fullName: string; url: string }[] = [];
+  const addedKeys = new Set<string>();
+
+  // 关键词匹配
+  if (lowerContent.includes('合同') || lowerContent.includes('签订') || lowerContent.includes('解除')) {
+    LEGAL_REFERENCES.contract.forEach(ref => {
+      if (!addedKeys.has(ref.name)) { refs.push(ref); addedKeys.add(ref.name); }
+    });
+  }
+  if (lowerContent.includes('工资') || lowerContent.includes('拖欠') || lowerContent.includes('报酬') || lowerContent.includes('加班费')) {
+    LEGAL_REFERENCES.wage.forEach(ref => {
+      if (!addedKeys.has(ref.name)) { refs.push(ref); addedKeys.add(ref.name); }
+    });
+  }
+  if (lowerContent.includes('投诉') || lowerContent.includes('举报') || lowerContent.includes('监察')) {
+    LEGAL_REFERENCES.complaint.forEach(ref => {
+      if (!addedKeys.has(ref.name)) { refs.push(ref); addedKeys.add(ref.name); }
+    });
+  }
+  if (lowerContent.includes('工伤') || lowerContent.includes('伤残') || lowerContent.includes('职业病')) {
+    LEGAL_REFERENCES.injury.forEach(ref => {
+      if (!addedKeys.has(ref.name)) { refs.push(ref); addedKeys.add(ref.name); }
+    });
+  }
+  if (lowerContent.includes('援助') || lowerContent.includes('免费') || lowerContent.includes('律师')) {
+    LEGAL_REFERENCES.legal_aid.forEach(ref => {
+      if (!addedKeys.has(ref.name)) { refs.push(ref); addedKeys.add(ref.name); }
+    });
+  }
+
+  // 如果没有匹配，返回默认引用
+  if (refs.length === 0) {
+    refs.push(...LEGAL_REFERENCES.default.slice(0, 2));
+  }
+
+  return refs.slice(0, 3); // 最多返回3条
+}
+
 // 系统提示词
 const SYSTEM_PROMPT = `你是"护薪平台"的智能法律文书助手，专门为农民工提供法律文书生成服务。
 
@@ -70,11 +140,15 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    // 根据回复内容匹配相关法律法规
+    const legalRefs = matchLegalReferences(response.content);
+
     return NextResponse.json({
       success: true,
       data: {
         content: response.content,
-        step: formData ? Object.keys(formData).length : 0
+        step: formData ? Object.keys(formData).length : 0,
+        legalReferences: legalRefs
       }
     });
 

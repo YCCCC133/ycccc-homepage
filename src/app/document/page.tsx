@@ -4,14 +4,22 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Send, FileText, Loader2, Copy, Check, Download, Sparkles } from 'lucide-react';
+import { Send, FileText, Loader2, Copy, Check, Download, Sparkles, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+// 法律引用类型
+interface LegalReference {
+  name: string;
+  fullName: string;
+  url: string;
+}
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  legalReferences?: LegalReference[];
 }
 
 interface FormData {
@@ -62,8 +70,13 @@ export default function DocumentPage() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // 发送消息到前端显示
-  const sendMessage = (content: string) => {
-    setMessages(prev => [...prev, { role: 'assistant', content, timestamp: new Date() }]);
+  const sendMessage = (content: string, legalRefs?: LegalReference[]) => {
+    setMessages(prev => [...prev, { 
+      role: 'assistant', 
+      content, 
+      timestamp: new Date(),
+      legalReferences: legalRefs 
+    }]);
   };
 
   // 调用后端AI对话API
@@ -80,7 +93,7 @@ export default function DocumentPage() {
       
       const result = await response.json();
       if (result.success && result.data.content) {
-        sendMessage(result.data.content);
+        sendMessage(result.data.content, result.data.legalReferences);
       }
     } catch (error) {
       sendMessage('抱歉，服务暂时不可用，请稍后重试。');
@@ -292,21 +305,47 @@ export default function DocumentPage() {
                   key={idx}
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                      msg.role === 'user'
-                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
-                        : 'bg-white/80 text-foreground border border-emerald-100/50 shadow-sm'
-                    }`}
-                  >
-                    {msg.role === 'assistant' ? (
-                      <div className="markdown-content text-sm leading-relaxed">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {msg.content}
-                        </ReactMarkdown>
+                  <div className="max-w-[85%]">
+                    <div
+                      className={`rounded-2xl px-4 py-3 ${
+                        msg.role === 'user'
+                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
+                          : 'bg-white/80 text-foreground border border-emerald-100/50 shadow-sm'
+                      }`}
+                    >
+                      {msg.role === 'assistant' ? (
+                        <div className="markdown-content text-sm leading-relaxed">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.content}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                      )}
+                    </div>
+                    
+                    {/* 法律引用标注 - 弱化显示 */}
+                    {msg.role === 'assistant' && msg.legalReferences && msg.legalReferences.length > 0 && (
+                      <div className="mt-2 px-1">
+                        <div className="text-[10px] text-gray-400 leading-relaxed">
+                          <span className="mr-1">📖 参考：</span>
+                          {msg.legalReferences.map((ref, i) => (
+                            <span key={i}>
+                              {i > 0 && <span className="mx-1">·</span>}
+                              <a 
+                                href={ref.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="hover:text-gray-500 underline underline-offset-2 transition-colors"
+                                title={ref.fullName}
+                              >
+                                {ref.name}
+                              </a>
+                              <ExternalLink className="inline-block ml-0.5 h-2.5 w-2.5 opacity-50" />
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    ) : (
-                      <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
                     )}
                   </div>
                 </div>
