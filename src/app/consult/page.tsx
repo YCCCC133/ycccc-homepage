@@ -1,14 +1,29 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, Loader2, AlertCircle, BookOpen } from 'lucide-react';
+import { Send, Bot, User, Loader2, AlertCircle, BookOpen, ArrowDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from '@/components/markdown';
+
+// ============================================================
+// 滚动配置
+// ============================================================
+const SCROLL_CONFIG = {
+  scrollFactor: 0.15,           // 滚动系数（越大滚动越快）
+  stopThreshold: 5,             // 停止阈值
+  showButtonThreshold: 150,     // 显示按钮阈值
+};
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  legalReferences?: Array<{
+    name: string;
+    fullName: string;
+    url: string;
+  }>;
 }
 
 interface QuickQuestion {
@@ -16,225 +31,177 @@ interface QuickQuestion {
   text: string;
 }
 
-// 滚动配置
-const SCROLL_CONFIG = {
-  // 非线性插值曲线 (cubic-bezier approximation)
-  easeOutExpo: (t: number) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
-  easeOutQuart: (t: number) => 1 - Math.pow(1 - t, 4),
-  
-  // 滚动速度参数
-  baseDuration: 400,        // 基础动画时长 (ms)
-  minDuration: 200,        // 最小动画时长 (ms)
-  maxDuration: 800,        // 最大动画时长 (ms)
-  
-  // 文本匹配参数
-  charsPerSecond: 30,       // 假设阅读速度
-  scrollThreshold: 0.85,    // 滚动触发阈值 (视口高度的85%)
-};
-
-// 自定义滚动函数，使用非线性插值
-function smoothScrollTo(
-  container: HTMLElement,
-  targetTop: number,
-  duration: number,
-  easeFn: (t: number) => number
-): () => void {
-  const startTop = container.scrollTop;
-  const distance = targetTop - startTop;
-  const startTime = performance.now();
-  
-  let animationId: number;
-  let cancelled = false;
-  
-  const cancel = () => {
-    cancelled = true;
-    if (animationId) cancelAnimationFrame(animationId);
-  };
-  
-  const animate = (currentTime: number) => {
-    if (cancelled) return;
-    
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const easedProgress = easeFn(progress);
-    
-    container.scrollTop = startTop + distance * easedProgress;
-    
-    if (progress < 1) {
-      animationId = requestAnimationFrame(animate);
-    }
-  };
-  
-  animationId = requestAnimationFrame(animate);
-  return cancel;
-}
-
 export default function ConsultPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
       role: 'assistant',
-      content: '您好，我是护薪平台的法律智能助手，专门为您提供劳动法律咨询和维权指导服务。\n\n请问有什么可以帮助您的？您可以：\n• 咨询劳动合同相关问题\n• 了解工资拖欠维权途径\n• 询问工伤赔偿标准\n• 申请法律援助条件\n• 其他劳动权益问题',
+      content: '您好，我是护薪平台的法律智能助手，专门为您提供劳动法律咨询和维权指导服务。\n\n请问有什么可以帮助您的？您可以：\n- 咨询劳动合同相关问题\n- 了解工资拖欠维权途径\n- 询问工伤赔偿标准\n- 申请法律援助条件\n- 其他劳动权益问题',
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [showBackToBottom, setShowBackToBottom] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  
-  // 滚动取消函数引用
-  const scrollCancelRef = useRef<(() => void) | null>(null);
-  
-  // 用户交互状态
-  const userInteractingRef = useRef(false);
-  const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const isScrollingRef = useRef(false);
+  const userScrolledRef = useRef(false);
 
-  // 检测用户主动滚动
-  const handleUserScroll = useCallback(() => {
-    userInteractingRef.current = true;
-    setIsUserScrolling(true);
-    
-    // 取消当前滚动动画
-    if (scrollCancelRef.current) {
-      scrollCancelRef.current();
-      scrollCancelRef.current = null;
+  // --------------------------------------------------------
+  // 核心滚动函数：渐进跟随滚动
+  // --------------------------------------------------------
+  const scrollToBottom = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    // 取消之前的动画
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
     }
-    
-    // 清除之前的timeout
-    if (userScrollTimeoutRef.current) {
-      clearTimeout(userScrollTimeoutRef.current);
+
+    const targetScrollTop = container.scrollHeight - container.clientHeight;
+    const currentScrollTop = container.scrollTop;
+    const distance = targetScrollTop - currentScrollTop;
+
+    // 如果距离很小，直接滚动到底部
+    if (Math.abs(distance) < SCROLL_CONFIG.stopThreshold) {
+      container.scrollTop = targetScrollTop;
+      isScrollingRef.current = false;
+      return;
     }
-    
-    // 用户停止滚动后，恢复自动滚动
-    userScrollTimeoutRef.current = setTimeout(() => {
-      userInteractingRef.current = false;
-      setIsUserScrolling(false);
-    }, 1500); // 1.5秒后恢复自动滚动
+
+    // 标记正在滚动
+    isScrollingRef.current = true;
+
+    // 使用 requestAnimationFrame 实现平滑滚动
+    const animate = () => {
+      const el = messagesContainerRef.current;
+      if (!el) return;
+
+      const target = el.scrollHeight - el.clientHeight;
+      const current = el.scrollTop;
+      const remaining = target - current;
+
+      if (Math.abs(remaining) < SCROLL_CONFIG.stopThreshold) {
+        el.scrollTop = target;
+        isScrollingRef.current = false;
+        animationFrameRef.current = null;
+        return;
+      }
+
+      // 渐进滚动
+      const step = remaining * SCROLL_CONFIG.scrollFactor;
+      el.scrollTop = current + step;
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
   }, []);
 
-  // 监听用户交互事件
+  // --------------------------------------------------------
+  // 立即滚动到底部（无动画）
+  // --------------------------------------------------------
+  const scrollToBottomImmediate = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    
+    container.scrollTop = container.scrollHeight;
+    isScrollingRef.current = false;
+    userScrolledRef.current = false;
+  }, []);
+
+  // --------------------------------------------------------
+  // 检测是否需要显示回到底部按钮
+  // --------------------------------------------------------
+  const checkShowBackButton = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    
+    // 只有用户手动滚动过才显示按钮
+    if (userScrolledRef.current && distanceFromBottom > SCROLL_CONFIG.showButtonThreshold) {
+      setShowBackToBottom(true);
+    } else {
+      setShowBackToBottom(false);
+    }
+  }, []);
+
+  // --------------------------------------------------------
+  // 用户中断检测
+  // --------------------------------------------------------
   useEffect(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
 
-    const events = ['wheel', 'touchstart', 'touchmove', 'mousedown', 'keydown'];
-    
-    const handleInteraction = () => {
-      userInteractingRef.current = true;
-      setIsUserScrolling(true);
+    let scrollTimeout: NodeJS.Timeout | null = null;
+
+    const handleScroll = () => {
+      // 如果正在自动滚动，忽略这次滚动事件
+      if (isScrollingRef.current) return;
       
-      if (userScrollTimeoutRef.current) {
-        clearTimeout(userScrollTimeoutRef.current);
-      }
+      // 用户手动滚动了
+      userScrolledRef.current = true;
       
-      userScrollTimeoutRef.current = setTimeout(() => {
-        userInteractingRef.current = false;
-        setIsUserScrolling(false);
-      }, 2000); // 2秒后恢复
+      // 清除之前的超时
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      
+      // 延迟检测是否需要显示按钮
+      scrollTimeout = setTimeout(() => {
+        checkShowBackButton();
+      }, 100);
     };
 
-    events.forEach(event => {
-      container.addEventListener(event, handleInteraction, { passive: true });
-    });
+    container.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      events.forEach(event => {
-        container.removeEventListener(event, handleInteraction);
-      });
-      if (userScrollTimeoutRef.current) {
-        clearTimeout(userScrollTimeoutRef.current);
+      container.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, []);
+  }, [checkShowBackButton]);
 
-  // 智能滚动到底部
-  const smartScrollToBottom = useCallback((contentLength: number) => {
-    const container = messagesContainerRef.current;
-    const endRef = messagesEndRef.current;
-    
-    if (!container || !endRef || userInteractingRef.current) return;
-    
-    // 检查是否已经在视口底部
-    const containerRect = container.getBoundingClientRect();
-    const containerBottom = containerRect.bottom;
-    const viewportHeight = window.innerHeight;
-    
-    // 计算元素是否在可见范围内
-    const endRect = endRef.getBoundingClientRect();
-    const isNearBottom = endRect.top < viewportHeight * SCROLL_CONFIG.scrollThreshold;
-    
-    // 如果内容已经可见，不需要滚动
-    if (isNearBottom && contentLength > 0) {
-      const distance = Math.abs(endRect.top - containerBottom + container.clientTop);
-      
-      // 如果距离太近，跳过滚动
-      if (distance < 50) return;
-    }
-    
-    // 取消之前的滚动动画
-    if (scrollCancelRef.current) {
-      scrollCancelRef.current();
-    }
-    
-    // 计算目标位置
-    const targetTop = endRef.offsetTop - container.clientTop;
-    
-    // 根据距离计算动画时长（使用easeOutQuart曲线）
-    const distance = Math.abs(targetTop - container.scrollTop);
-    const baseTime = (distance / 500) * SCROLL_CONFIG.baseDuration;
-    const duration = Math.max(
-      SCROLL_CONFIG.minDuration,
-      Math.min(SCROLL_CONFIG.maxDuration, baseTime)
-    );
-    
-    // 使用非线性插值滚动
-    scrollCancelRef.current = smoothScrollTo(
-      container,
-      targetTop,
-      duration,
-      SCROLL_CONFIG.easeOutQuart
-    );
-  }, []);
-
-  // 消息更新时触发智能滚动
+  // --------------------------------------------------------
+  // 消息变化时触发滚动（核心：必须自动滚动）
+  // --------------------------------------------------------
   useEffect(() => {
-    if (messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      const contentLength = lastMessage.content.length;
+    if (messages.length === 0) return;
+
+    // 延迟执行，等待 DOM 更新
+    const timer = setTimeout(() => {
+      // 始终滚动到底部，不管用户之前是否手动滚动过
+      scrollToBottom();
       
-      // 如果是AI正在生成，使用延迟滚动匹配阅读节奏
-      if (isLoading && lastMessage.role === 'assistant') {
-        // 延迟滚动，等待内容累积
-        const delay = Math.min(contentLength / SCROLL_CONFIG.charsPerSecond * 1000, 500);
-        const timer = setTimeout(() => {
-          smartScrollToBottom(contentLength);
-        }, delay);
-        return () => clearTimeout(timer);
-      } else if (!isLoading) {
-        // 非加载状态，直接滚动
-        smartScrollToBottom(contentLength);
-      }
-    }
-  }, [messages, isLoading, smartScrollToBottom]);
+      // 更新按钮显示状态
+      setTimeout(() => {
+        checkShowBackButton();
+      }, 100);
+    }, 30);
 
-  // 组件卸载时清理
-  useEffect(() => {
-    return () => {
-      if (scrollCancelRef.current) {
-        scrollCancelRef.current();
-      }
-      if (userScrollTimeoutRef.current) {
-        clearTimeout(userScrollTimeoutRef.current);
-      }
-    };
-  }, []);
+    return () => clearTimeout(timer);
+  }, [messages.length, scrollToBottom, checkShowBackButton]);
 
+  // --------------------------------------------------------
+  // 回到底部按钮点击
+  // --------------------------------------------------------
+  const handleBackToBottom = useCallback(() => {
+    scrollToBottomImmediate();
+    userScrolledRef.current = false;
+    setShowBackToBottom(false);
+  }, [scrollToBottomImmediate]);
+
+  // --------------------------------------------------------
+  // 快捷问题
+  // --------------------------------------------------------
   const quickQuestions: QuickQuestion[] = [
     { icon: '💰', text: '老板拖欠工资怎么办？' },
     { icon: '📋', text: '劳动合同应该包含哪些内容？' },
@@ -249,15 +216,18 @@ export default function ConsultPage() {
     inputRef.current?.focus();
   };
 
+  // --------------------------------------------------------
+  // 发送消息
+  // --------------------------------------------------------
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     
     const trimmedInput = input.trim();
     if (!trimmedInput || isLoading) return;
 
-    // 用户发送消息时，恢复自动滚动
-    userInteractingRef.current = false;
-    setIsUserScrolling(false);
+    // 用户发送消息时，重置滚动状态
+    userScrolledRef.current = false;
+    setShowBackToBottom(false);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -273,6 +243,7 @@ export default function ConsultPage() {
 
     const assistantMessageId = (Date.now() + 1).toString();
     let assistantContent = '';
+    let legalRefs: Message['legalReferences'] = [];
 
     setMessages((prev) => [
       ...prev,
@@ -314,7 +285,7 @@ export default function ConsultPage() {
       }
 
       let lastScrollTime = 0;
-      const scrollInterval = 150; // 每150ms检查一次滚动
+      const scrollInterval = 50; // 每50ms检查一次滚动
 
       while (true) {
         const { done, value } = await reader.read();
@@ -333,9 +304,14 @@ export default function ConsultPage() {
               if (parsed.content) {
                 assistantContent += parsed.content;
                 
+                // 保存法律引用
+                if (parsed.legalReferences) {
+                  legalRefs = parsed.legalReferences;
+                }
+                
                 // 节流更新，减少不必要的渲染
                 const now = Date.now();
-                if (now - lastScrollTime > 50) {
+                if (now - lastScrollTime > scrollInterval) {
                   lastScrollTime = now;
                   
                   setMessages((prev) =>
@@ -358,7 +334,7 @@ export default function ConsultPage() {
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantMessageId
-            ? { ...msg, content: assistantContent }
+            ? { ...msg, content: assistantContent, legalReferences: legalRefs }
             : msg
         )
       );
@@ -390,7 +366,7 @@ export default function ConsultPage() {
       abortControllerRef.current = null;
       
       // 滚动到底部
-      setTimeout(() => smartScrollToBottom(assistantContent.length), 100);
+      setTimeout(() => scrollToBottom(), 100);
     }
   };
 
@@ -401,181 +377,219 @@ export default function ConsultPage() {
     }
   };
 
-  const stopGeneration = () => {
-    abortControllerRef.current?.abort();
-  };
-
-  const clearChat = () => {
-    setMessages([
-      {
-        id: 'welcome',
-        role: 'assistant',
-        content:
-          '您好，我是护薪平台的法律智能助手，专门为您提供劳动法律咨询和维权指导服务。\n\n请问有什么可以帮助您的？您可以：\n• 咨询劳动合同相关问题\n• 了解工资拖欠维权途径\n• 询问工伤赔偿标准\n• 申请法律援助条件\n• 其他劳动权益问题',
-        timestamp: new Date(),
-      },
-    ]);
-    setError(null);
-    userInteractingRef.current = false;
-    setIsUserScrolling(false);
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-emerald-50 selection-primary select-text">
-      {/* 头部 */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                <Bot className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">智能法律咨询</h1>
-                <p className="text-sm text-gray-500">基于知识库的专业法律指导</p>
-              </div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50/50 to-white selection-primary flex flex-col">
+      {/* Header */}
+      <div className="border-b bg-white/80 backdrop-blur-md shrink-0">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <Bot className="h-5 w-5 text-white" />
             </div>
-            {isUserScrolling && (
-              <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
-                已暂停自动滚动
-              </div>
-            )}
+            <div>
+              <h1 className="text-lg font-semibold text-foreground">智能法律咨询</h1>
+              <p className="text-xs text-muted-foreground">AI助手 · 专业解答</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 知识库提示 */}
-      <div className="max-w-4xl mx-auto px-4 py-3">
-        <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100">
-          <BookOpen className="w-4 h-4" />
-          <span>AI 助手基于劳动法律法规知识库为您提供解答</span>
-        </div>
-      </div>
-
-      {/* 快捷问题 */}
-      {messages.length === 1 && (
-        <div className="max-w-4xl mx-auto px-4 pb-4">
-          <p className="text-sm text-gray-500 mb-3">快捷问题：</p>
-          <div className="flex flex-wrap gap-2">
-            {quickQuestions.map((q, i) => (
-              <button
-                key={i}
-                onClick={() => handleQuickQuestion(q.text)}
-                className="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-full hover:border-emerald-300 hover:bg-emerald-50 transition-colors flex items-center gap-1.5"
-              >
-                <span>{q.icon}</span>
-                <span>{q.text}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 消息列表 - 带滚动容器 */}
-      <div className="max-w-4xl mx-auto px-4 pb-32">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col relative">
+        {/* Chat Area */}
         <div 
           ref={messagesContainerRef}
-          className="space-y-4 py-4"
-          onScroll={handleUserScroll}
+          className="flex-1 overflow-y-auto px-4 py-6"
         >
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-3 ${
-                message.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              {message.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0">
-                  <Bot className="w-5 h-5 text-white" />
+          <div className="container mx-auto max-w-3xl space-y-4">
+            {/* Messages */}
+            <div className="space-y-4 pb-4">
+              {messages.map((msg, idx) => {
+                const isLastMessage = idx === messages.length - 1;
+                const isStreaming = isLastMessage && isLoading && msg.role === 'assistant';
+                
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+                  >
+                    <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                      {/* Avatar */}
+                      <div className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
+                        msg.role === 'user' 
+                          ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
+                          : 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+                      }`}>
+                        {msg.role === 'user' ? (
+                          <User className="h-4 w-4 text-white" />
+                        ) : (
+                          <Bot className="h-4 w-4 text-white" />
+                        )}
+                      </div>
+                      
+                      {/* Message Bubble */}
+                      <div className="flex flex-col gap-1">
+                        <div
+                          className={`rounded-2xl px-4 py-3 ${
+                            msg.role === 'user'
+                              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
+                              : 'bg-white/80 text-foreground border border-slate-200/50 shadow-sm'
+                          }`}
+                        >
+                          {msg.role === 'assistant' ? (
+                            <div className="text-sm leading-relaxed">
+                              <MarkdownRenderer 
+                                content={msg.content} 
+                                isStreaming={isStreaming}
+                              />
+                              {/* 流式输出光标 */}
+                              {isStreaming && (
+                                <span className="inline-block w-2 h-4 ml-1 bg-emerald-500 animate-pulse vertical-align-middle" />
+                              )}
+                            </div>
+                          ) : (
+                            <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                          )}
+                        </div>
+                        
+                        {/* 法律引用标注 */}
+                        {msg.role === 'assistant' && msg.legalReferences && msg.legalReferences.length > 0 && (
+                          <div className="px-1">
+                            <div className="text-[10px] text-gray-400 leading-relaxed">
+                              <span className="mr-1">📖 参考：</span>
+                              {msg.legalReferences.map((ref, i) => (
+                                <span key={i}>
+                                  {i > 0 && <span className="mx-1">·</span>}
+                                  <a 
+                                    href={ref.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="hover:text-gray-500 underline underline-offset-2 transition-colors"
+                                    title={ref.fullName}
+                                  >
+                                    {ref.name}
+                                  </a>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Time */}
+                        <span className={`text-[10px] text-gray-400 px-1 ${msg.role === 'user' ? 'text-right' : ''}`}>
+                          {msg.timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {/* Loading indicator */}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="flex gap-3 max-w-[85%]">
+                    <div className="shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+                      <Bot className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="bg-white/80 text-foreground border border-slate-200/50 rounded-2xl px-4 py-3 shadow-sm">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>思考中...</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  message.role === 'user'
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white'
-                    : 'bg-white border shadow-sm'
-                }`}
-              >
-                {message.role === 'assistant' ? (
-                  <div className="text-sm leading-relaxed select-text text-gray-700">
-                    <MarkdownRenderer content={message.content} />
+              
+              {/* Error */}
+              {error && (
+                <div className="flex justify-center">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-full text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{error}</span>
                   </div>
-                ) : (
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap select-text">
-                    {message.content}
-                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Scroll anchor */}
+            <div ref={messagesEndRef} id="scroll-anchor" />
+          </div>
+        </div>
+
+        {/* Back to bottom button */}
+        {showBackToBottom && (
+          <button
+            onClick={handleBackToBottom}
+            className="fixed bottom-[180px] right-6 z-50 w-12 h-12 rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+            title="回到底部"
+          >
+            <ArrowDown className="h-5 w-5" />
+          </button>
+        )}
+
+        {/* Fixed Bottom Input */}
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/95 backdrop-blur-sm border-t border-slate-200/50 z-50">
+          <div className="container mx-auto max-w-3xl px-4 py-4">
+            {/* Quick Questions */}
+            <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-2">
+              {quickQuestions.map((q, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleQuickQuestion(q.text)}
+                  className="shrink-0 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 transition-colors flex items-center gap-1.5"
+                >
+                  <span>{q.icon}</span>
+                  <span>{q.text.slice(0, 10)}...</span>
+                </button>
+              ))}
+            </div>
+            
+            {/* Input Form */}
+            <form onSubmit={handleSubmit} className="flex gap-2">
+              <div className="flex-1 relative">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="输入您的法律问题..."
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-white/80 px-4 py-3 pr-12 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all"
+                  rows={1}
+                  style={{ maxHeight: '120px' }}
+                  disabled={isLoading}
+                />
+                {isLoading && (
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-red-500 hover:text-red-600 font-medium"
+                  >
+                    取消
+                  </button>
                 )}
               </div>
-              {message.role === 'user' && (
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-                  <User className="w-5 h-5 text-gray-600" />
-                </div>
-              )}
-            </div>
-          ))}
-
-          {/* 错误提示 */}
-          {error && (
-            <div className="flex justify-center">
-              <div className="flex items-center gap-2 text-red-500 bg-red-50 px-4 py-2 rounded-full text-sm">
-                <AlertCircle className="w-4 h-4" />
-                <span>{error}</span>
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* 输入区域 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <form onSubmit={handleSubmit} className="flex gap-3">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="输入您的问题，按 Enter 发送..."
-              className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              rows={1}
-              disabled={isLoading}
-            />
-            {isLoading ? (
-              <button
-                type="button"
-                onClick={stopGeneration}
-                className="px-4 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors flex items-center gap-2"
+              <Button 
+                type="submit" 
+                size="icon"
+                disabled={isLoading || !input.trim()}
+                className="shrink-0 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30"
               >
-                <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                停止
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={!input.trim()}
-                className="px-6 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Send className="w-4 h-4" />
-                发送
-              </button>
-            )}
-          </form>
-          <div className="flex justify-between items-center mt-2">
-            <p className="text-xs text-gray-400">
-              按 Enter 发送，Shift + Enter 换行
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+            
+            {/* Disclaimer */}
+            <p className="text-[10px] text-center text-gray-400 mt-2">
+              AI辅助建议仅供参考，具体法律问题请咨询专业律师
             </p>
-            {messages.length > 1 && (
-              <button
-                onClick={clearChat}
-                className="text-xs text-gray-400 hover:text-gray-600"
-              >
-                清空对话
-              </button>
-            )}
           </div>
         </div>
       </div>

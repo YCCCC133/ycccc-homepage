@@ -8,41 +8,12 @@ import { Send, FileText, Loader2, Copy, Check, Download, Sparkles, ArrowDown } f
 import { MarkdownRenderer } from '@/components/markdown';
 
 // ============================================================
-// 类型定义
-// ============================================================
-interface LegalReference {
-  name: string;
-  fullName: string;
-  url: string;
-}
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  legalReferences?: LegalReference[];
-}
-
-interface FormData {
-  name: string;
-  phone: string;
-  companyName: string;
-  owedAmount: string;
-  workPeriod: string;
-  hasContract: string;
-  hasEvidence: string;
-  description: string;
-}
-
-// ============================================================
 // 配置常量
 // ============================================================
 const SCROLL_CONFIG = {
-  scrollFactor: 0.12,           // 渐进跟随系数
-  throttleMs: 16,              // 节流时间
-  stopThreshold: 2,             // 停止阈值
-  showButtonThreshold: 100,     // 显示按钮阈值
-  visibilityThreshold: 0.7,    // 可见性阈值 70%
+  scrollFactor: 0.15,           // 滚动系数（增大让滚动更快）
+  stopThreshold: 5,             // 停止阈值
+  showButtonThreshold: 150,     // 显示按钮阈值
 };
 
 // ============================================================
@@ -70,58 +41,77 @@ export default function DocumentPage() {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  
-  // 滚动状态
-  const [isAutoScroll, setIsAutoScroll] = useState(true);
   const [showBackToBottom, setShowBackToBottom] = useState(false);
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const isScrollingRef = useRef(false);
+  const userScrolledRef = useRef(false);
 
   // --------------------------------------------------------
-  // 渐进跟随滚动核心算法
+  // 核心滚动函数：立即滚动到底部
   // --------------------------------------------------------
-  const smoothScrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback(() => {
     const container = chatContainerRef.current;
     if (!container) return;
 
-    // 如果用户已手动停止，不干预
-    if (!isAutoScroll) return;
+    // 取消之前的动画
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
 
     const targetScrollTop = container.scrollHeight - container.clientHeight;
     const currentScrollTop = container.scrollTop;
     const distance = targetScrollTop - currentScrollTop;
 
-    // 如果已经非常接近底部，停止动画
+    // 如果距离很小，直接滚动到底部
     if (Math.abs(distance) < SCROLL_CONFIG.stopThreshold) {
       container.scrollTop = targetScrollTop;
-      animationFrameRef.current = null;
+      isScrollingRef.current = false;
       return;
     }
 
-    // 渐进跟随：每帧滚动剩余距离的12%
-    const step = distance * SCROLL_CONFIG.scrollFactor;
-    container.scrollTop = currentScrollTop + step;
+    // 标记正在滚动
+    isScrollingRef.current = true;
 
-    // 继续动画
-    animationFrameRef.current = requestAnimationFrame(smoothScrollToBottom);
-  }, [isAutoScroll]);
+    // 使用 requestAnimationFrame 实现平滑滚动
+    const animate = () => {
+      const el = chatContainerRef.current;
+      if (!el) return;
+
+      const target = el.scrollHeight - el.clientHeight;
+      const current = el.scrollTop;
+      const remaining = target - current;
+
+      if (Math.abs(remaining) < SCROLL_CONFIG.stopThreshold) {
+        el.scrollTop = target;
+        isScrollingRef.current = false;
+        animationFrameRef.current = null;
+        return;
+      }
+
+      // 渐进滚动
+      const step = remaining * SCROLL_CONFIG.scrollFactor;
+      el.scrollTop = current + step;
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+  }, []);
 
   // --------------------------------------------------------
-  // 触发滚动
+  // 立即滚动到底部（无动画）
   // --------------------------------------------------------
-  const triggerScroll = useCallback(() => {
-    if (!isAutoScroll) return;
+  const scrollToBottomImmediate = useCallback(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
     
-    // 取消之前的动画
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    
-    // 开始新的滚动动画
-    animationFrameRef.current = requestAnimationFrame(smoothScrollToBottom);
-  }, [isAutoScroll, smoothScrollToBottom]);
+    container.scrollTop = container.scrollHeight;
+    isScrollingRef.current = false;
+    userScrolledRef.current = false;
+  }, []);
 
   // --------------------------------------------------------
   // 检测是否需要显示回到底部按钮
@@ -131,38 +121,46 @@ export default function DocumentPage() {
     if (!container) return;
 
     const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-    setShowBackToBottom(distanceFromBottom > SCROLL_CONFIG.showButtonThreshold);
+    const shouldShow = distanceFromBottom > SCROLL_CONFIG.showButtonThreshold;
+    
+    // 只有用户手动滚动过才显示按钮
+    if (userScrolledRef.current && shouldShow) {
+      setShowBackToBottom(true);
+    } else {
+      setShowBackToBottom(false);
+    }
   }, []);
 
   // --------------------------------------------------------
-  // 用户中断：停止自动滚动
+  // 用户中断检测
   // --------------------------------------------------------
   useEffect(() => {
     const container = chatContainerRef.current;
     if (!container) return;
 
-    const handleWheel = () => {
-      setIsAutoScroll(false);
-      checkShowBackButton();
-    };
-
-    const handleTouchMove = () => {
-      setIsAutoScroll(false);
-      checkShowBackButton();
-    };
+    let scrollTimeout: NodeJS.Timeout | null = null;
 
     const handleScroll = () => {
-      checkShowBackButton();
+      // 如果正在自动滚动，忽略这次滚动事件
+      if (isScrollingRef.current) return;
+      
+      // 用户手动滚动了
+      userScrolledRef.current = true;
+      
+      // 清除之前的超时
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      
+      // 延迟检测是否需要显示按钮
+      scrollTimeout = setTimeout(() => {
+        checkShowBackButton();
+      }, 100);
     };
 
-    container.addEventListener('wheel', handleWheel, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: true });
     container.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      container.removeEventListener('wheel', handleWheel);
-      container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('scroll', handleScroll);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
@@ -170,29 +168,33 @@ export default function DocumentPage() {
   }, [checkShowBackButton]);
 
   // --------------------------------------------------------
-  // 消息变化时触发滚动
+  // 消息变化时触发滚动（核心：必须自动滚动）
   // --------------------------------------------------------
   useEffect(() => {
-    if (messages.length > 0 && isAutoScroll) {
-      // 延迟执行，等待 DOM 更新
-      const timer = setTimeout(() => {
-        triggerScroll();
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [messages.length, isAutoScroll, triggerScroll]);
+    if (messages.length === 0) return;
+
+    // 延迟执行，等待 DOM 更新
+    const timer = setTimeout(() => {
+      // 始终滚动到底部，不管用户之前是否手动滚动过
+      scrollToBottom();
+      
+      // 更新按钮显示状态
+      setTimeout(() => {
+        checkShowBackButton();
+      }, 100);
+    }, 30);
+
+    return () => clearTimeout(timer);
+  }, [messages.length, scrollToBottom, checkShowBackButton]);
 
   // --------------------------------------------------------
-  // 回到底部
+  // 回到底部按钮点击
   // --------------------------------------------------------
-  const scrollToBottom = useCallback(() => {
-    const container = chatContainerRef.current;
-    if (!container) return;
-
-    container.scrollTop = container.scrollHeight;
-    setIsAutoScroll(true);
+  const handleBackToBottom = useCallback(() => {
+    scrollToBottomImmediate();
+    userScrolledRef.current = false;
     setShowBackToBottom(false);
-  }, []);
+  }, [scrollToBottomImmediate]);
 
   // --------------------------------------------------------
   // 发送消息
@@ -267,7 +269,7 @@ export default function DocumentPage() {
       setFormData({});
       setCurrentStep(0);
       setIsTyping(true);
-      setIsAutoScroll(true);
+      userScrolledRef.current = false;
       await new Promise(r => setTimeout(r, 500));
       sendMessage('好的，我们重新开始！请问您叫什么名字？');
       setCurrentStep(1);
@@ -436,7 +438,6 @@ export default function DocumentPage() {
                             ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
                             : 'bg-white/80 text-foreground border border-emerald-100/50 shadow-sm'
                         }`}
-                        data-is-last={isLastMessage}
                       >
                         {msg.role === 'assistant' ? (
                           <div className="text-sm leading-relaxed">
@@ -493,7 +494,8 @@ export default function DocumentPage() {
                 </div>
               )}
               
-              <div ref={messagesEndRef} />
+              {/* 滚动锚点 */}
+              <div ref={messagesEndRef} id="scroll-anchor" />
             </div>
 
             {/* Generated Document */}
@@ -536,11 +538,11 @@ export default function DocumentPage() {
         {/* 回到底部按钮 */}
         {showBackToBottom && (
           <button
-            onClick={scrollToBottom}
-            className="fixed bottom-[180px] right-6 z-50 w-10 h-10 rounded-full bg-white border border-emerald-200 shadow-lg hover:shadow-xl hover:bg-emerald-50 transition-all duration-200 flex items-center justify-center group animate-bounce-subtle"
+            onClick={handleBackToBottom}
+            className="fixed bottom-[180px] right-6 z-50 w-12 h-12 rounded-full bg-emerald-500 text-white shadow-lg hover:bg-emerald-600 hover:shadow-xl transition-all duration-200 flex items-center justify-center"
             title="回到底部"
           >
-            <ArrowDown className="h-5 w-5 text-emerald-600 group-hover:translate-y-0.5 transition-transform" />
+            <ArrowDown className="h-5 w-5" />
           </button>
         )}
 
@@ -635,7 +637,7 @@ export default function DocumentPage() {
 }
 
 // ============================================================
-// 问题列表（组件外部）
+// 问题列表
 // ============================================================
 const QUESTIONS = [
   { id: 'name', field: 'name', question: '请问您叫什么名字？', placeholder: '请输入您的姓名' },
@@ -647,3 +649,28 @@ const QUESTIONS = [
   { id: 'hasEvidence', field: 'hasEvidence', question: '您有哪些证据？（工资条、聊天记录等）', placeholder: '如：工资条、微信记录' },
   { id: 'description', field: 'description', question: '请简单描述一下拖欠工资的情况', placeholder: '越详细越好' }
 ];
+
+// 类型定义
+interface LegalReference {
+  name: string;
+  fullName: string;
+  url: string;
+}
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  legalReferences?: LegalReference[];
+}
+
+interface FormData {
+  name: string;
+  phone: string;
+  companyName: string;
+  owedAmount: string;
+  workPeriod: string;
+  hasContract: string;
+  hasEvidence: string;
+  description: string;
+}
