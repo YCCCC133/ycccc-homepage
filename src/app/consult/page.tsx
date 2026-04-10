@@ -321,6 +321,9 @@ export default function ConsultPage() {
                         : msg
                     )
                   );
+                  
+                  // 流式输出时也要触发滚动！
+                  scrollToBottom();
                 }
               }
             } catch (e) {
