@@ -73,19 +73,17 @@ export default function ConsultPage() {
       const { scrollTop, scrollHeight, clientHeight } = container;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       
-      // 只有在自动滚动启用时，才在距离底部较远时显示按钮
-      if (autoScrollEnabled && distanceFromBottom > 150) {
+      // 如果用户向上滚动超过阈值，显示按钮（但不改变自动滚动状态）
+      if (distanceFromBottom > 150) {
         setShowBackToBottom(true);
       } else {
-        // 用户发送消息，恢复自动滚动
-    setAutoScrollEnabled(true);
-    setShowBackToBottom(false);
+        setShowBackToBottom(false);
       }
     };
 
     container.addEventListener('scroll', onScroll, { passive: true });
     return () => container.removeEventListener('scroll', onScroll);
-  }, [autoScrollEnabled]);
+  }, []);
 
   // --------------------------------------------------------
   // 点击回到底部按钮
