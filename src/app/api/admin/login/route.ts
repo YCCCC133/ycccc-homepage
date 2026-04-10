@@ -12,11 +12,11 @@ function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
-// Cookie 配置
-function getCookieOptions() {
+// Cookie 配置 - 根据环境自动调整 secure 标志
+function getCookieOptions(isProduction: boolean) {
   return {
     httpOnly: true,
-    secure: true, // 生产环境必须 HTTPS
+    secure: isProduction, // 生产环境必须 HTTPS，开发环境使用 HTTP
     sameSite: 'lax' as const,
     maxAge: 60 * 60 * 24, // 24小时
     path: '/',
@@ -26,6 +26,7 @@ function getCookieOptions() {
 export async function POST(request: NextRequest) {
   try {
     const { password } = await request.json();
+    const isProduction = process.env.NODE_ENV === 'production';
 
     if (!password) {
       return NextResponse.json({ error: '请输入密码' }, { status: 400 });
@@ -72,8 +73,8 @@ export async function POST(request: NextRequest) {
           .eq('username', 'admin');
 
         const token = generateToken();
-        const response = NextResponse.json({ success: true, token });
-        const opts = getCookieOptions();
+        const response = NextResponse.json({ success: true, token, authenticated: true });
+        const opts = getCookieOptions(isProduction);
         response.cookies.set('admin_token', token, opts);
         return response;
       } else {
@@ -93,8 +94,8 @@ export async function POST(request: NextRequest) {
       .eq('id', admin.id);
 
     const token = generateToken();
-    const response = NextResponse.json({ success: true, token });
-    const opts = getCookieOptions();
+    const response = NextResponse.json({ success: true, token, authenticated: true });
+    const opts = getCookieOptions(isProduction);
     response.cookies.set('admin_token', token, opts);
     return response;
   } catch (error) {
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('admin_token')?.value;
   if (token) {
-    return NextResponse.json({ authenticated: true });
+    return NextResponse.json({ authenticated: true, success: true });
   }
-  return NextResponse.json({ authenticated: false });
+  return NextResponse.json({ authenticated: false, success: false });
 }

@@ -16,7 +16,7 @@ import {
   Phone,
   HelpCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const navigation = [
   { name: '首页', href: '/', icon: Home },
@@ -34,8 +34,17 @@ const quickLinks = [
 
 export function Navigation() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
+
+  // Handle client-side mounting for hydration consistency
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Initialize pathname state for SSR consistency
+  const currentPath = mounted ? pathname : '/';
 
   return (
     <nav className="sticky top-0 z-50 no-select">
@@ -121,7 +130,7 @@ export function Navigation() {
           {/* Desktop Navigation - 精致导航项 */}
           <div className="hidden lg:flex items-center gap-1">
             {navigation.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = currentPath === item.href;
               return (
                 <Link
                   key={item.name}
@@ -258,7 +267,7 @@ export function Navigation() {
         >
           <div className="space-y-1 p-4">
             {navigation.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = currentPath === item.href;
               return (
                 <Link
                   key={item.name}
