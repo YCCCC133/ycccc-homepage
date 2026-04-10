@@ -6,31 +6,25 @@ import Image from 'next/image';
 import { 
   ChevronLeft, 
   ChevronRight, 
-  Clock,
-  ArrowRight, 
-  Megaphone,
-  Bell,
-  Pin,
   Volume2,
 } from 'lucide-react';
 import {
   getAnnouncementList,
   AnnouncementListItem,
-  formatAnnouncementDate,
   stripHtml,
 } from '@/lib/api/announcements';
 
 export function ScrollingAnnouncementBanner() {
   const [announcements, setAnnouncements] = useState<AnnouncementListItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isHovered, setIsHovered] = useState(false);
-  const progressRef = useRef(0);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
+  
+  // Touch/swipe state
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
+  const isDragging = useRef<boolean>(false);
+  
   const fetchAnnouncements = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -58,101 +52,62 @@ export function ScrollingAnnouncementBanner() {
     fetchAnnouncements();
   }, [fetchAnnouncements]);
 
-  // Progress bar animation
+  // Auto-rotate every 5 seconds
   useEffect(() => {
-    if (announcements.length <= 1 || isPaused || isHovered) {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-        progressIntervalRef.current = null;
-      }
-      return;
-    }
-
-    progressRef.current = 0;
-    const duration = 5000;
-    const interval = 50;
-    const increment = (interval / duration) * 100;
-
-    progressIntervalRef.current = setInterval(() => {
-      progressRef.current += increment;
-      if (progressRef.current >= 100) {
-        progressRef.current = 0;
-      }
-    }, interval);
-
-    return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-    };
-  }, [announcements.length, isPaused, isHovered]);
-
-  // Auto-scroll effect
-  useEffect(() => {
-    if (announcements.length <= 1 || isPaused || isHovered) return;
-
-    const timeout = setTimeout(() => {
-      goToNext();
+    if (announcements.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % announcements.length);
     }, 5000);
-
-    return () => clearTimeout(timeout);
-  }, [announcements.length, isPaused, isHovered, currentIndex]);
+    
+    return () => clearInterval(interval);
+  }, [announcements.length]);
 
   const goToNext = useCallback(() => {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
     setCurrentIndex((prev) => (prev + 1) % announcements.length);
-    progressRef.current = 0;
-    setTimeout(() => setIsTransitioning(false), 500);
-  }, [announcements.length, isTransitioning]);
+  }, [announcements.length]);
 
-  const goToPrev = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (isTransitioning) return;
-    setIsTransitioning(true);
+  const goToPrev = useCallback(() => {
     setCurrentIndex((prev) => (prev - 1 + announcements.length) % announcements.length);
-    progressRef.current = 0;
-    setTimeout(() => setIsTransitioning(false), 500);
-  }, [announcements.length, isTransitioning]);
+  }, [announcements.length]);
 
-  const goToNextBtn = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (isTransitioning) return;
-    setIsTransitioning(true);
-    setCurrentIndex((prev) => (prev + 1) % announcements.length);
-    progressRef.current = 0;
-    setTimeout(() => setIsTransitioning(false), 500);
-  }, [announcements.length, isTransitioning]);
+  // Touch handlers for swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    isDragging.current = true;
+  };
 
-  const handleDotClick = useCallback((e: React.MouseEvent, index: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (isTransitioning || index === currentIndex) return;
-    setIsTransitioning(true);
-    progressRef.current = 0;
-    setCurrentIndex(index);
-    setTimeout(() => setIsTransitioning(false), 500);
-  }, [isTransitioning, currentIndex]);
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging.current) return;
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    
+    const diff = touchStartX.current - touchEndX.current;
+    const threshold = 50; // Minimum swipe distance
+    
+    if (Math.abs(diff) > threshold) {
+      if (diff > 0) {
+        goToNext();
+      } else {
+        goToPrev();
+      }
+    }
+  };
 
   // Loading state
   if (isLoading) {
     return (
       <div className="w-full h-[280px] sm:h-[320px] md:h-[380px] lg:h-[420px] bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900">
         <div className="flex items-center justify-center h-full">
-          <div className="relative">
-            <div className="absolute inset-0 animate-ping opacity-30">
-              <div className="w-20 h-20 rounded-full bg-emerald-500/50" />
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+              <Volume2 className="h-6 w-6 text-emerald-400 animate-pulse" />
             </div>
-            <div className="relative flex flex-col items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 backdrop-blur-sm flex items-center justify-center">
-                <Volume2 className="h-8 w-8 text-emerald-400 animate-bounce" style={{ animationDuration: '1.2s' }} />
-              </div>
-              <span className="text-emerald-300/80 text-base font-medium animate-pulse">
-                正在加载公告...
-              </span>
-            </div>
+            <span className="text-emerald-300/60 text-xs">加载中...</span>
           </div>
         </div>
       </div>
@@ -165,8 +120,8 @@ export function ScrollingAnnouncementBanner() {
       <div className="w-full h-[200px] bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100">
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <Megaphone className="h-12 w-12 text-emerald-300 mx-auto mb-2" />
-            <p className="text-emerald-600/60 text-sm">暂无公告信息</p>
+            <Volume2 className="h-10 w-10 text-emerald-300 mx-auto mb-2" />
+            <p className="text-emerald-600/50 text-sm">暂无公告</p>
           </div>
         </div>
       </div>
@@ -174,249 +129,164 @@ export function ScrollingAnnouncementBanner() {
   }
 
   const currentAnnouncement = announcements[currentIndex];
-  const hasImage = !!currentAnnouncement.image_url;
-  const progressPercent = isPaused || isHovered ? progressRef.current : progressRef.current;
 
   return (
-    <div 
-      className="w-full relative overflow-hidden"
-      onMouseEnter={() => {
-        setIsHovered(true);
-        setIsPaused(true);
-      }}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        setIsPaused(false);
-      }}
-    >
-      {/* Main Image Carousel Container */}
-      <div className="relative w-full h-[280px] sm:h-[320px] md:h-[380px] lg:h-[420px]">
-        
-        {/* Background Images */}
-        {announcements.map((announcement, index) => (
-          <div
-            key={announcement.id}
-            className={`
-              absolute inset-0 transition-opacity duration-500 ease-in-out
-              ${index === currentIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}
-            `}
-          >
-            {hasImage && announcement.image_url ? (
-              <Image
-                src={announcement.image_url}
-                alt={announcement.title}
-                fill
-                className="object-cover"
-                priority={index === 0}
-                sizes="100vw"
-              />
-            ) : (
-              // Fallback gradient background
-              <div className={`
-                absolute inset-0 bg-gradient-to-br
-                ${index % 3 === 0 ? 'from-emerald-600 via-teal-600 to-cyan-700' : ''}
-                ${index % 3 === 1 ? 'from-slate-700 via-emerald-800 to-teal-900' : ''}
-                ${index % 3 === 2 ? 'from-teal-600 via-emerald-700 to-green-800' : ''}
-              `}>
-                {/* Decorative pattern */}
-                <div className="absolute inset-0 opacity-10">
-                  <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <defs>
-                      <pattern id={`grid-${index}`} width="10" height="10" patternUnits="userSpaceOnUse">
-                        <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5"/>
-                      </pattern>
-                    </defs>
-                    <rect width="100" height="100" fill={`url(#grid-${index})`}/>
-                  </svg>
-                </div>
-              </div>
-            )}
-            
-            {/* Gradient overlay for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
-          </div>
-        ))}
+    <div className="w-full">
+      {/* Main Image Carousel */}
+      <div 
+        className="relative w-full h-[280px] sm:h-[320px] md:h-[400px] lg:h-[480px] xl:h-[520px] overflow-hidden select-none"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Images */}
+        {announcements.map((announcement, index) => {
+          const isActive = index === currentIndex;
+          
+          return (
+            <Link
+              key={announcement.id}
+              href={`/announcements/${announcement.id}`}
+              className={`
+                absolute inset-0 transition-opacity duration-500 ease-in-out
+                ${isActive ? 'opacity-100 z-10' : 'opacity-0 z-0'}
+              `}
+            >
+              {announcement.image_url ? (
+                <Image
+                  src={announcement.image_url}
+                  alt={announcement.title}
+                  fill
+                  className="object-cover"
+                  priority={index === 0}
+                  sizes="100vw"
+                />
+              ) : (
+                <div className={`
+                  absolute inset-0 bg-gradient-to-br
+                  ${index % 3 === 0 ? 'from-emerald-600 via-teal-600 to-cyan-700' : ''}
+                  ${index % 3 === 1 ? 'from-slate-700 via-emerald-800 to-teal-900' : ''}
+                  ${index % 3 === 2 ? 'from-teal-600 via-emerald-700 to-green-800' : ''}
+                `} />
+              )}
+              
+              {/* Gradient overlay - stronger at bottom */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
+            </Link>
+          );
+        })}
 
-        {/* Top Badge - Announcement Label */}
-        <div className="absolute top-4 left-4 sm:top-6 sm:left-6 lg:left-8 z-20">
-          <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg backdrop-blur-md bg-white/10 border border-white/20 shadow-lg">
-            <Megaphone className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-            <span className="text-white font-semibold text-sm sm:text-base">公告</span>
-            <span className="hidden sm:inline text-white/70 text-xs">Announcement</span>
-          </div>
-        </div>
-
-        {/* Top Right: Time and Counter */}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 lg:right-8 z-20 flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg backdrop-blur-md bg-black/20 border border-white/10">
-            <Clock className="h-3.5 w-3.5 text-white/70" />
-            <span className="text-white/80 text-xs">
-              {formatAnnouncementDate(currentAnnouncement.created_at)}
-            </span>
-          </div>
-          <div className="px-3 py-1.5 rounded-lg backdrop-blur-md bg-white/10 border border-white/20">
-            <span className="text-white font-semibold text-sm">
-              {currentIndex + 1}
-            </span>
-            <span className="text-white/60 text-xs"> / {announcements.length}</span>
-          </div>
-        </div>
-
-        {/* Center Content */}
+        {/* Bottom Content Overlay */}
         <div className="absolute inset-0 z-20 flex flex-col justify-end">
-          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20 lg:pb-24">
+          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8 lg:pb-10">
             
-            {/* Category and Top Badge */}
-            <div className="flex items-center gap-2 mb-3 sm:mb-4">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/80 text-white border border-white/20 backdrop-blur-sm">
+            {/* Category Tag */}
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
+              <span className="px-2.5 py-1 rounded text-[10px] sm:text-xs font-medium bg-white/20 backdrop-blur-sm text-white border border-white/20">
                 {currentAnnouncement.category}
               </span>
               {currentAnnouncement.is_top && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500 text-amber-950 border border-amber-400/50 shadow-lg">
-                  <Pin className="h-3 w-3" />
+                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-400 text-amber-900">
                   置顶
                 </span>
               )}
             </div>
 
-            {/* Main Title */}
-            <Link href={`/announcements/${currentAnnouncement.id}`}>
-              <h2 className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-2 sm:mb-3 max-w-4xl group cursor-pointer">
-                <span className="group-hover:text-emerald-300 transition-colors duration-300">
-                  {currentAnnouncement.title}
-                </span>
-              </h2>
-            </Link>
+            {/* Main Title - Prominent */}
+            <h2 className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-2 max-w-4xl drop-shadow-lg">
+              {currentAnnouncement.title}
+            </h2>
 
-            {/* Summary */}
+            {/* Summary - Subtle */}
             {currentAnnouncement.summary && (
-              <p className="text-white/80 text-sm sm:text-base md:text-lg max-w-3xl line-clamp-2 mb-4 sm:mb-6 hidden md:block">
+              <p className="text-white/60 text-xs sm:text-sm md:text-base max-w-2xl line-clamp-1 sm:line-clamp-2 hidden sm:block">
                 {stripHtml(currentAnnouncement.summary)}
               </p>
             )}
-
-            {/* CTA Button */}
-            <div className="flex items-center gap-4">
-              <Link href={`/announcements/${currentAnnouncement.id}`}>
-                <button className="
-                  group flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 
-                  rounded-lg bg-white/95 hover:bg-white text-emerald-700 
-                  font-semibold text-sm sm:text-base
-                  shadow-xl shadow-black/20
-                  transition-all duration-300
-                  hover:gap-3 hover:shadow-2xl hover:shadow-black/30
-                ">
-                  查看详情
-                  <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform" />
-                </button>
-              </Link>
-              
-              <Link href="/announcements">
-                <button className="
-                  hidden sm:flex items-center gap-2 px-4 py-2.5
-                  rounded-lg bg-white/10 hover:bg-white/20 text-white
-                  border border-white/30 text-sm
-                  backdrop-blur-sm transition-all duration-300
-                ">
-                  更多公告
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </Link>
-            </div>
           </div>
         </div>
 
-        {/* Navigation Arrows */}
+        {/* Navigation Arrows - Left */}
         {announcements.length > 1 && (
           <>
             <button
-              onClick={goToPrev}
-              className={`
-                absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-30
-                w-10 h-10 sm:w-12 sm:h-12 rounded-full
-                flex items-center justify-center
-                backdrop-blur-md bg-black/30 hover:bg-black/50 
-                border border-white/20 hover:border-white/40
-                text-white transition-all duration-300
-                hover:scale-110 hover:shadow-lg
-                ${isHovered ? 'opacity-100' : 'opacity-0 sm:opacity-0'}
-              `}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                goToPrev();
+              }}
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-sm border border-white/10 text-white/80 hover:text-white transition-all flex items-center justify-center"
               aria-label="上一条"
             >
-              <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
             
             <button
-              onClick={goToNextBtn}
-              className={`
-                absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-30
-                w-10 h-10 sm:w-12 sm:h-12 rounded-full
-                flex items-center justify-center
-                backdrop-blur-md bg-black/30 hover:bg-black/50 
-                border border-white/20 hover:border-white/40
-                text-white transition-all duration-300
-                hover:scale-110 hover:shadow-lg
-                ${isHovered ? 'opacity-100' : 'opacity-0 sm:opacity-0'}
-              `}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                goToNext();
+              }}
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-sm border border-white/10 text-white/80 hover:text-white transition-all flex items-center justify-center"
               aria-label="下一条"
             >
-              <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+              <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </>
         )}
 
-        {/* Bottom Progress Bar */}
+        {/* Dot Indicators - Bottom Center */}
         {announcements.length > 1 && (
-          <div className="absolute bottom-0 left-0 right-0 z-30 h-1 bg-white/20">
-            <div
-              className="h-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-100 ease-linear"
-              style={{ width: `${((currentIndex + (isPaused || isHovered ? progressPercent / 100 : progressPercent / 100)) / announcements.length) * 100 + (progressPercent / 100) * (100 / announcements.length)}%` }}
-            />
-          </div>
-        )}
-
-        {/* Dot Indicators */}
-        {announcements.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 sm:gap-2">
             {announcements.map((_, index) => (
               <button
                 key={index}
-                onClick={(e) => handleDotClick(e, index)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCurrentIndex(index);
+                }}
                 className={`
                   rounded-full transition-all duration-300
-                  focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-1 focus:ring-offset-black/50
                   ${index === currentIndex 
-                    ? 'w-8 h-2.5 bg-white shadow-lg' 
-                    : 'w-2.5 h-2.5 bg-white/40 hover:bg-white/60'
+                    ? 'w-6 sm:w-8 h-2 bg-white shadow-lg' 
+                    : 'w-2 h-2 bg-white/40 hover:bg-white/60'
                   }
                 `}
-                aria-label={`跳转到第 ${index + 1} 条公告`}
+                aria-label={`跳转到第 ${index + 1} 条`}
               />
             ))}
           </div>
         )}
 
-        {/* Mobile: Bottom Info Bar */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/60 to-transparent pt-8 pb-2 sm:hidden">
-          <div className="mx-auto max-w-7xl px-4 flex items-center justify-between">
-            <div className="text-white/80 text-xs truncate max-w-[60%]">
-              {currentAnnouncement.title}
-            </div>
-            <div className="flex items-center gap-2 text-white/70 text-xs">
-              <span className="font-medium">{currentIndex + 1}</span>
-              <span>/</span>
-              <span>{announcements.length}</span>
+        {/* Page Counter - Bottom Right */}
+        {announcements.length > 1 && (
+          <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 lg:right-8 z-30">
+            <div className="px-2.5 py-1 rounded-full bg-black/30 backdrop-blur-sm border border-white/10">
+              <span className="text-white/90 text-[10px] sm:text-xs font-medium">
+                {currentIndex + 1} / {announcements.length}
+              </span>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Mobile Swipe Hint - First time */}
+        {announcements.length > 1 && (
+          <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 lg:left-8 z-30 hidden sm:block">
+            <div className="px-2.5 py-1 rounded-full bg-black/20 backdrop-blur-sm border border-white/10">
+              <span className="text-white/60 text-[10px]">左右滑动</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Mobile Touch Area for Navigation */}
-      <div className="sm:hidden absolute inset-0 z-25 flex">
-        <div className="w-1/3 h-full" onClick={goToPrev} />
-        <div className="w-1/3 h-full" />
-        <div className="w-1/3 h-full" onClick={goToNextBtn} />
-      </div>
+      {/* Swipe instruction for mobile - outside carousel */}
+      {announcements.length > 1 && (
+        <div className="sm:hidden bg-black/5 py-2 text-center">
+          <span className="text-[10px] text-gray-400">左右滑动查看更多</span>
+        </div>
+      )}
     </div>
   );
 }
