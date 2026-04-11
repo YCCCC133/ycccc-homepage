@@ -7,6 +7,12 @@ const hostname = process.env.HOSTNAME || 'localhost';
 const port = parseInt(process.env.DEPLOY_RUN_PORT || process.env.PORT || '5000', 10);
 
 console.log(`[server] Starting with NODE_ENV=${process.env.NODE_ENV}, dev=${dev}`);
+console.log(`[server] Environment diagnostics:`);
+console.log(`  COZE_SUPABASE_URL: ${process.env.COZE_SUPABASE_URL ? 'SET' : 'NOT_SET'}`);
+console.log(`  COZE_SUPABASE_ANON_KEY: ${process.env.COZE_SUPABASE_ANON_KEY ? 'SET' : 'NOT_SET'}`);
+console.log(`  COZE_SUPABASE_SERVICE_ROLE_KEY: ${process.env.COZE_SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT_SET'}`);
+console.log(`  COZE_WORKSPACE_PATH: ${process.env.COZE_WORKSPACE_PATH || 'NOT_SET'}`);
+console.log(`  DEPLOY_RUN_PORT: ${process.env.DEPLOY_RUN_PORT || 'NOT_SET'}`);
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();

@@ -152,14 +152,37 @@ export default function AdminDashboard() {
         fetch('/api/admin/consultations', { credentials: 'include' }).then(r => r.json()),
       ]);
 
-      if (statsRes.success) setStats(statsRes.stats);
+      // 详细记录每个 API 的响应状态
+      console.log('[dashboard] Stats response:', statsRes);
+      console.log('[dashboard] Announcements response:', announcementsRes);
+      console.log('[dashboard] Reports response:', reportsRes);
+      console.log('[dashboard] Applications response:', applicationsRes);
+      console.log('[dashboard] Documents response:', documentsRes);
+      console.log('[dashboard] Consultations response:', consultationsRes);
+
+      // 处理 stats
+      if (statsRes.success) {
+        setStats(statsRes.stats);
+      } else {
+        console.error('[dashboard] Stats failed:', statsRes.error, statsRes.details);
+        toast.error(`获取统计数据失败: ${statsRes.error || statsRes.details || '未知错误'}`);
+      }
+
+      // 处理其他数据
       if (announcementsRes.success) setAnnouncements(announcementsRes.data || []);
       if (reportsRes.success) setReports(reportsRes.data || []);
       if (applicationsRes.success) setApplications(applicationsRes.data || []);
       if (documentsRes.success) setDocuments(documentsRes.data || []);
       if (consultationsRes.success) setConsultations(consultationsRes.data || []);
+
+      // 如果所有 API 都失败
+      const allFailed = !statsRes.success && !announcementsRes.success && !reportsRes.success && 
+                        !applicationsRes.success && !documentsRes.success && !consultationsRes.success;
+      if (allFailed) {
+        toast.error('加载数据失败，请检查网络连接');
+      }
     } catch (error) {
-      console.error('加载数据失败:', error);
+      console.error('[dashboard] Load data error:', error);
       toast.error('加载数据失败');
     }
   };

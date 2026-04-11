@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
 // POST 请求 - 执行登录
 export async function POST(request: NextRequest) {
   const isProduction = process.env.NODE_ENV === 'production';
+  let supabaseInitError: string | null = null;
   
   console.log('[login] POST request received');
   
@@ -68,8 +69,9 @@ export async function POST(request: NextRequest) {
     try {
       client = getSupabaseClient();
       console.log('[login] Supabase client initialized');
-    } catch (envError) {
-      console.error('[login] Failed to initialize Supabase client:', envError);
+    } catch (envError: any) {
+      console.error('[login] Failed to initialize Supabase client:', envError?.message || envError);
+      supabaseInitError = envError?.message || '初始化失败';
       // 继续使用本地验证模式
     }
     
@@ -177,7 +179,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '密码错误' }, { status: 401 });
     }
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('[login] Fatal error:', error);
     
     // 最后的降级方案：使用默认密码
@@ -196,7 +198,11 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('[login] Login failed completely');
-    return NextResponse.json({ error: '服务器错误' }, { status: 500 });
+    return NextResponse.json({ 
+      error: '服务器错误',
+      details: error?.message || '未知错误',
+      supabaseInitError: supabaseInitError || null
+    }, { status: 500 });
   }
 }
 
