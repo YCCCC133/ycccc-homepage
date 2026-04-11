@@ -120,14 +120,57 @@ export function MarkdownRenderer({ content, className = '', isStreaming = false 
               {children}
             </li>
           ),
-          // 强调
-          strong: ({ children }) => (
-            <strong style={{ 
-              fontWeight: 600, 
-              color: '#1f2937' 
+          // 强调 - 重点内容高亮
+          strong: ({ children }) => {
+            // 判断内容是否为数字（金额、日期等）
+            const text = String(children);
+            const isNumeric = /^\d+([万千万百元角分])?[元]?$/.test(text) || 
+                             /^\d{4}[-/年]\d{1,2}[-/月]\d{1,2}[日]?$/.test(text) ||
+                             /^\d+%?$/.test(text);
+            
+            // 判断是否为关键提示词
+            const keyWords = ['注意', '重要', '建议', '必须', '应当', '可以', '违法', '合法', '赔偿', '支付', '时限', '证据'];
+            const hasKeyWord = keyWords.some(kw => text.includes(kw));
+            
+            // 如果是数字或关键内容，使用高亮样式
+            if (isNumeric || hasKeyWord) {
+              return (
+                <strong style={{ 
+                  fontWeight: 600,
+                  backgroundColor: '#fef9c3', // 浅黄色背景
+                  padding: '1px 4px',
+                  borderRadius: '3px',
+                  color: '#854d0e'
+                }}>
+                  {children}
+                </strong>
+              );
+            }
+            
+            return (
+              <strong style={{ 
+                fontWeight: 600, 
+                color: '#1f2937' 
+              }}>
+                {children}
+              </strong>
+            );
+          },
+          // 引用 - 使用浅绿色背景
+          blockquote: ({ children }) => (
+            <blockquote style={{
+              borderLeft: '4px solid #10b981',
+              paddingLeft: '12px',
+              padding: '8px 12px',
+              marginLeft: 0,
+              marginBottom: '8px',
+              color: '#374151',
+              backgroundColor: '#ecfdf5', // 浅绿色背景
+              borderRadius: '0 6px 6px 0',
+              fontStyle: 'normal'
             }}>
               {children}
-            </strong>
+            </blockquote>
           ),
           em: ({ children }) => (
             <em style={{ fontStyle: 'italic' }}>
@@ -173,19 +216,6 @@ export function MarkdownRenderer({ content, className = '', isStreaming = false 
             }}>
               {children}
             </pre>
-          ),
-          // 引用
-          blockquote: ({ children }) => (
-            <blockquote style={{
-              borderLeft: '4px solid #10b981',
-              paddingLeft: '12px',
-              marginLeft: 0,
-              marginBottom: '8px',
-              color: '#4b5563',
-              fontStyle: 'italic'
-            }}>
-              {children}
-            </blockquote>
           ),
           // 链接
           a: ({ href, children }) => (
