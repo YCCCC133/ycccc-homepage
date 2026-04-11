@@ -45,6 +45,9 @@ export default function ConsultPage() {
   // Dynamic bottom padding state
   const [bottomPadding, setBottomPadding] = useState(0);
   
+  // Calculate header height
+  const headerHeight = 64; // Approximate header height in px
+  
   // Quick questions
   const quickQuestions = [
     { icon: '💰', text: '老板拖欠工资怎么办？' },
@@ -373,12 +376,12 @@ export default function ConsultPage() {
         </div>
       </header>
 
-      {/* Chat Messages Area - Independent Scroll with space for fixed input */}
+      {/* Chat Messages Area - Independent Scroll */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto overscroll-contain"
+        className="overflow-y-auto overscroll-contain"
         style={{
-          paddingBottom: `${bottomPadding}px`,
+          height: `calc(100dvh - ${headerHeight}px - ${bottomPadding}px)`,
           contain: 'layout style',
         }}
       >
