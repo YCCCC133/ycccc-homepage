@@ -27,66 +27,53 @@ const quickQuestions = [
   { icon: '🏢', text: '不签合同违法' },
 ];
 
+// 初始欢迎消息
+const INITIAL_WELCOME: Message = {
+  id: 'welcome',
+  role: 'assistant',
+  content: '您好，我是护薪平台的法律智能助手，专门为您提供劳动法律咨询和维权指导服务。请问有什么可以帮助您的？',
+  timestamp: 0,
+};
+
 export default function ConsultPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: '您好，我是护薪平台的法律智能助手，专门为您提供劳动法律咨询和维权指导服务。请问有什么可以帮助您的？',
-      timestamp: Date.now(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([INITIAL_WELCOME]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [inputAreaHeight, setInputAreaHeight] = useState(140);
+  const [isMounted, setIsMounted] = useState(false);
   
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const inputAreaRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  // 测量输入区域高度
+  // 确保组件已挂载（避免 Hydration mismatch）
   useEffect(() => {
-    const updateHeight = () => {
-      if (inputAreaRef.current) {
-        const height = inputAreaRef.current.offsetHeight;
-        setInputAreaHeight(height);
-      }
-    };
-    
-    updateHeight();
-    
-    // 监听窗口大小变化
-    window.addEventListener('resize', updateHeight);
-    
-    // 监听输入区域内容变化
-    const observer = new ResizeObserver(updateHeight);
-    if (inputAreaRef.current) {
-      observer.observe(inputAreaRef.current);
-    }
-    
-    return () => {
-      window.removeEventListener('resize', updateHeight);
-      observer.disconnect();
-    };
+    setIsMounted(true);
   }, []);
 
   // 滚动到底部
   const scrollToBottom = useCallback((smooth = true) => {
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({
-        behavior: smooth ? 'smooth' : 'auto',
-        block: 'end',
-      });
+    if (!messagesEndRef.current) return;
+    
+    messagesEndRef.current.scrollIntoView({
+      behavior: smooth ? 'smooth' : 'auto',
+      block: 'end',
     });
   }, []);
 
   // 消息变化时自动滚动
   useEffect(() => {
-    scrollToBottom();
-  }, [messages.length, scrollToBottom]);
+    if (isMounted) {
+      // 延迟滚动以确保 DOM 已更新
+      const timeout = setTimeout(() => {
+        scrollToBottom();
+      }, 50);
+      return () => clearTimeout(timeout);
+    }
+  }, [messages, isMounted, scrollToBottom]);
 
   // 处理输入变化
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -113,6 +100,8 @@ export default function ConsultPage() {
       content: trimmedInput,
       timestamp: Date.now(),
     };
+    
+    // 先添加用户消息
     setMessages(prev => [...prev, userMessage]);
     setInput('');
 
@@ -129,6 +118,8 @@ export default function ConsultPage() {
       content: '',
       timestamp: Date.now(),
     };
+    
+    // 添加助手消息占位
     setMessages(prev => [...prev, assistantMessage]);
 
     // 立即滚动
@@ -180,7 +171,7 @@ export default function ConsultPage() {
                 }
                 
                 const now = Date.now();
-                if (now - lastUpdate > 30) {
+                if (now - lastUpdate > 50) {
                   lastUpdate = now;
                   setMessages(prev =>
                     prev.map(msg =>
@@ -252,14 +243,37 @@ export default function ConsultPage() {
     inputRef.current?.focus();
   };
 
-  // 计算消息区域样式
-  const headerHeight = 64; // 头部高度
-  const bottomPadding = inputAreaHeight + 16; // 输入区域高度 + 安全边距
+  // 判断是否是流式输出中
+  const lastMessage = messages[messages.length - 1];
+  const isStreaming = isLoading && lastMessage?.role === 'assistant' && lastMessage?.content === '';
+
+  // 如果未挂载，渲染最小化的加载状态
+  if (!isMounted) {
+    return (
+      <div className="h-dvh flex flex-col bg-gradient-to-b from-slate-50 to-white">
+        <header className="shrink-0 bg-white border-b border-slate-200/50">
+          <div className="max-w-3xl mx-auto px-4 h-16 flex items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+                <Bot className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-base font-semibold text-slate-900">智能法律咨询</h1>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-dvh flex flex-col bg-gradient-to-b from-slate-50 to-white overflow-hidden">
       {/* 头部 */}
-      <header className="shrink-0 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 z-20">
+      <header className="shrink-0 bg-white/95 backdrop-blur-xl border-b border-slate-200/60 z-20 safe-area-inset-top">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
@@ -279,15 +293,15 @@ export default function ConsultPage() {
         </div>
       </header>
 
-      {/* 消息区域 */}
+      {/* 消息区域 - 可滚动 */}
       <div 
-        className="flex-1 overflow-y-auto"
-        style={{ 
-          paddingBottom: `${bottomPadding}px`,
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto overscroll-y-contain"
+        style={{
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        <div className="max-w-3xl mx-auto px-4 py-6">
+        <div className="max-w-3xl mx-auto px-4 py-6 pb-32">
           {/* 欢迎卡片 */}
           <div className="mb-8 text-center">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-full border border-emerald-100 text-emerald-700 text-sm font-medium shadow-sm">
@@ -298,9 +312,10 @@ export default function ConsultPage() {
 
           {/* 消息列表 */}
           <div className="space-y-6">
-            {messages.map((msg) => {
+            {messages.map((msg, index) => {
               const isUser = msg.role === 'user';
-              const isStreaming = isLoading && msg.id === messages[messages.length - 1].id && msg.content === '';
+              const isLastAssistant = msg.role === 'assistant' && index === messages.length - 1;
+              const showStreaming = isStreaming && isLastAssistant;
               
               return (
                 <div
@@ -332,8 +347,8 @@ export default function ConsultPage() {
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                       ) : (
                         <div className="text-sm leading-relaxed">
-                          <MarkdownRenderer content={msg.content} isStreaming={isStreaming} />
-                          {isStreaming && (
+                          <MarkdownRenderer content={msg.content} isStreaming={showStreaming} />
+                          {showStreaming && (
                             <span className="inline-block w-1.5 h-4 ml-0.5 bg-emerald-500 animate-pulse rounded" />
                           )}
                         </div>
@@ -359,7 +374,7 @@ export default function ConsultPage() {
 
                     {/* 时间戳 */}
                     <span className="text-[10px] text-slate-400 px-1">
-                      {msg.id === 'welcome' 
+                      {msg.timestamp === 0 
                         ? '' 
                         : new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
                       }
@@ -370,40 +385,15 @@ export default function ConsultPage() {
             })}
           </div>
 
-          {/* 加载指示器 */}
-          {isLoading && (
-            <div className="flex gap-3 mt-6">
-              <div className="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
-                <Bot className="h-4 w-4 text-white" />
-              </div>
-              <div className="bg-white border border-slate-200/60 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-                <div className="flex items-center gap-2 text-slate-500">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">正在思考...</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 错误提示 */}
-          {error && (
-            <div className="flex justify-center mt-6">
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 rounded-full text-sm border border-red-100">
-                <AlertCircle className="h-4 w-4" />
-                <span>{error}</span>
-              </div>
-            </div>
-          )}
-
-          {/* 底部锚点 */}
-          <div ref={messagesEndRef} className="h-4" />
+          {/* 底部锚点 - 用于滚动定位 */}
+          <div ref={messagesEndRef} className="h-px" />
         </div>
       </div>
 
       {/* 输入区域 - 固定在底部 */}
       <div 
         ref={inputAreaRef}
-        className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200/50 z-30"
+        className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200/50 z-30 safe-area-inset-bottom"
       >
         <div className="max-w-3xl mx-auto px-4 py-3">
           {/* 快捷问题 - 仅在开始时显示 */}
@@ -481,6 +471,15 @@ export default function ConsultPage() {
         .scrollbar-none {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+        .overscroll-y-contain {
+          overscroll-behavior-y: contain;
+        }
+        .safe-area-inset-top {
+          padding-top: env(safe-area-inset-top);
+        }
+        .safe-area-inset-bottom {
+          padding-bottom: env(safe-area-inset-bottom);
         }
       `}</style>
     </div>
