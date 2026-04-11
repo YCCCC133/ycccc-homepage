@@ -7,15 +7,59 @@ import { uploadDocument } from '@/storage/s3-storage';
 export const runtime = 'nodejs';
 
 interface GenerateRequest {
-  name: string;
-  phone: string;
-  companyName: string;
+  // 文书类型
+  documentType?: 'litigation' | 'support_prosecution' | 'labor_dispute';
+  
+  // 申请人信息
+  applicantName: string;
+  applicantGender?: string;
+  applicantBirthDate?: string;
+  applicantNation?: string;
+  applicantIdCard?: string;
+  applicantPhone?: string;
+  applicantAddress?: string;
+  
+  // 被告信息
+  defendantName: string;
+  defendantType?: 'company' | 'individual';
+  defendantCode?: string;
+  defendantAddress?: string;
+  defendantLegalPerson?: string;
+  defendantPhone?: string;
+  
+  // 案件信息
+  projectName?: string;
+  workLocation?: string;
+  workStartDate?: string;
+  workEndDate?: string;
   owedAmount: string;
-  workPeriod: string;
-  hasContract: string;
-  hasEvidence: string;
-  description: string;
-  documentType?: 'civil_complaint' | 'support_prosecution' | 'labor_dispute';
+  owedAmountCN?: string;
+  workDays?: string;
+  dailyRate?: string;
+  
+  // 诉讼请求
+  requestType?: string[];
+  
+  // 事实与理由
+  factDescription?: string;
+  
+  // 提交法院
+  courtName?: string;
+  
+  // 其他（兼容新旧字段）
+  hasContract?: boolean | string;
+  hasEvidence?: string;
+  hasWitness?: boolean;
+  
+  // 兼容旧字段
+  name?: string;
+  phone?: string;
+  companyName?: string;
+  owedAmountOld?: string;
+  workPeriod?: string;
+  hasContractOld?: string;
+  hasEvidenceOld?: string;
+  description?: string;
 }
 
 // 获取相关案例
@@ -61,7 +105,9 @@ function inferCategory(data: GenerateRequest): string {
   if (desc.includes('工伤') || desc.includes('职业病')) {
     return '工伤或职业病伴欠薪类';
   }
-  if (data.hasContract === '没有') {
+  // 兼容新旧字段：hasContract 可能是 boolean 或 string
+  const hasContractValue = data.hasContract;
+  if (hasContractValue === false || hasContractValue === '没有' || hasContractValue === '无') {
     return '无劳动合同类欠薪';
   }
   
@@ -321,13 +367,26 @@ function getDocumentTemplate(documentType?: string): {
 export async function POST(request: NextRequest) {
   try {
     const body: GenerateRequest = await request.json();
-    const { name, phone, companyName, owedAmount, workPeriod, hasContract, hasEvidence, description, documentType } = body;
+    
+    // 兼容新旧字段
+    const applicantName = body.applicantName || body.name;
+    const applicantPhone = body.applicantPhone || body.phone;
+    const defendantName = body.defendantName || body.companyName;
+    const owedAmount = body.owedAmount || body.owedAmountOld;
+    const factDescription = body.factDescription || body.description;
+    const hasContract = body.hasContract !== undefined ? body.hasContract : body.hasContractOld;
+    const hasEvidence = body.hasEvidence || body.hasEvidenceOld;
+
+    // 工作时间
+    const workPeriod = body.workStartDate && body.workEndDate 
+      ? `${body.workStartDate} 至 ${body.workEndDate}` 
+      : body.workPeriod;
 
     // 验证必填字段
-    if (!name || !companyName || !owedAmount) {
+    if (!applicantName || !defendantName || !owedAmount) {
       return NextResponse.json({
         success: false,
-        error: '请填写必要的姓名、欠薪金额等信息'
+        error: '请填写必要的姓名、被告名称、欠薪金额等信息'
       }, { status: 400 });
     }
 
@@ -336,22 +395,70 @@ export async function POST(request: NextRequest) {
     const relatedCases = await getRelatedCases(category);
 
     // 获取文书模板
-    const { title, systemPrompt } = getDocumentTemplate(documentType);
+    const { title, systemPrompt } = getDocumentTemplate(body.documentType);
     const documentTitle = title;
 
-    // 构建用户提示词
+    // 构建详细的用户提示词
     const userPrompt = `## 用户提供的真实信息
 
+### 一、申请人（原告）信息
 | 字段 | 内容 |
 |------|------|
-| 姓名 | ${name} |
-| 联系电话 | ${phone || '暂无提供'} |
-| 欠薪公司/个人 | ${companyName} |
-| 被拖欠金额 | ${owedAmount}元 |
-| 工作时间 | ${workPeriod || '用户未提供'} |
-| 是否有劳动合同 | ${hasContract || '用户未提供'} |
-| 现有证据 | ${hasEvidence || '用户未提供'} |
-| 详细描述 | ${description || '用户未提供'} |
+| 姓名 | ${applicantName} |
+| 性别 | ${body.applicantGender || '不详'} |
+| 出生日期 | ${body.applicantBirthDate || '不详'} |
+| 民族 | ${body.applicantNation || '不详'} |
+| 身份证号 | ${body.applicantIdCard || '不详'} |
+| 联系电话 | ${applicantPhone || '不详'} |
+| 户籍地址 | ${body.applicantAddress || '不详'} |
+
+### 二、被告（被申请人）信息
+| 字段 | 内容 |
+|------|------|
+| 名称/姓名 | ${defendantName} |
+| 类型 | ${body.defendantType === 'individual' ? '个人' : '单位/公司'} |
+| 统一社会信用代码/身份证号 | ${body.defendantCode || '不详'} |
+| 住所地/地址 | ${body.defendantAddress || '不详'} |
+| 法定代表人/负责人 | ${body.defendantLegalPerson || '不详'} |
+| 联系电话 | ${body.defendantPhone || '不详'} |
+
+### 三、案件基本情况
+| 字段 | 内容 |
+|------|------|
+| 工程/项目名称 | ${body.projectName || '不详'} |
+| 工作地点 | ${body.workLocation || '不详'} |
+| 工作开始时间 | ${body.workStartDate || '不详'} |
+| 工作结束时间 | ${body.workEndDate || '不详'} |
+| 工作时间段 | ${workPeriod || '用户未提供'} |
+| 拖欠工资金额 | ${owedAmount}元 |
+| 金额大写 | ${body.owedAmountCN || '由系统生成'} |
+| 工作天数 | ${body.workDays || '不详'} |
+| 日工资标准 | ${body.dailyRate || '不详'} |
+
+### 四、诉讼请求
+${body.requestType && body.requestType.length > 0 
+  ? body.requestType.map(r => {
+      const map: Record<string, string> = {
+        'salary': '请求判令被告支付拖欠的工资',
+        'compensation': '请求判令被告支付赔偿金',
+        'economic': '请求判令被告支付经济补偿金',
+        'double': '请求判令被告支付未签订书面劳动合同的双倍工资差额'
+      };
+      return `- ${map[r] || r}`;
+    }).join('\n')
+  : '- 请求判令被告支付拖欠的工资'}
+
+### 五、事实与理由
+${factDescription || '用户未提供详细描述'}
+
+### 六、证据材料
+| 字段 | 内容 |
+|------|------|
+| 是否有劳动合同 | ${hasContract ? '有' : '无'} |
+| 证据清单 | ${hasEvidence || '用户未提供具体证据'} |
+
+### 七、管辖法院
+${body.courtName || '待填写'}
 
 ${relatedCases ? `## 参考案例
 
@@ -368,7 +475,9 @@ ${relatedCases}` : ''}
 3. 信息不完整的字段填"不详"
 4. 输出**完整的、格式规范的Markdown文书**
 5. **不要省略任何章节**，包括附件部分
-6. 确保Markdown语法正确（标题用#、列表用1.或-、表格用|等）`;
+6. 确保Markdown语法正确（标题用#、列表用1.或-、表格用|等）
+7. 金额使用具体数字，如：50000元
+8. 日期如无法确定，使用"[年]年[月]月[日]日"占位`;
 
     // 调用 AI 生成文书
     const llmClient = new LLMClient();
@@ -405,8 +514,8 @@ ${relatedCases}` : ''}
       .insert({
         document_type: documentTitle,
         document_content: generatedContent,
-        applicant_name: name,
-        applicant_phone: phone,
+        applicant_name: applicantName,
+        applicant_phone: applicantPhone,
         template_used: category
       })
       .select()
