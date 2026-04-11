@@ -373,7 +373,7 @@ export default function ConsultPage() {
         </div>
       </header>
 
-      {/* Chat Messages Area - Independent Scroll */}
+      {/* Chat Messages Area - Independent Scroll with space for fixed input */}
       <div 
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto overscroll-contain"
@@ -480,19 +480,19 @@ export default function ConsultPage() {
       {showBackToBottom && (
         <button
           onClick={handleBackToBottom}
-          className="fixed bottom-[140px] sm:bottom-[160px] right-4 sm:right-6 z-50 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-emerald-500 text-white shadow-lg hover:bg-emerald-600 hover:shadow-xl flex items-center justify-center transition-all active:scale-95"
+          className="fixed bottom-[160px] sm:bottom-[180px] right-4 sm:right-6 z-50 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-emerald-500 text-white shadow-lg hover:bg-emerald-600 hover:shadow-xl flex items-center justify-center transition-all active:scale-95"
           aria-label="滚动到底部"
         >
           <ArrowDown className="h-5 w-5" />
         </button>
       )}
 
-      {/* Fixed Bottom Input Area */}
+      {/* Fixed Bottom Input Area - Always at screen bottom */}
       <div 
         ref={inputAreaRef}
-        className="shrink-0 bg-white/95 backdrop-blur-md border-t border-slate-200/50 z-40 safe-area-bottom"
+        className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/50 z-40 safe-area-bottom"
         style={{
-          paddingBottom: 'env(safe-area-inset-bottom, 8px)',
+          paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
         }}
       >
         <div className="container mx-auto max-w-3xl px-3 sm:px-4 py-2 sm:py-3">
