@@ -57,14 +57,18 @@ interface Consultation {
 }
 
 interface DashboardStats {
-  totalReports: number;
+  reports: number;
+  applications: number;
+  documents: number;
+  consultations: number;
   pendingReports: number;
-  totalApplications: number;
   pendingApplications: number;
-  totalDocuments: number;
-  totalConsultations: number;
-  recentReports: Report[];
-  recentApplications: Application[];
+  totalAmount: number;
+  caseTypeDistribution: Record<string, number>;
+  monthlyTrend: { month: string; count: number }[];
+  helpedWorkers: number;
+  avgProcessingDays: number;
+  successRate: number;
 }
 
 const categories = ['全部', '政策通知', '平台公告', '办事指南', '工作动态', '普法宣传'];
@@ -521,7 +525,7 @@ export default function AdminDashboard() {
                     <FileText className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalReports}</div>
+                    <div className="text-2xl font-bold">{stats.reports}</div>
                     <p className="text-xs text-muted-foreground">待处理 {stats.pendingReports}</p>
                   </CardContent>
                 </Card>
@@ -531,7 +535,7 @@ export default function AdminDashboard() {
                     <Send className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalApplications}</div>
+                    <div className="text-2xl font-bold">{stats.applications}</div>
                     <p className="text-xs text-muted-foreground">待审核 {stats.pendingApplications}</p>
                   </CardContent>
                 </Card>
@@ -541,7 +545,7 @@ export default function AdminDashboard() {
                     <Database className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalDocuments}</div>
+                    <div className="text-2xl font-bold">{stats.documents}</div>
                     <p className="text-xs text-muted-foreground">法律文书</p>
                   </CardContent>
                 </Card>
@@ -551,7 +555,7 @@ export default function AdminDashboard() {
                     <MessageSquare className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalConsultations}</div>
+                    <div className="text-2xl font-bold">{stats.consultations}</div>
                     <p className="text-xs text-muted-foreground">智能咨询</p>
                   </CardContent>
                 </Card>
@@ -569,7 +573,7 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {stats.recentReports.slice(0, 5).map((report) => (
+                      {reports.slice(0, 5).map((report) => (
                         <TableRow key={report.id}>
                           <TableCell>{report.name}</TableCell>
                           <TableCell className="max-w-[150px] truncate">{report.company}</TableCell>
@@ -600,7 +604,7 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {stats.recentApplications.slice(0, 5).map((app) => (
+                      {applications.slice(0, 5).map((app) => (
                         <TableRow key={app.id}>
                           <TableCell>{app.name}</TableCell>
                           <TableCell><Badge variant="outline">{app.type}</Badge></TableCell>
