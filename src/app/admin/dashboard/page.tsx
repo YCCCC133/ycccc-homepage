@@ -338,11 +338,14 @@ export default function AdminDashboard() {
   };
 
   // ============ 加载状态 - 必须完全匹配 SSR ============
+  // ============ Hydration-safe loading skeleton ==========
+  // SSR: mounted=false → renders skeleton
+  // CSR first render: mounted=false → renders skeleton (MUST match SSR)
   const LoadingSkeleton = () => (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-emerald-50/20 to-white">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50/50 to-background">
       <div className="text-center">
-        <div className="h-10 w-10 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-sm text-slate-500">加载中...</p>
+        <div className="h-10 w-10 border-4 border-gray-200 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-muted-foreground">加载中...</p>
       </div>
     </div>
   );
@@ -360,98 +363,75 @@ export default function AdminDashboard() {
     return (
       <div className="flex min-h-screen">
         {/* 左侧品牌区域 */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-800 via-slate-700 to-emerald-800 p-8 flex-col justify-between relative overflow-hidden">
-          {/* 装饰元素 */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl" />
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-12">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 backdrop-blur">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#1a3a5c] via-[#1e4d5c] to-[#1a5c4c] p-8 flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
+                <Scale className="h-6 w-6 text-white" />
               </div>
-              <div>
-                <span className="text-2xl font-bold text-white">护薪平台</span>
-                <p className="text-xs text-white/60 uppercase tracking-wider">Admin Console</p>
-              </div>
+              <span className="text-2xl font-bold text-white">护薪平台</span>
             </div>
-            <h1 className="text-4xl font-bold text-white mb-4 leading-tight">
-              检察支持起诉<br />
-              <span className="text-emerald-400">智能管理平台</span>
-            </h1>
-            <p className="text-white/70 text-lg mb-8">为农民工群体提供薪酬权益保障服务</p>
+            <h1 className="text-4xl font-bold text-white mb-4">检察支持起诉智能平台</h1>
+            <p className="text-white/80 text-lg mb-8">为农民工群体提供薪酬权益保障服务</p>
           </div>
-          
-          <div className="relative z-10 space-y-4">
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <span className="text-2xl mb-1 block">👥</span>
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur">
+                <Users className="h-8 w-8 text-emerald-300 mb-2" />
                 <p className="text-2xl font-bold text-white">2,458+</p>
                 <p className="text-white/60 text-sm">帮助劳动者</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <span className="text-2xl mb-1 block">📊</span>
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur">
+                <Database className="h-8 w-8 text-cyan-300 mb-2" />
                 <p className="text-2xl font-bold text-white">1,200+</p>
                 <p className="text-white/60 text-sm">成功案例</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <span className="text-2xl mb-1 block">💰</span>
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur">
+                <DollarSign className="h-8 w-8 text-yellow-300 mb-2" />
                 <p className="text-2xl font-bold text-white">¥860万+</p>
                 <p className="text-white/60 text-sm">追回金额</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <span className="text-2xl mb-1 block">✓</span>
+              <div className="bg-white/10 rounded-xl p-4 backdrop-blur">
+                <CheckCircle className="h-8 w-8 text-green-300 mb-2" />
                 <p className="text-2xl font-bold text-white">98.6%</p>
                 <p className="text-white/60 text-sm">成功维权率</p>
               </div>
             </div>
           </div>
-          <p className="relative z-10 text-white/40 text-sm">© {new Date().getFullYear()} 护薪平台</p>
+          <p className="text-white/50 text-sm">© 2026 护薪平台</p>
         </div>
         
         {/* 右侧登录区域 */}
-        <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-slate-50 via-white to-emerald-50/30">
-          <Card className="w-full max-w-md shadow-xl shadow-emerald-500/5 border-slate-200/60">
+        <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-emerald-50/50 to-background">
+          <Card className="w-full max-w-md shadow-xl border-border/50">
             <CardHeader className="text-center pb-2">
-              <div className="lg:hidden mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/20">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
+              <div className="lg:hidden mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-[#1a3a5c] to-[#1a5c4c]">
+                <Scale className="h-7 w-7 text-white" />
               </div>
-              <CardTitle className="text-xl text-slate-900">管理员登录</CardTitle>
+              <CardTitle className="text-xl">管理员登录</CardTitle>
               <CardDescription>请输入密码进入后台管理系统</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-slate-700">管理员密码</Label>
+                  <Label>管理员密码</Label>
                   <Input
                     type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                     placeholder="请输入管理员密码"
-                    className="h-11"
                   />
                 </div>
                 {loginError && (
-                  <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-100 p-3 text-sm text-red-600">
-                    <AlertCircle className="h-4 w-4" />
-                    {loginError}
+                  <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4" />{loginError}
                   </div>
                 )}
-                <Button type="submit" className="w-full h-11 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 shadow-lg shadow-emerald-500/20" disabled={loginLoading}>
-                  {loginLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
-                  登录系统
+                <Button type="submit" className="w-full bg-gradient-to-r from-[#1a3a5c] to-[#1a5c4c] hover:opacity-90" disabled={loginLoading}>
+                  {loginLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}登录系统
                 </Button>
               </form>
-              <div className="mt-6 pt-4 border-t border-slate-100">
-                <button onClick={() => router.push('/')} className="w-full text-center text-sm text-slate-500 hover:text-emerald-600 transition-colors flex items-center justify-center gap-2">
-                  <Home className="h-4 w-4" />
-                  返回首页
+              <div className="mt-6 pt-4 border-t border-border/50">
+                <button onClick={() => router.push('/')} className="w-full text-center text-sm text-muted-foreground hover:text-primary flex items-center justify-center gap-2">
+                  <Home className="h-4 w-4" />返回首页
                 </button>
               </div>
             </CardContent>
@@ -463,24 +443,24 @@ export default function AdminDashboard() {
 
   // ============ 主界面 ============
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-100 via-white to-emerald-50/20">
+    <div className="flex min-h-screen bg-muted/30">
       {/* 侧边栏 */}
-      <aside className={cn('fixed left-0 top-0 z-40 h-screen bg-white border-r border-slate-200/60 transition-all duration-300 shadow-sm', sidebarOpen ? 'w-60' : 'w-20')}>
-        <div className="flex h-16 items-center justify-between border-b border-slate-200/60 px-4">
+      <aside className={cn('fixed left-0 top-0 z-40 h-screen bg-white border-r border-border/50 transition-all duration-300', sidebarOpen ? 'w-56' : 'w-16')}>
+        <div className="flex h-16 items-center justify-between border-b border-border/50 px-4">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/20">
-                <Shield className="h-5 w-5 text-white" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
+                <Shield className="h-4 w-4 text-white" />
               </div>
-              <span className="font-semibold text-slate-900">管理后台</span>
+              <span className="font-semibold text-gray-800">管理后台</span>
             </div>
           )}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="rounded-lg p-2 hover:bg-slate-100 transition-colors">
-            {sidebarOpen ? <X className="h-5 w-5 text-slate-600" /> : <Menu className="h-5 w-5 text-slate-600" />}
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="rounded-lg p-1.5 hover:bg-muted">
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
         
-        <nav className="p-3 space-y-1">
+        <nav className="p-2 space-y-1">
           {[
             { id: 'dashboard', icon: Home, label: '数据概览' },
             { id: 'announcements', icon: Bell, label: '公告管理' },
@@ -493,13 +473,11 @@ export default function AdminDashboard() {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={cn('flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
-                activeTab === item.id 
-                  ? 'bg-gradient-to-r from-emerald-50 to-emerald-50/50 text-emerald-700 border-l-2 border-emerald-500' 
-                  : 'text-slate-600 hover:bg-slate-50 border-l-2 border-transparent'
+              className={cn('flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                activeTab === item.id ? 'bg-emerald-50 text-emerald-700' : 'text-gray-600 hover:bg-muted'
               )}
             >
-              <item.icon className={cn('h-5 w-5 shrink-0', activeTab === item.id ? 'text-emerald-600' : 'text-slate-400')} />
+              <item.icon className="h-5 w-5 shrink-0" />
               {sidebarOpen && <span>{item.label}</span>}
             </button>
           ))}
@@ -507,34 +485,29 @@ export default function AdminDashboard() {
       </aside>
 
       {/* 主内容 */}
-      <main className={cn('flex-1 transition-all duration-300', sidebarOpen ? 'ml-60' : 'ml-20')}>
+      <main className={cn('flex-1 transition-all duration-300', sidebarOpen ? 'ml-56' : 'ml-16')}>
         {/* 顶部栏 */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white/80 backdrop-blur-xl px-6 shadow-sm">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white/80 backdrop-blur-sm px-6">
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden rounded-lg p-2 hover:bg-slate-100">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden rounded-lg p-2 hover:bg-muted">
               <Menu className="h-5 w-5" />
             </button>
-            <div>
-              <h1 className="text-lg font-semibold text-slate-900">
-                {activeTab === 'dashboard' && '数据概览'}
-                {activeTab === 'announcements' && '公告管理'}
-                {activeTab === 'reports' && '线索管理'}
-                {activeTab === 'applications' && '申请管理'}
-                {activeTab === 'documents' && '文书管理'}
-                {activeTab === 'consultations' && '咨询记录'}
-                {activeTab === 'settings' && '系统设置'}
-              </h1>
-              <p className="text-xs text-slate-500">{new Date().toLocaleDateString('zh-CN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-            </div>
+            <h1 className="text-lg font-semibold">
+              {activeTab === 'dashboard' && '数据概览'}
+              {activeTab === 'announcements' && '公告管理'}
+              {activeTab === 'reports' && '线索管理'}
+              {activeTab === 'applications' && '申请管理'}
+              {activeTab === 'documents' && '文书管理'}
+              {activeTab === 'consultations' && '咨询记录'}
+              {activeTab === 'settings' && '系统设置'}
+            </h1>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => setShowPasswordModal(true)} className="border-slate-200">
-              <Settings className="h-4 w-4 mr-2" />
-              修改密码
+            <Button variant="outline" size="sm" onClick={() => setShowPasswordModal(true)}>
+              <Settings className="h-4 w-4 mr-2" />修改密码
             </Button>
-            <Button variant="outline" size="sm" onClick={handleLogout} className="border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-200">
-              <LogOut className="h-4 w-4 mr-2" />
-              退出登录
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />退出登录
             </Button>
           </div>
         </header>
@@ -546,86 +519,67 @@ export default function AdminDashboard() {
             <div className="space-y-6">
               {/* 统计卡片 */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
+                <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-600">线索总数</CardTitle>
-                    <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                      <FileText className="h-4 w-4 text-emerald-600" />
-                    </div>
+                    <CardTitle className="text-sm font-medium">线索总数</CardTitle>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-slate-900">{stats.reports}</div>
-                    <p className="text-xs text-slate-500 mt-1">待处理 <span className="text-amber-600 font-medium">{stats.pendingReports}</span></p>
+                    <div className="text-2xl font-bold">{stats.reports}</div>
+                    <p className="text-xs text-muted-foreground">待处理 {stats.pendingReports}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
+                <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-600">申请总数</CardTitle>
-                    <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                      <Send className="h-4 w-4 text-blue-600" />
-                    </div>
+                    <CardTitle className="text-sm font-medium">申请总数</CardTitle>
+                    <Send className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-slate-900">{stats.applications}</div>
-                    <p className="text-xs text-slate-500 mt-1">待审核 <span className="text-amber-600 font-medium">{stats.pendingApplications}</span></p>
+                    <div className="text-2xl font-bold">{stats.applications}</div>
+                    <p className="text-xs text-muted-foreground">待审核 {stats.pendingApplications}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
+                <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-600">生成文书</CardTitle>
-                    <div className="h-8 w-8 rounded-lg bg-purple-50 flex items-center justify-center">
-                      <Database className="h-4 w-4 text-purple-600" />
-                    </div>
+                    <CardTitle className="text-sm font-medium">生成文书</CardTitle>
+                    <Database className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-slate-900">{stats.documents}</div>
-                    <p className="text-xs text-slate-500 mt-1">法律文书</p>
+                    <div className="text-2xl font-bold">{stats.documents}</div>
+                    <p className="text-xs text-muted-foreground">法律文书</p>
                   </CardContent>
                 </Card>
-                <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
+                <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-slate-600">咨询记录</CardTitle>
-                    <div className="h-8 w-8 rounded-lg bg-cyan-50 flex items-center justify-center">
-                      <MessageSquare className="h-4 w-4 text-cyan-600" />
-                    </div>
+                    <CardTitle className="text-sm font-medium">咨询记录</CardTitle>
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-slate-900">{stats.consultations}</div>
-                    <p className="text-xs text-slate-500 mt-1">智能咨询</p>
+                    <div className="text-2xl font-bold">{stats.consultations}</div>
+                    <p className="text-xs text-muted-foreground">智能咨询</p>
                   </CardContent>
                 </Card>
               </div>
 
               {/* 最近线索 */}
-              <Card className="border-slate-200/60 shadow-sm">
-                <CardHeader className="border-b border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base font-semibold text-slate-900">最近线索</CardTitle>
-                    <Button variant="ghost" size="sm" onClick={() => setActiveTab('reports')}>
-                      查看全部
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
+              <Card>
+                <CardHeader><CardTitle>最近线索</CardTitle></CardHeader>
+                <CardContent>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                        <TableHead className="font-medium">姓名</TableHead>
-                        <TableHead className="font-medium">公司</TableHead>
-                        <TableHead className="font-medium">金额</TableHead>
-                        <TableHead className="font-medium">状态</TableHead>
-                        <TableHead className="font-medium">时间</TableHead>
-                        <TableHead className="font-medium">操作</TableHead>
+                      <TableRow>
+                        <TableHead>姓名</TableHead><TableHead>公司</TableHead><TableHead>金额</TableHead>
+                        <TableHead>状态</TableHead><TableHead>时间</TableHead><TableHead>操作</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {reports.slice(0, 5).map((report) => (
-                        <TableRow key={report.id} className="hover:bg-slate-50/50 transition-colors">
-                          <TableCell className="font-medium">{report.name}</TableCell>
-                          <TableCell className="max-w-[150px] truncate text-slate-600">{report.company}</TableCell>
-                          <TableCell className="text-emerald-600 font-medium">¥{report.amount}</TableCell>
+                        <TableRow key={report.id}>
+                          <TableCell>{report.name}</TableCell>
+                          <TableCell className="max-w-[150px] truncate">{report.company}</TableCell>
+                          <TableCell>¥{report.amount}</TableCell>
                           <TableCell><Badge className={getStatusColor(report.status)}>{report.status}</Badge></TableCell>
-                          <TableCell className="text-slate-500">{formatDate(report.created_at)}</TableCell>
+                          <TableCell className="text-muted-foreground">{formatDate(report.created_at)}</TableCell>
                           <TableCell>
                             <Button variant="ghost" size="sm" onClick={() => { setActiveTab('reports'); }}>
                               <Eye className="h-4 w-4" />
@@ -639,16 +593,9 @@ export default function AdminDashboard() {
               </Card>
 
               {/* 最近申请 */}
-              <Card className="border-slate-200/60 shadow-sm">
-                <CardHeader className="border-b border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base font-semibold text-slate-900">最近申请</CardTitle>
-                    <Button variant="ghost" size="sm" onClick={() => setActiveTab('applications')}>
-                      查看全部
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
+              <Card>
+                <CardHeader><CardTitle>最近申请</CardTitle></CardHeader>
+                <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
