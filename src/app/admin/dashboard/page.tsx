@@ -443,20 +443,24 @@ export default function AdminDashboard() {
 
   // ============ 主界面 ============
   return (
-    <div className="flex min-h-screen bg-muted/30">
+    <div className="flex min-h-screen" style={{ background: 'linear-gradient(135deg, var(--warm-gray-50) 0%, var(--warm-gray-100) 50%, var(--jade-50) 100%)' }}>
       {/* 侧边栏 */}
-      <aside className={cn('fixed left-0 top-0 z-40 h-screen bg-white border-r border-border/50 transition-all duration-300', sidebarOpen ? 'w-56' : 'w-16')}>
-        <div className="flex h-16 items-center justify-between border-b border-border/50 px-4">
+      <aside className={cn(
+        'fixed left-0 top-0 z-40 h-screen backdrop-blur-xl border-r transition-all duration-300',
+        'bg-white/80 border-stone-200/50',
+        sidebarOpen ? 'w-56' : 'w-16'
+      )}>
+        <div className="flex h-16 items-center justify-between border-b border-stone-200/50 px-4">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
-                <Shield className="h-4 w-4 text-white" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/20">
+                <Shield className="h-5 w-5 text-white" />
               </div>
-              <span className="font-semibold text-gray-800">管理后台</span>
+              <span className="font-semibold text-stone-800">管理后台</span>
             </div>
           )}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="rounded-lg p-1.5 hover:bg-muted">
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="rounded-lg p-1.5 hover:bg-stone-100 transition-colors">
+            {sidebarOpen ? <X className="h-5 w-5 text-stone-600" /> : <Menu className="h-5 w-5 text-stone-600" />}
           </button>
         </div>
         
@@ -473,8 +477,10 @@ export default function AdminDashboard() {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={cn('flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                activeTab === item.id ? 'bg-emerald-50 text-emerald-700' : 'text-gray-600 hover:bg-muted'
+              className={cn('flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                activeTab === item.id 
+                  ? 'bg-emerald-50/80 text-emerald-700 border border-emerald-200/50' 
+                  : 'text-stone-600 hover:bg-white/60 hover:text-emerald-600'
               )}
             >
               <item.icon className="h-5 w-5 shrink-0" />
@@ -487,12 +493,15 @@ export default function AdminDashboard() {
       {/* 主内容 */}
       <main className={cn('flex-1 transition-all duration-300', sidebarOpen ? 'ml-56' : 'ml-16')}>
         {/* 顶部栏 */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white/80 backdrop-blur-sm px-6">
+        <header className={cn(
+          'sticky top-0 z-30 flex h-16 items-center justify-between border-b px-6',
+          'bg-white/80 backdrop-blur-xl border-stone-200/50'
+        )}>
           <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden rounded-lg p-2 hover:bg-muted">
-              <Menu className="h-5 w-5" />
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden rounded-lg p-2 hover:bg-stone-100">
+              <Menu className="h-5 w-5 text-stone-600" />
             </button>
-            <h1 className="text-lg font-semibold">
+            <h1 className="text-lg font-semibold text-stone-800">
               {activeTab === 'dashboard' && '数据概览'}
               {activeTab === 'announcements' && '公告管理'}
               {activeTab === 'reports' && '线索管理'}
@@ -503,10 +512,12 @@ export default function AdminDashboard() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => setShowPasswordModal(true)}>
+            <Button variant="outline" size="sm" onClick={() => setShowPasswordModal(true)}
+              className="rounded-xl border-stone-200/60 hover:bg-stone-50">
               <Settings className="h-4 w-4 mr-2" />修改密码
             </Button>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button variant="outline" size="sm" onClick={handleLogout}
+              className="rounded-xl border-stone-200/60 hover:bg-stone-50">
               <LogOut className="h-4 w-4 mr-2" />退出登录
             </Button>
           </div>
@@ -519,67 +530,73 @@ export default function AdminDashboard() {
             <div className="space-y-6">
               {/* 统计卡片 */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">线索总数</CardTitle>
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.reports}</div>
-                    <p className="text-xs text-muted-foreground">待处理 {stats.pendingReports}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">申请总数</CardTitle>
-                    <Send className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.applications}</div>
-                    <p className="text-xs text-muted-foreground">待审核 {stats.pendingApplications}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">生成文书</CardTitle>
-                    <Database className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.documents}</div>
-                    <p className="text-xs text-muted-foreground">法律文书</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">咨询记录</CardTitle>
-                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.consultations}</div>
-                    <p className="text-xs text-muted-foreground">智能咨询</p>
-                  </CardContent>
-                </Card>
+                <div className="p-5 rounded-2xl bg-white/70 backdrop-blur-lg border border-white/60 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-stone-600">线索总数</span>
+                    <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
+                      <FileText className="h-4 w-4 text-emerald-600" />
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-stone-800">{stats.reports}</div>
+                  <p className="text-xs text-stone-500 mt-1">待处理 {stats.pendingReports}</p>
+                </div>
+                <div className="p-5 rounded-2xl bg-white/70 backdrop-blur-lg border border-white/60 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-stone-600">申请总数</span>
+                    <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
+                      <Send className="h-4 w-4 text-blue-600" />
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-stone-800">{stats.applications}</div>
+                  <p className="text-xs text-stone-500 mt-1">待审核 {stats.pendingApplications}</p>
+                </div>
+                <div className="p-5 rounded-2xl bg-white/70 backdrop-blur-lg border border-white/60 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-stone-600">生成文书</span>
+                    <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center">
+                      <Database className="h-4 w-4 text-purple-600" />
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-stone-800">{stats.documents}</div>
+                  <p className="text-xs text-stone-500 mt-1">法律文书</p>
+                </div>
+                <div className="p-5 rounded-2xl bg-white/70 backdrop-blur-lg border border-white/60 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-stone-600">咨询次数</span>
+                    <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
+                      <MessageSquare className="h-4 w-4 text-amber-600" />
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-stone-800">{stats.consultations}</div>
+                  <p className="text-xs text-stone-500 mt-1">智能咨询</p>
+                </div>
               </div>
 
               {/* 最近线索 */}
-              <Card>
-                <CardHeader><CardTitle>最近线索</CardTitle></CardHeader>
-                <CardContent>
+              <div className="rounded-2xl bg-white/70 backdrop-blur-lg border border-white/60 shadow-lg overflow-hidden">
+                <div className="px-5 py-4 border-b border-stone-200/40">
+                  <h3 className="font-semibold text-stone-800">最近线索</h3>
+                </div>
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>姓名</TableHead><TableHead>公司</TableHead><TableHead>金额</TableHead>
-                        <TableHead>状态</TableHead><TableHead>时间</TableHead><TableHead>操作</TableHead>
+                      <TableRow className="hover:bg-transparent border-stone-200/40">
+                        <TableHead className="text-stone-600">姓名</TableHead>
+                        <TableHead className="text-stone-600">公司</TableHead>
+                        <TableHead className="text-stone-600">金额</TableHead>
+                        <TableHead className="text-stone-600">状态</TableHead>
+                        <TableHead className="text-stone-600">时间</TableHead>
+                        <TableHead className="text-stone-600">操作</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {reports.slice(0, 5).map((report) => (
-                        <TableRow key={report.id}>
-                          <TableCell>{report.name}</TableCell>
-                          <TableCell className="max-w-[150px] truncate">{report.company}</TableCell>
-                          <TableCell>¥{report.amount}</TableCell>
+                        <TableRow key={report.id} className="hover:bg-stone-50/50">
+                          <TableCell className="font-medium text-stone-800">{report.name}</TableCell>
+                          <TableCell className="max-w-[150px] truncate text-stone-600">{report.company}</TableCell>
+                          <TableCell className="text-emerald-600 font-medium">¥{report.amount}</TableCell>
                           <TableCell><Badge className={getStatusColor(report.status)}>{report.status}</Badge></TableCell>
-                          <TableCell className="text-muted-foreground">{formatDate(report.created_at)}</TableCell>
+                          <TableCell className="text-stone-500">{formatDate(report.created_at)}</TableCell>
                           <TableCell>
                             <Button variant="ghost" size="sm" onClick={() => { setActiveTab('reports'); }}>
                               <Eye className="h-4 w-4" />
@@ -589,28 +606,34 @@ export default function AdminDashboard() {
                       ))}
                     </TableBody>
                   </Table>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* 最近申请 */}
-              <Card>
-                <CardHeader><CardTitle>最近申请</CardTitle></CardHeader>
-                <CardContent>
+              <div className="rounded-2xl bg-white/70 backdrop-blur-lg border border-white/60 shadow-lg overflow-hidden">
+                <div className="px-5 py-4 border-b border-stone-200/40">
+                  <h3 className="font-semibold text-stone-800">最近申请</h3>
+                </div>
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>姓名</TableHead><TableHead>类型</TableHead><TableHead>公司</TableHead>
-                        <TableHead>状态</TableHead><TableHead>时间</TableHead><TableHead>操作</TableHead>
+                      <TableRow className="hover:bg-transparent border-stone-200/40">
+                        <TableHead className="text-stone-600">姓名</TableHead>
+                        <TableHead className="text-stone-600">类型</TableHead>
+                        <TableHead className="text-stone-600">公司</TableHead>
+                        <TableHead className="text-stone-600">状态</TableHead>
+                        <TableHead className="text-stone-600">时间</TableHead>
+                        <TableHead className="text-stone-600">操作</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {applications.slice(0, 5).map((app) => (
-                        <TableRow key={app.id}>
-                          <TableCell>{app.name}</TableCell>
-                          <TableCell><Badge variant="outline">{app.type}</Badge></TableCell>
-                          <TableCell className="max-w-[150px] truncate">{app.company}</TableCell>
+                        <TableRow key={app.id} className="hover:bg-stone-50/50">
+                          <TableCell className="font-medium text-stone-800">{app.name}</TableCell>
+                          <TableCell><Badge variant="outline" className="border-stone-300">{app.type}</Badge></TableCell>
+                          <TableCell className="max-w-[150px] truncate text-stone-600">{app.company}</TableCell>
                           <TableCell><Badge className={getStatusColor(app.status)}>{app.status}</Badge></TableCell>
-                          <TableCell className="text-muted-foreground">{formatDate(app.created_at)}</TableCell>
+                          <TableCell className="text-stone-500">{formatDate(app.created_at)}</TableCell>
                           <TableCell>
                             <Button variant="ghost" size="sm" onClick={() => { setActiveTab('applications'); }}>
                               <Eye className="h-4 w-4" />
@@ -620,8 +643,8 @@ export default function AdminDashboard() {
                       ))}
                     </TableBody>
                   </Table>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           )}
 
@@ -639,11 +662,11 @@ export default function AdminDashboard() {
                   <Plus className="h-4 w-4 mr-2" />新建公告
                 </Button>
               </div>
-              <Card>
-                <CardContent className="p-0">
+              <div className="rounded-2xl bg-white/70 backdrop-blur-lg border border-white/60 shadow-lg overflow-hidden">
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="hover:bg-transparent border-stone-200/40">
                         <TableHead>标题</TableHead><TableHead>分类</TableHead>
                         <TableHead>置顶</TableHead><TableHead>轮播</TableHead>
                         <TableHead>状态</TableHead><TableHead>时间</TableHead><TableHead>操作</TableHead>
@@ -674,8 +697,8 @@ export default function AdminDashboard() {
                       ))}
                     </TableBody>
                   </Table>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           )}
 
@@ -690,23 +713,28 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               </div>
-              <Card>
-                <CardContent className="p-0">
+              <div className="rounded-2xl bg-white/70 backdrop-blur-lg border border-white/60 shadow-lg overflow-hidden">
+                <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>姓名</TableHead><TableHead>电话</TableHead><TableHead>公司</TableHead>
-                        <TableHead>金额</TableHead><TableHead>时间</TableHead><TableHead>状态</TableHead><TableHead>操作</TableHead>
+                      <TableRow className="hover:bg-transparent border-stone-200/40">
+                        <TableHead className="text-stone-600">姓名</TableHead>
+                        <TableHead className="text-stone-600">电话</TableHead>
+                        <TableHead className="text-stone-600">公司</TableHead>
+                        <TableHead className="text-stone-600">金额</TableHead>
+                        <TableHead className="text-stone-600">时间</TableHead>
+                        <TableHead className="text-stone-600">状态</TableHead>
+                        <TableHead className="text-stone-600">操作</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {reports.filter(r => reportFilter === '全部' || r.status === reportFilter).map((r) => (
-                        <TableRow key={r.id}>
-                          <TableCell>{r.name}</TableCell>
-                          <TableCell>{r.phone}</TableCell>
-                          <TableCell className="max-w-[150px] truncate">{r.company}</TableCell>
-                          <TableCell>¥{r.amount}</TableCell>
-                          <TableCell className="text-muted-foreground">{formatDate(r.created_at)}</TableCell>
+                        <TableRow key={r.id} className="hover:bg-stone-50/50">
+                          <TableCell className="font-medium text-stone-800">{r.name}</TableCell>
+                          <TableCell className="text-stone-600">{r.phone}</TableCell>
+                          <TableCell className="max-w-[150px] truncate text-stone-600">{r.company}</TableCell>
+                          <TableCell className="text-emerald-600 font-medium">¥{r.amount}</TableCell>
+                          <TableCell className="text-stone-500">{formatDate(r.created_at)}</TableCell>
                           <TableCell>
                             <Select value={r.status} onValueChange={(v) => handleUpdateReportStatus(r.id, v)}>
                               <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
@@ -724,8 +752,8 @@ export default function AdminDashboard() {
                       ))}
                     </TableBody>
                   </Table>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           )}
 
