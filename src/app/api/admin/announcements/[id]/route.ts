@@ -7,7 +7,7 @@ function isAuthenticated(request: NextRequest): boolean {
   return !!token;
 }
 
-// GET - 获取单个模板
+// 获取单个公告详情
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -26,26 +26,26 @@ export async function GET(
   try {
     const client = getSupabaseClient();
     const { data, error } = await client
-      .from('templates')
+      .from('announcements')
       .select('*')
       .eq('id', numId)
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
-        return NextResponse.json({ error: '模板不存在' }, { status: 404 });
+        return NextResponse.json({ error: '公告不存在' }, { status: 404 });
       }
       throw error;
     }
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('获取模板详情失败:', error);
-    return NextResponse.json({ error: '获取模板详情失败' }, { status: 500 });
+    console.error('获取公告详情失败:', error);
+    return NextResponse.json({ error: '获取公告详情失败' }, { status: 500 });
   }
 }
 
-// PUT - 更新模板
+// 更新公告
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -64,8 +64,8 @@ export async function PUT(
   try {
     const body = await request.json();
     const updateData: Record<string, unknown> = {};
-
-    const allowedFields = ['name', 'type', 'content', 'variables', 'is_active'];
+    
+    const allowedFields = ['title', 'content', 'category', 'image_url', 'summary', 'author', 'is_published', 'is_top', 'is_banner', 'sort_order'];
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updateData[field] = body[field];
@@ -80,7 +80,7 @@ export async function PUT(
 
     const client = getSupabaseClient();
     const { data, error } = await client
-      .from('templates')
+      .from('announcements')
       .update(updateData)
       .eq('id', numId)
       .select()
@@ -89,17 +89,17 @@ export async function PUT(
     if (error) throw error;
 
     if (!data) {
-      return NextResponse.json({ error: '模板不存在' }, { status: 404 });
+      return NextResponse.json({ error: '公告不存在' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('更新模板失败:', error);
-    return NextResponse.json({ error: '更新模板失败' }, { status: 500 });
+    console.error('更新公告失败:', error);
+    return NextResponse.json({ error: '更新公告失败' }, { status: 500 });
   }
 }
 
-// DELETE - 删除模板
+// 删除公告
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -118,7 +118,7 @@ export async function DELETE(
   try {
     const client = getSupabaseClient();
     const { error } = await client
-      .from('templates')
+      .from('announcements')
       .delete()
       .eq('id', numId);
 
@@ -126,7 +126,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('删除模板失败:', error);
-    return NextResponse.json({ error: '删除模板失败' }, { status: 500 });
+    console.error('删除公告失败:', error);
+    return NextResponse.json({ error: '删除公告失败' }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pool } from '@/storage/database/pg-pool';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 // 验证管理员身份
 function isAuthenticated(request: NextRequest): boolean {
@@ -7,38 +7,30 @@ function isAuthenticated(request: NextRequest): boolean {
   return !!token;
 }
 
-// GET - 获取所有设置和操作日志
+// GET - 获取系统设置
 export async function GET(request: NextRequest) {
   if (!isAuthenticated(request)) {
     return NextResponse.json({ error: '未授权' }, { status: 401 });
   }
 
   try {
-    const client = await pool.connect();
+    const client = getSupabaseClient();
     
-    try {
-      const settingsResult = await client.query('SELECT * FROM settings ORDER BY key');
-      
-      // 获取最近10条操作日志
-      const logsResult = await client.query(
-        'SELECT * FROM operation_logs ORDER BY created_at DESC LIMIT 10'
-      );
-      
-      return NextResponse.json({ 
-        success: true, 
-        data: settingsResult.rows,
-        logs: logsResult.rows 
-      });
-    } finally {
-      client.release();
-    }
+    const { data, error } = await client
+      .from('settings')
+      .select('*')
+      .order('key', { ascending: true });
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, data: data || [] });
   } catch (error) {
     console.error('获取设置失败:', error);
     return NextResponse.json({ error: '获取设置失败' }, { status: 500 });
   }
 }
 
-// PUT - 批量更新设置
+// PUT - 更新系统设置
 export async function PUT(request: NextRequest) {
   if (!isAuthenticated(request)) {
     return NextResponse.json({ error: '未授权' }, { status: 401 });
@@ -52,35 +44,22 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: '参数格式错误' }, { status: 400 });
     }
 
-    const client = await pool.connect();
-    
-    try {
-      await client.query('BEGIN');
+    const client = getSupabaseClient();
 
-      for (const setting of settings) {
-        await client.query(
-          `INSERT INTO settings (key, value, updated_at) 
-           VALUES ($1, $2, NOW())
-           ON CONFLICT (key) 
-           DO UPDATE SET value = $2, updated_at = NOW()`,
-          [setting.key, setting.value]
-        );
-      }
+    // 使用 upsert 批量更新设置
+    const updates = settings.map(s => ({
+      key: s.key,
+      value: s.value,
+      updated_at: new Date().toISOString(),
+    }));
 
-      // 记录操作日志
-      await client.query(
-        'INSERT INTO operation_logs (action, type) VALUES ($1, $2)',
-        ['更新系统设置', 'update']
-      );
+    const { error } = await client
+      .from('settings')
+      .upsert(updates, { onConflict: 'key' });
 
-      await client.query('COMMIT');
-      return NextResponse.json({ success: true });
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('更新设置失败:', error);
     return NextResponse.json({ error: '更新设置失败' }, { status: 500 });
