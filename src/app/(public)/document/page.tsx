@@ -209,22 +209,28 @@ export default function DocumentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50/50 to-white">
+    <div className="min-h-screen">
+      {/* 背景装饰 */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 -right-40 w-96 h-96 bg-emerald-100/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-40 w-[500px] h-[500px] bg-emerald-50/30 rounded-full blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-emerald-100/50">
-        <div className="container mx-auto px-4 py-3 sm:py-4">
+      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-xl border-b border-stone-200/50 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4">
           <div className="flex items-center gap-3">
             {step !== 'select' && (
-              <Button variant="ghost" size="icon" onClick={goBack} className="shrink-0">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
+              <button onClick={goBack} className="shrink-0 w-10 h-10 rounded-xl bg-white/80 flex items-center justify-center hover:bg-emerald-50 transition-colors">
+                <ArrowLeft className="h-5 w-5 text-stone-600" />
+              </button>
             )}
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 shrink-0">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 shrink-0">
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-base sm:text-lg font-semibold text-foreground">文书生成</h1>
-              <p className="text-xs text-muted-foreground">
+              <h1 className="text-base sm:text-lg font-semibold text-stone-800">文书生成</h1>
+              <p className="text-xs text-stone-500">
                 {step === 'select' && '选择文书类型'}
                 {step === 'form' && '填写信息'}
                 {step === 'preview' && '预览与下载'}
@@ -235,7 +241,7 @@ export default function DocumentPage() {
       </header>
 
       {/* Content */}
-      <main className="container mx-auto px-4 py-6">
+      <main className="relative max-w-6xl mx-auto px-4 py-6">
         {/* Step 1: Select Document Type */}
         {step === 'select' && (
           <div className="max-w-2xl mx-auto space-y-6">
@@ -246,86 +252,84 @@ export default function DocumentPage() {
 
             <div className="grid gap-4">
               {/* 民事起诉状 */}
-              <Card 
-                className="cursor-pointer hover:border-emerald-400 hover:shadow-lg transition-all group"
+              <div 
+                className="cursor-pointer hover:-translate-y-0.5 transition-all duration-200 group"
                 onClick={() => { setDocumentType('litigation'); setStep('form'); }}
               >
-                <CardContent className="p-5">
+                <div className="p-5 rounded-2xl bg-white/80 backdrop-blur-lg border border-white/60 shadow-lg hover:shadow-xl">
                   <div className="flex items-start gap-4">
                     <div className="h-12 w-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                       <FileText className="h-6 w-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base mb-1">民事起诉状</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-base mb-1 text-stone-800">民事起诉状</h3>
+                      <p className="text-xs sm:text-sm text-stone-600">
                         适用于直接向人民法院提起诉讼，请求判决被告支付拖欠工资等劳动报酬
                       </p>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <ChevronRight className="h-5 w-5 text-stone-400 shrink-0" />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* 支持起诉申请书 */}
-              <Card 
-                className="cursor-pointer hover:border-emerald-400 hover:shadow-lg transition-all group"
+              <div 
+                className="cursor-pointer hover:-translate-y-0.5 transition-all duration-200 group"
                 onClick={() => { setDocumentType('support_prosecution'); setStep('form'); }}
               >
-                <CardContent className="p-5">
+                <div className="p-5 rounded-2xl bg-white/80 backdrop-blur-lg border border-white/60 shadow-lg hover:shadow-xl">
                   <div className="flex items-start gap-4">
                     <div className="h-12 w-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                       <FileText className="h-6 w-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base mb-1">支持起诉申请书</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-base mb-1 text-stone-800">支持起诉申请书</h3>
+                      <p className="text-xs sm:text-sm text-stone-600">
                         适用于请求检察机关支持起诉，由检察院向法院发出支持起诉意见书
                       </p>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <ChevronRight className="h-5 w-5 text-stone-400 shrink-0" />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* 劳动争议起诉状 */}
-              <Card 
-                className="cursor-pointer hover:border-amber-400 hover:shadow-lg transition-all group"
+              <div 
+                className="cursor-pointer hover:-translate-y-0.5 transition-all duration-200 group"
                 onClick={() => { setDocumentType('labor_dispute'); setStep('form'); }}
               >
-                <CardContent className="p-5">
+                <div className="p-5 rounded-2xl bg-white/80 backdrop-blur-lg border border-white/60 shadow-lg hover:shadow-xl">
                   <div className="flex items-start gap-4">
                     <div className="h-12 w-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                       <FileText className="h-6 w-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base mb-1">劳动争议起诉状</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground">
+                      <h3 className="font-semibold text-base mb-1 text-stone-800">劳动争议起诉状</h3>
+                      <p className="text-xs sm:text-sm text-stone-600">
                         适用于因劳动合同履行、解除等产生的劳动争议纠纷（包含工资、工伤等）
                       </p>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <ChevronRight className="h-5 w-5 text-stone-400 shrink-0" />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             {/* 提示信息 */}
-            <Card className="bg-blue-50/50 border-blue-100">
-              <CardContent className="p-4">
-                <div className="flex gap-3">
-                  <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-700 space-y-1">
-                    <p className="font-medium">温馨提示</p>
-                    <ul className="text-xs space-y-0.5 list-disc list-inside">
-                      <li>请确保填写的信息真实有效</li>
-                      <li>带 * 号的字段为必填项</li>
-                      <li>文书生成后可复制或下载</li>
-                      <li>如需法律援助可同时申请</li>
-                    </ul>
-                  </div>
+            <div className="p-5 rounded-2xl bg-blue-50/60 backdrop-blur-lg border border-blue-100/50 shadow-lg">
+              <div className="flex gap-3">
+                <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-700 space-y-1">
+                  <p className="font-medium">温馨提示</p>
+                  <ul className="text-xs space-y-0.5 list-disc list-inside">
+                    <li>请确保填写的信息真实有效</li>
+                    <li>带 * 号的字段为必填项</li>
+                    <li>文书生成后可复制或下载</li>
+                    <li>如需法律援助可同时申请</li>
+                  </ul>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         )}
 
@@ -342,15 +346,14 @@ export default function DocumentPage() {
 
               {/* 申请人信息 */}
               <TabsContent value="applicant" className="space-y-4 mt-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">申请人基本信息</CardTitle>
-                    <CardDescription>请如实填写您的个人信息</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+                <div className="p-5 sm:p-6 rounded-2xl bg-white/80 backdrop-blur-lg border border-white/60 shadow-lg">
+                  <h3 className="text-base font-semibold text-stone-800 mb-1">申请人基本信息</h3>
+                  <p className="text-sm text-stone-500 mb-4">请如实填写您的个人信息</p>
+                  
+                  <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="applicantName">
+                        <Label htmlFor="applicantName" className="text-sm font-medium text-stone-700">
                           姓名 <span className="text-red-500">*</span>
                         </Label>
                         <Input
@@ -358,12 +361,13 @@ export default function DocumentPage() {
                           value={formData.applicantName}
                           onChange={(e) => updateField('applicantName', e.target.value)}
                           placeholder="请输入您的真实姓名"
+                          className="rounded-xl bg-white/80 border-stone-200/60 focus:border-emerald-400"
                         />
                         {errors.applicantName && <p className="text-xs text-red-500">{errors.applicantName}</p>}
                       </div>
 
                       <div className="space-y-2">
-                        <Label>
+                        <Label className="text-sm font-medium text-stone-700">
                           性别 <span className="text-red-500">*</span>
                         </Label>
                         <RadioGroup
@@ -373,11 +377,11 @@ export default function DocumentPage() {
                         >
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="男" id="male" />
-                            <Label htmlFor="male" className="font-normal cursor-pointer">男</Label>
+                            <Label htmlFor="male" className="font-normal cursor-pointer text-stone-600">男</Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="女" id="female" />
-                            <Label htmlFor="female" className="font-normal cursor-pointer">女</Label>
+                            <Label htmlFor="female" className="font-normal cursor-pointer text-stone-600">女</Label>
                           </div>
                         </RadioGroup>
                         {errors.applicantGender && <p className="text-xs text-red-500">{errors.applicantGender}</p>}
@@ -386,7 +390,7 @@ export default function DocumentPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="applicantBirthDate">
+                        <Label htmlFor="applicantBirthDate" className="text-sm font-medium text-stone-700">
                           出生日期 <span className="text-red-500">*</span>
                         </Label>
                         <Input
@@ -394,24 +398,26 @@ export default function DocumentPage() {
                           type="date"
                           value={formData.applicantBirthDate}
                           onChange={(e) => updateField('applicantBirthDate', e.target.value)}
+                          className="rounded-xl bg-white/80 border-stone-200/60"
                         />
                         {errors.applicantBirthDate && <p className="text-xs text-red-500">{errors.applicantBirthDate}</p>}
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="applicantNation">民族</Label>
+                        <Label htmlFor="applicantNation" className="text-sm font-medium text-stone-700">民族</Label>
                         <Input
                           id="applicantNation"
                           value={formData.applicantNation}
                           onChange={(e) => updateField('applicantNation', e.target.value)}
                           placeholder="如：汉族"
+                          className="rounded-xl bg-white/80 border-stone-200/60"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="applicantIdCard">
+                        <Label htmlFor="applicantIdCard" className="text-sm font-medium text-stone-700">
                           身份证号 <span className="text-red-500">*</span>
                         </Label>
                         <Input
@@ -419,12 +425,13 @@ export default function DocumentPage() {
                           value={formData.applicantIdCard}
                           onChange={(e) => updateField('applicantIdCard', e.target.value)}
                           placeholder="18位身份证号码"
+                          className="rounded-xl bg-white/80 border-stone-200/60"
                         />
                         {errors.applicantIdCard && <p className="text-xs text-red-500">{errors.applicantIdCard}</p>}
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="applicantPhone">
+                        <Label htmlFor="applicantPhone" className="text-sm font-medium text-stone-700">
                           联系电话 <span className="text-red-500">*</span>
                         </Label>
                         <Input
@@ -433,26 +440,28 @@ export default function DocumentPage() {
                           value={formData.applicantPhone}
                           onChange={(e) => updateField('applicantPhone', e.target.value)}
                           placeholder="手机号码"
+                          className="rounded-xl bg-white/80 border-stone-200/60"
                         />
                         {errors.applicantPhone && <p className="text-xs text-red-500">{errors.applicantPhone}</p>}
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="applicantAddress">户籍地址</Label>
+                      <Label htmlFor="applicantAddress" className="text-sm font-medium text-stone-700">户籍地址</Label>
                       <Input
                         id="applicantAddress"
                         value={formData.applicantAddress}
                         onChange={(e) => updateField('applicantAddress', e.target.value)}
                         placeholder="请输入您的户籍地址"
+                        className="rounded-xl bg-white/80 border-stone-200/60"
                       />
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
                 <Button 
                   onClick={() => document.querySelector<HTMLElement>('[data-value="defendant"]')?.click()}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600"
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30"
                 >
                   下一步：填写被告信息
                 </Button>
