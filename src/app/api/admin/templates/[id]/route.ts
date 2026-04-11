@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { pool } from '@/storage/database/pg-pool';
 
 // 验证管理员身份
 function isAuthenticated(request: NextRequest): boolean {
@@ -17,28 +17,21 @@ export async function GET(
   }
 
   const { id } = await params;
-  const numId = parseInt(id);
-
-  if (isNaN(numId)) {
-    return NextResponse.json({ error: '无效的ID' }, { status: 400 });
-  }
 
   try {
-    const client = getSupabaseClient();
-    const { data, error } = await client
-      .from('templates')
-      .select('*')
-      .eq('id', numId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
+    const client = await pool.connect();
+    
+    try {
+      const result = await client.query('SELECT * FROM templates WHERE id = $1', [id]);
+      
+      if (result.rows.length === 0) {
         return NextResponse.json({ error: '模板不存在' }, { status: 404 });
       }
-      throw error;
-    }
 
-    return NextResponse.json({ success: true, data });
+      return NextResponse.json({ success: true, data: result.rows[0] });
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error('获取模板详情失败:', error);
     return NextResponse.json({ error: '获取模板详情失败' }, { status: 500 });
@@ -55,44 +48,50 @@ export async function PUT(
   }
 
   const { id } = await params;
-  const numId = parseInt(id);
-
-  if (isNaN(numId)) {
-    return NextResponse.json({ error: '无效的ID' }, { status: 400 });
-  }
 
   try {
     const body = await request.json();
-    const updateData: Record<string, unknown> = {};
+    const client = await pool.connect();
+    
+    try {
+      const fields: string[] = [];
+      const values: (string | number | boolean | null)[] = [];
+      let paramIndex = 1;
 
-    const allowedFields = ['name', 'type', 'content', 'variables', 'is_active'];
-    for (const field of allowedFields) {
-      if (body[field] !== undefined) {
-        updateData[field] = body[field];
+      const allowedFields = ['name', 'type', 'content', 'variables', 'is_active'];
+
+      for (const field of allowedFields) {
+        if (body[field] !== undefined) {
+          if (field === 'variables') {
+            fields.push(`${field} = $${paramIndex}`);
+            values.push(JSON.stringify(body[field]));
+          } else {
+            fields.push(`${field} = $${paramIndex}`);
+            values.push(body[field]);
+          }
+          paramIndex++;
+        }
       }
+
+      if (fields.length === 0) {
+        return NextResponse.json({ error: '没有要更新的字段' }, { status: 400 });
+      }
+
+      fields.push(`updated_at = $${paramIndex}`);
+      values.push(new Date().toISOString());
+      values.push(id);
+
+      const query = `UPDATE templates SET ${fields.join(', ')} WHERE id = $${paramIndex + 1} RETURNING *`;
+      const result = await client.query(query, values);
+
+      if (result.rows.length === 0) {
+        return NextResponse.json({ error: '模板不存在' }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true, data: result.rows[0] });
+    } finally {
+      client.release();
     }
-
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({ error: '没有要更新的字段' }, { status: 400 });
-    }
-
-    updateData.updated_at = new Date().toISOString();
-
-    const client = getSupabaseClient();
-    const { data, error } = await client
-      .from('templates')
-      .update(updateData)
-      .eq('id', numId)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    if (!data) {
-      return NextResponse.json({ error: '模板不存在' }, { status: 404 });
-    }
-
-    return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('更新模板失败:', error);
     return NextResponse.json({ error: '更新模板失败' }, { status: 500 });
@@ -109,22 +108,21 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const numId = parseInt(id);
-
-  if (isNaN(numId)) {
-    return NextResponse.json({ error: '无效的ID' }, { status: 400 });
-  }
 
   try {
-    const client = getSupabaseClient();
-    const { error } = await client
-      .from('templates')
-      .delete()
-      .eq('id', numId);
+    const client = await pool.connect();
+    
+    try {
+      const result = await client.query('DELETE FROM templates WHERE id = $1 RETURNING id', [id]);
 
-    if (error) throw error;
+      if (result.rows.length === 0) {
+        return NextResponse.json({ error: '模板不存在' }, { status: 404 });
+      }
 
-    return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true });
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error('删除模板失败:', error);
     return NextResponse.json({ error: '删除模板失败' }, { status: 500 });

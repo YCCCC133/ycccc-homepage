@@ -2,13 +2,10 @@
 @import 'tw-animate-css';
 
 /* ============================================================
-   新中式政务高级感设计系统
-   Glassmorphism + 轻3D + 微动效
+   全站统一宋体字体系统
    ============================================================ */
 
-/* ============================================================
-   第一层：字体系统
-   ============================================================ */
+/* 字体变量定义 - 完整宋体字体栈 */
 :root {
   /* 主字体栈 - 宋体体系 */
   --font-serif-cn: 
@@ -22,7 +19,7 @@
     "STFangsong",
     serif;
   
-  /* 无衬线字体 - 用于按钮、标签等小字号场景 */
+  /* 无衬线字体 - 仅用于按钮、标签等小字号场景 */
   --font-ui: 
     "PingFang SC",
     "Hiragino Sans GB",
@@ -31,7 +28,7 @@
     Arial,
     sans-serif;
   
-  /* 等宽字体 */
+  /* 等宽字体 - 仅用于代码块 */
   --font-mono-cn:
     "SF Mono",
     "Fira Code",
@@ -42,129 +39,159 @@
     "Liberation Mono",
     ui-monospace,
     monospace;
-  
-  /* ============================================================
-     颜色系统 - 低饱和玉石绿
-     ============================================================ */
-  /* 主色 - 玉石绿 */
-  --jade-50: #f0fdf4;
-  --jade-100: #dcfce7;
-  --jade-200: #bbf7d0;
-  --jade-300: #86efac;
-  --jade-400: #4ade80;
-  --jade-500: #22c55e;
-  --jade-600: #16a34a;
-  --jade-700: #15803d;
-  --jade-800: #166534;
-  --jade-900: #14532d;
-  
-  /* 暖灰背景 */
-  --warm-gray-50: #fafaf9;
-  --warm-gray-100: #f5f5f4;
-  --warm-gray-200: #e7e5e4;
-  --warm-gray-300: #d6d3d1;
-  --warm-gray-400: #a8a29e;
-  --warm-gray-500: #78716c;
-  --warm-gray-600: #57534e;
-  --warm-gray-700: #44403c;
-  --warm-gray-800: #292524;
-  --warm-gray-900: #1c1917;
-  
-  /* 中性色 */
-  --stone-50: #fafaf9;
-  --stone-100: #f5f5f4;
-  --stone-200: #e7e5e4;
-  --stone-800: #292524;
-  --stone-900: #1c1917;
-  
-  /* ============================================================
-     毛玻璃效果变量
-     ============================================================ */
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-bg-hover: rgba(255, 255, 255, 0.85);
-  --glass-bg-strong: rgba(255, 255, 255, 0.9);
-  --glass-border: rgba(255, 255, 255, 0.3);
-  --glass-border-strong: rgba(255, 255, 255, 0.5);
-  --glass-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.08);
-  --glass-shadow-hover: 0 8px 32px -8px rgba(0, 0, 0, 0.12);
-  --glass-blur: blur(16px);
-  --glass-blur-strong: blur(24px);
-  
-  /* ============================================================
-     阴影系统
-     ============================================================ */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
-  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.1);
-  
-  /* ============================================================
-     间距系统
-     ============================================================ */
-  --space-xs: 0.25rem;
-  --space-sm: 0.5rem;
-  --space-md: 1rem;
-  --space-lg: 1.5rem;
-  --space-xl: 2rem;
-  --space-2xl: 3rem;
-  --space-3xl: 4rem;
-  
-  /* ============================================================
-     圆角系统
-     ============================================================ */
-  --radius-xs: 0.5rem;
-  --radius-sm: 0.75rem;
-  --radius-md: 1rem;
-  --radius-lg: 1.25rem;
-  --radius-xl: 1.5rem;
-  --radius-2xl: 2rem;
-  
-  /* ============================================================
-     动效系统
-     ============================================================ */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --duration-fast: 150ms;
-  --duration-normal: 200ms;
-  --duration-slow: 300ms;
 }
 
 @theme inline {
-  /* 字体 */
-  --font-sans: var(--font-serif-cn);
-  --font-serif: var(--font-serif-cn);
-  --font-mono: var(--font-mono-cn);
+  --font-sans:
+    "Noto Serif SC",
+    "Source Han Serif SC",
+    "Source Han Serif CN",
+    "Songti SC",
+    "STSong",
+    "SimSun",
+    "FangSong",
+    "STFangsong",
+    serif;
   
-  /* 颜色 */
-  --color-background: oklch(0.985 0.002 180);
-  --color-foreground: oklch(0.2 0.01 180);
-  --color-card: oklch(0.99 0.002 180);
-  --color-card-foreground: oklch(0.2 0.01 180);
-  --color-popover: oklch(0.99 0.002 180);
-  --color-popover-foreground: oklch(0.2 0.01 180);
+  --font-serif:
+    "Noto Serif SC",
+    "Source Han Serif SC",
+    "Source Han Serif CN",
+    "Songti SC",
+    "STSong",
+    "SimSun",
+    "FangSong",
+    "STFangsong",
+    serif;
+  
+  --font-mono:
+    "SF Mono",
+    "Fira Code",
+    "Fira Mono",
+    "Menlo",
+    "Monaco",
+    "Consolas",
+    "Liberation Mono",
+    ui-monospace,
+    monospace;
+  
+  /* 颜色变量 - 用于 shadcn/ui 组件 */
+  --color-background: oklch(0.98 0.005 180);
+  --color-foreground: oklch(0.15 0.02 180);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.15 0.02 180);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.15 0.02 180);
   --color-primary: oklch(0.45 0.12 160);
-  --color-primary-foreground: oklch(0.98 0.002 180);
-  --color-secondary: oklch(0.97 0.005 180);
-  --color-secondary-foreground: oklch(0.3 0.01 180);
-  --color-muted: oklch(0.95 0.005 180);
-  --color-muted-foreground: oklch(0.5 0.01 180);
-  --color-accent: oklch(0.92 0.01 180);
-  --color-accent-foreground: oklch(0.25 0.01 180);
-  --color-destructive: oklch(0.55 0.18 25);
-  --color-border: oklch(0.88 0.005 180);
-  --color-input: oklch(0.92 0.005 180);
+  --color-primary-foreground: oklch(0.98 0.005 180);
+  --color-secondary: oklch(0.95 0.01 180);
+  --color-secondary-foreground: oklch(0.25 0.02 180);
+  --color-muted: oklch(0.96 0.01 180);
+  --color-muted-foreground: oklch(0.5 0.02 180);
+  --color-accent: oklch(0.92 0.02 180);
+  --color-accent-foreground: oklch(0.2 0.02 180);
+  --color-destructive: oklch(0.55 0.22 25);
+  --color-border: oklch(0.9 0.01 180);
+  --color-input: oklch(0.9 0.01 180);
   --color-ring: oklch(0.45 0.12 160);
+  --color-chart-1: oklch(0.45 0.12 160);
+  --color-chart-2: oklch(0.35 0.15 250);
+  --color-chart-3: oklch(0.75 0.15 85);
+  --color-chart-4: oklch(0.65 0.1 300);
+  --color-chart-5: oklch(0.55 0.12 120);
+  --color-sidebar: oklch(0.98 0.005 180);
+  --color-sidebar-foreground: oklch(0.15 0.02 180);
+  --color-sidebar-primary: oklch(0.45 0.12 160);
+  --color-sidebar-primary-foreground: oklch(0.98 0.005 180);
+  --color-sidebar-accent: oklch(0.95 0.01 180);
+  --color-sidebar-accent-foreground: oklch(0.25 0.02 180);
+  --color-sidebar-border: oklch(0.9 0.01 180);
+  --color-sidebar-ring: oklch(0.45 0.12 160);
+  
+  /* 边框颜色 - 用于 border-border 等工具类 */
+  --border: oklch(0.9 0.01 180);
   
   /* 圆角 */
-  --radius-sm: var(--radius-sm);
-  --radius-md: var(--radius-md);
-  --radius-lg: var(--radius-lg);
-  --radius-xl: var(--radius-xl);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 /* ============================================================
-   第二层：全局基础样式
+   全局变量定义
+   ============================================================ */
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.98 0.005 180);
+  --foreground: oklch(0.15 0.02 180);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.02 180);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.02 180);
+  --primary: oklch(0.45 0.12 160);
+  --primary-foreground: oklch(0.98 0.005 180);
+  --secondary: oklch(0.95 0.01 180);
+  --secondary-foreground: oklch(0.25 0.02 180);
+  --muted: oklch(0.96 0.01 180);
+  --muted-foreground: oklch(0.5 0.02 180);
+  --accent: oklch(0.92 0.02 180);
+  --accent-foreground: oklch(0.2 0.02 180);
+  --destructive: oklch(0.55 0.22 25);
+  --border: oklch(0.9 0.01 180);
+  --input: oklch(0.9 0.01 180);
+  --ring: oklch(0.45 0.12 160);
+  --chart-1: oklch(0.45 0.12 160);
+  --chart-2: oklch(0.35 0.15 250);
+  --chart-3: oklch(0.75 0.15 85);
+  --chart-4: oklch(0.65 0.1 300);
+  --chart-5: oklch(0.55 0.12 120);
+  --sidebar: oklch(0.98 0.005 180);
+  --sidebar-foreground: oklch(0.15 0.02 180);
+  --sidebar-primary: oklch(0.45 0.12 160);
+  --sidebar-primary-foreground: oklch(0.98 0.005 180);
+  --sidebar-accent: oklch(0.95 0.01 180);
+  --sidebar-accent-foreground: oklch(0.25 0.02 180);
+  --sidebar-border: oklch(0.9 0.01 180);
+  --sidebar-ring: oklch(0.45 0.12 160);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* ============================================================
+   第一层：根节点强制字体继承
    ============================================================ */
 html {
   font-family: var(--font-serif-cn);
@@ -172,7 +199,6 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  scroll-behavior: smooth;
 }
 
 body {
@@ -181,21 +207,17 @@ body {
   line-height: 1.75;
   letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;
-  background: linear-gradient(
-    135deg,
-    var(--warm-gray-50) 0%,
-    var(--warm-gray-100) 50%,
-    var(--jade-50) 100%
-  );
-  min-height: 100vh;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ============================================================
-   第三层：HTML元素覆盖
+   第二层：HTML 元素批量覆盖
    ============================================================ */
-/* 文本元素 */
+/* 文本级元素 */
 html, body, div, span, p, a, small, strong, em, b, i, u, s, 
-mark, del, ins, sub, sup, q, cite, data, time, abbr, figcaption {
+mark, del, ins, sub, sup, q, cite, data, time, abbr, figcaption, 
+blockquote, figure, main, article, section, aside, header, footer, 
+nav, address, details, summary {
   font-family: var(--font-serif-cn);
 }
 
@@ -205,492 +227,531 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: 0.02em;
-  color: var(--stone-800);
 }
 
-/* 链接 */
-a {
-  font-family: var(--font-serif-cn);
-  transition: color var(--duration-fast) var(--ease-out);
-}
-
-/* 列表 */
+/* 列表元素 */
 ul, ol, li, dl, dt, dd {
   font-family: var(--font-serif-cn);
 }
 
-/* 代码 */
+/* 表格元素 */
+table, thead, tbody, tfoot, tr, th, td, caption, colgroup, col {
+  font-family: var(--font-serif-cn);
+}
+
+/* 表单元素 */
+button, input, textarea, select, option, optgroup, label, legend, 
+fieldset, datalist, output, meter, progress {
+  font-family: var(--font-serif-cn);
+}
+
+/* 链接元素 */
+a, area, link {
+  font-family: var(--font-serif-cn);
+}
+
+/* 代码元素 - 例外：保持等宽 */
 code, pre, kbd, samp, var {
   font-family: var(--font-mono-cn);
 }
 
-/* ============================================================
-   第四层：毛玻璃卡片系统
-   ============================================================ */
-
-/* 基础毛玻璃卡片 */
-.glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--glass-shadow);
-  transition: 
-    transform var(--duration-normal) var(--ease-out),
-    box-shadow var(--duration-normal) var(--ease-out),
-    background var(--duration-normal) var(--ease-out);
+/* 占位符 */
+::placeholder {
+  font-family: var(--font-serif-cn);
+  opacity: 0.5;
 }
 
-.glass-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--glass-shadow-hover);
-  background: var(--glass-bg-hover);
-}
-
-/* 强毛玻璃卡片 */
-.glass-card-strong {
-  background: var(--glass-bg-strong);
-  backdrop-filter: var(--glass-blur-strong);
-  -webkit-backdrop-filter: var(--glass-blur-strong);
-  border: 1px solid var(--glass-border-strong);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-lg);
-}
-
-/* 毛玻璃按钮 */
-.glass-button {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  transition: 
-    all var(--duration-normal) var(--ease-out);
-}
-
-.glass-button:hover {
-  background: var(--glass-bg-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--jade-300);
-}
-
-.glass-button:active {
-  transform: translateY(0);
-  box-shadow: var(--shadow-xs);
-}
-
-/* 主色调玻璃按钮 */
-.glass-button-primary {
-  background: linear-gradient(
-    135deg,
-    var(--jade-500) 0%,
-    var(--jade-600) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  box-shadow: 
-    var(--shadow-md),
-    0 0 20px rgba(34, 197, 94, 0.15);
-}
-
-.glass-button-primary:hover {
-  background: linear-gradient(
-    135deg,
-    var(--jade-600) 0%,
-    var(--jade-700) 100%
-  );
-  box-shadow: 
-    var(--shadow-lg),
-    0 0 30px rgba(34, 197, 94, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-/* 毛玻璃输入框 */
-.glass-input {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xs);
-  transition: 
-    all var(--duration-normal) var(--ease-out);
-}
-
-.glass-input:focus {
-  background: var(--glass-bg-strong);
-  border-color: var(--jade-400);
-  box-shadow: 
-    var(--shadow-sm),
-    0 0 0 3px rgba(34, 197, 94, 0.1);
-  outline: none;
-}
-
-.glass-input::placeholder {
-  color: var(--stone-400);
+/* SVG */
+svg text, svg tspan {
+  font-family: var(--font-serif-cn);
 }
 
 /* ============================================================
-   第五层：层级系统
+   第三层：组件库覆盖
    ============================================================ */
-
-/* 前景层 - 浮在最上 */
-.layer-front {
-  position: relative;
-  z-index: 20;
+/* Tailwind prose */
+.prose, .prose * {
+  font-family: var(--font-serif-cn);
 }
 
-/* 内容层 */
-.layer-content {
-  position: relative;
-  z-index: 10;
+/* 通用容器 */
+.container, .wrapper, .card, .modal, .dialog, .drawer, .sheet {
+  font-family: var(--font-serif-cn);
 }
 
-/* 背景层 */
-.layer-back {
-  position: relative;
-  z-index: 0;
+.popover, .tooltip, .dropdown, .menu, .tabs, .accordion {
+  font-family: var(--font-serif-cn);
 }
 
-/* 3D 空间感 */
-.space-3d {
-  transform: perspective(1000px) rotateX(0deg);
-  transform-style: preserve-3d;
+.collapsible, .alert, .toast, .notification, .badge, .chip, .tag {
+  font-family: var(--font-serif-cn);
 }
 
-.space-3d-elevated {
-  transform: perspective(1000px) rotateX(0deg) translateZ(4px);
-  transform-style: preserve-3d;
+/* 按钮和输入 */
+button, [role="button"], .btn, .button {
+  font-family: var(--font-serif-cn);
+}
+
+.input, .input-field, .text-field, .search-input, .form-input {
+  font-family: var(--font-serif-cn);
+}
+
+/* 下拉菜单 */
+.select, .select-trigger, .select-content, .select-item {
+  font-family: var(--font-serif-cn);
+}
+
+/* 表格 */
+.table, .data-table {
+  font-family: var(--font-serif-cn);
+}
+
+/* 分页 */
+.pagination, .pager, .page-item, .page-link {
+  font-family: var(--font-serif-cn);
+}
+
+/* 状态 */
+.empty-state, .loading-state, .error-state, .skeleton, .placeholder {
+  font-family: var(--font-serif-cn);
 }
 
 /* ============================================================
-   第六层：Shadcn UI 组件覆盖
+   第四层：Shadcn/ui 组件覆盖
    ============================================================ */
+/* 所有包含 radix- 的元素 */
+[class*="radix-"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* shadcn 组件 */
+[class*="shadcn-"] {
+  font-family: var(--font-serif-cn);
+}
 
 /* 按钮 */
-button, [type="button"], [type="submit"], [type="reset"] {
+.shadcn-button, button {
   font-family: var(--font-serif-cn);
-  transition: 
-    all var(--duration-normal) var(--ease-out);
 }
 
 /* 输入 */
-input, textarea, select {
+.shadcn-input, input {
+  font-family: var(--font-serif-cn);
+}
+
+/* 文本域 */
+.shadcn-textarea, textarea {
+  font-family: var(--font-serif-cn);
+}
+
+/* 选择器 */
+.shadcn-select, select {
   font-family: var(--font-serif-cn);
 }
 
 /* 标签 */
+.shadcn-label, label {
+  font-family: var(--font-serif-cn);
+}
+
+/* 卡片 */
+.shadcn-card, [class*="card"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* 对话框 */
+.shadcn-dialog, [class*="dialog"], .shadcn-modal, [class*="modal"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* 下拉菜单 */
+.shadcn-dropdown-menu, [class*="dropdown"], [class*="menu"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* 弹出层 */
+.shadcn-popover, [class*="popover"], .shadcn-tooltip, [class*="tooltip"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* 标签页 */
+.shadcn-tabs, [class*="tabs"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* 表格 */
+.shadcn-table, [class*="table"] {
+  font-family: var(--font-serif-cn);
+}
+
+/* ============================================================
+   第五层：特殊内容区域
+   ============================================================ */
+/* Markdown 内容 */
+.markdown-content, .markdown-content *, 
+.markdown-body, .markdown-body *,
+.prose-content, .prose-content * {
+  font-family: var(--font-serif-cn);
+}
+
+/* 聊天消息 */
+.chat-message, .chat-message *, 
+.message-bubble, .message-bubble *,
+.conversation-message, .conversation-message * {
+  font-family: var(--font-serif-cn);
+}
+
+/* 富文本编辑 */
+.rich-text, .rich-text *, 
+.editor-content, .editor-content *,
+.text-editor, .text-editor * {
+  font-family: var(--font-serif-cn);
+}
+
+/* 法律文书 */
+.legal-document, .legal-document *, 
+.contract-text, .contract-text * {
+  font-family: var(--font-serif-cn);
+}
+
+/* 表单内容 */
+.form-content, .form-content *, 
+.form-body, .form-body * {
+  font-family: var(--font-serif-cn);
+}
+
+/* 详情描述 */
+.description, .description *, 
+.summary-text, .summary-text * {
+  font-family: var(--font-serif-cn);
+}
+
+/* ============================================================
+   第六层：工具类
+   ============================================================ */
+.font-serif-cn {
+  font-family: var(--font-serif-cn) !important;
+}
+
+.font-ui {
+  font-family: var(--font-ui) !important;
+}
+
+.font-mono-cn {
+  font-family: var(--font-mono-cn) !important;
+}
+
+.text-body, .text-content, .text-paragraph {
+  font-family: var(--font-serif-cn) !important;
+}
+
+/* ============================================================
+   组件样式
+   ============================================================ */
+/* 文字选中高亮 */
+.selection-primary ::selection {
+  background-color: rgba(60, 140, 120, 0.25);
+  color: inherit;
+}
+
+/* 表单标签 */
 label {
   font-family: var(--font-serif-cn);
   font-weight: 500;
-  color: var(--stone-700);
+  color: var(--foreground);
 }
 
-/* ============================================================
-   第七层：动效系统
-   ============================================================ */
-
-/* 淡入 */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* 上浮淡入 */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 缩放淡入 */
-@keyframes fadeInScale {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* 脉冲光晕 */
-@keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 20px 4px rgba(34, 197, 94, 0.15);
-  }
-}
-
-/* 浮动动画 */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}
-
-/* 动画类 */
-.animate-fade-in {
-  animation: fadeIn var(--duration-slow) var(--ease-out);
-}
-
-.animate-fade-in-up {
-  animation: fadeInUp var(--duration-slow) var(--ease-out);
-}
-
-.animate-fade-in-scale {
-  animation: fadeInScale var(--duration-normal) var(--ease-out);
-}
-
-.animate-pulse-glow {
-  animation: pulseGlow 2s ease-in-out infinite;
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-/* 悬停效果类 */
-.hover-lift {
-  transition: transform var(--duration-normal) var(--ease-out);
-}
-
-.hover-lift:hover {
-  transform: translateY(-2px);
-}
-
-.hover-glow {
-  transition: box-shadow var(--duration-normal) var(--ease-out);
-}
-
-.hover-glow:hover {
-  box-shadow: 0 0 24px rgba(34, 197, 94, 0.2);
-}
-
-/* ============================================================
-   第八层：滚动条美化
-   ============================================================ */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--stone-300);
-  border-radius: 3px;
-  transition: background var(--duration-fast);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--stone-400);
-}
-
-/* ============================================================
-   第九层：选中样式
-   ============================================================ */
-::selection {
-  background: rgba(34, 197, 94, 0.2);
-  color: var(--stone-800);
-}
-
-/* ============================================================
-   第十层：焦点样式
-   ============================================================ */
-:focus-visible {
-  outline: 2px solid var(--jade-500);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm);
-}
-
-/* ============================================================
-   第十一层：工具类
-   ============================================================ */
-
-/* 文字渐变 */
-.text-gradient-jade {
-  background: linear-gradient(
-    135deg,
-    var(--jade-600) 0%,
-    var(--jade-500) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* 装饰线 */
-.ornament-line {
-  position: relative;
-  text-align: center;
-}
-
-.ornament-line::before,
-.ornament-line::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 60px;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--stone-300),
-    transparent
-  );
-}
-
-.ornament-line::before {
-  right: calc(50% + 80px);
-}
-
-.ornament-line::after {
-  left: calc(50% + 80px);
-}
-
-/* 玻璃分隔线 */
-.glass-divider {
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--glass-border),
-    transparent
-  );
-}
-
-/* ============================================================
-   第十二层：布局工具
-   ============================================================ */
-.container-glass {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 var(--space-lg);
-}
-
-.section-padding {
-  padding: var(--space-3xl) 0;
-}
-
-/* ============================================================
-   第十三层：卡片网格
-   ============================================================ */
-.card-grid {
-  display: grid;
-  gap: var(--space-lg);
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-}
-
-.card-grid-2 {
-  display: grid;
-  gap: var(--space-xl);
-  grid-template-columns: repeat(2, 1fr);
-}
-
-@media (max-width: 768px) {
-  .card-grid-2 {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ============================================================
-   第十四层：响应式断点
-   ============================================================ */
-@media (max-width: 640px) {
-  :root {
-    --space-lg: 1rem;
-    --space-xl: 1.5rem;
-    --space-2xl: 2rem;
-    --space-3xl: 2.5rem;
-  }
-  
-  h1 { font-size: 1.75rem; }
-  h2 { font-size: 1.5rem; }
-  h3 { font-size: 1.25rem; }
-}
-
-/* ============================================================
-   第十五层：Markdown 内容
-   ============================================================ */
-.markdown-content {
-  font-family: var(--font-serif-cn);
-  line-height: 1.9;
-  color: var(--stone-700);
-}
-
-.markdown-content h1,
-.markdown-content h2,
-.markdown-content h3 {
-  font-weight: 600;
-  color: var(--stone-800);
-  margin-top: 1.5em;
-  margin-bottom: 0.75em;
-}
-
-.markdown-content h1 { font-size: 1.5rem; }
-.markdown-content h2 { font-size: 1.25rem; }
-.markdown-content h3 { font-size: 1.125rem; }
-
-.markdown-content p {
-  margin-bottom: 1em;
-}
-
-.markdown-content ul,
-.markdown-content ol {
-  padding-left: 1.5em;
-  margin-bottom: 1em;
-}
-
-.markdown-content li {
-  margin-bottom: 0.5em;
-}
-
-/* ============================================================
-   第十六层：表单验证
-   ============================================================ */
-.input-error {
-  border-color: var(--destructive) !important;
-}
-
-.error-message {
+/* 必填标记 */
+.required::after {
+  content: " *";
   color: var(--destructive);
+}
+
+/* 表单错误 */
+.form-error {
+  font-family: var(--font-serif-cn);
   font-size: 0.875rem;
   margin-top: 0.25rem;
+  color: var(--destructive);
+  animation: slideInTop 0.2s ease-out;
 }
 
-/* ============================================================
-   第十七层：加载状态
-   ============================================================ */
-.skeleton {
+/* 加载动画 */
+.loading-shimmer {
   background: linear-gradient(
     90deg,
-    var(--stone-100) 25%,
-    var(--stone-200) 50%,
-    var(--stone-100) 75%
+    transparent,
+    oklch(1 0 0 / 20%),
+    transparent
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-sm);
 }
 
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+@keyframes slideInTop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Focus 环 */
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* 滚动条 */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: oklch(0.85 0.02 180 / 0.3);
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.75 0.02 180 / 0.5);
+}
+
+/* ============================================================
+   Markdown 内容样式
+   ============================================================ */
+.markdown-content, .markdown-body {
+  font-family: var(--font-serif-cn);
+  line-height: 1.8;
+}
+
+.markdown-content h1, .markdown-body h1 {
+  font-family: var(--font-serif-cn);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 1rem;
+  margin-bottom: 0.75rem;
+  color: oklch(0.2 0.02 180);
+  line-height: 1.4;
+}
+
+.markdown-content h2, .markdown-body h2 {
+  font-family: var(--font-serif-cn);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: oklch(0.25 0.02 180);
+  line-height: 1.4;
+}
+
+.markdown-content h3, .markdown-body h3 {
+  font-family: var(--font-serif-cn);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  color: oklch(0.3 0.02 180);
+  line-height: 1.4;
+}
+
+.markdown-content h4, .markdown-content h5, .markdown-content h6,
+.markdown-body h4, .markdown-body h5, .markdown-body h6 {
+  font-family: var(--font-serif-cn);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.markdown-content p, .markdown-body p {
+  font-family: var(--font-serif-cn);
+  margin-bottom: 0.75rem;
+  line-height: 1.8;
+}
+
+.markdown-content ul, .markdown-content ol,
+.markdown-body ul, .markdown-body ol {
+  font-family: var(--font-serif-cn);
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+}
+
+.markdown-content li, .markdown-body li {
+  font-family: var(--font-serif-cn);
+  margin-bottom: 0.375rem;
+  line-height: 1.7;
+}
+
+.markdown-content strong, .markdown-body strong {
+  font-family: var(--font-serif-cn);
+  font-weight: 600;
+}
+
+.markdown-content em, .markdown-body em {
+  font-family: var(--font-serif-cn);
+  font-style: italic;
+}
+
+/* 代码块 - 等宽字体 */
+.markdown-content code, .markdown-body code {
+  font-family: var(--font-mono-cn);
+  background-color: oklch(0.95 0.01 180);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.markdown-content pre, .markdown-body pre {
+  font-family: var(--font-mono-cn);
+  background-color: oklch(0.95 0.01 180);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+.markdown-content pre code, .markdown-body pre code {
+  font-family: var(--font-mono-cn);
+  background: none;
+  padding: 0;
+  font-size: 0.875rem;
+}
+
+.markdown-content blockquote, .markdown-body blockquote {
+  font-family: var(--font-serif-cn);
+  border-left: 3px solid oklch(0.55 0.12 160);
+  padding-left: 1rem;
+  font-style: normal;
+  color: oklch(0.45 0.02 180);
+  margin: 0.75rem 0;
+  background: linear-gradient(to right, oklch(0.98 0.01 180), transparent);
+  padding: 0.75rem 1rem;
+  border-radius: 0 4px 4px 0;
+}
+
+.markdown-content hr, .markdown-body hr {
+  border: none;
+  border-top: 1px solid oklch(0.9 0.01 180);
+  margin: 1rem 0;
+}
+
+.markdown-content a, .markdown-body a {
+  font-family: var(--font-serif-cn);
+  color: oklch(0.5 0.12 160);
+  text-decoration: underline;
+}
+
+.markdown-content a:hover, .markdown-body a:hover {
+  color: oklch(0.45 0.12 160);
+}
+
+.markdown-content table, .markdown-body table {
+  font-family: var(--font-serif-cn);
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+}
+
+.markdown-content th, .markdown-content td,
+.markdown-body th, .markdown-body td {
+  font-family: var(--font-serif-cn);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid oklch(0.9 0.01 180);
+}
+
+.markdown-content th, .markdown-body th {
+  font-family: var(--font-serif-cn);
+  font-weight: 600;
+  background: oklch(0.96 0.01 180);
+}
+
+/* ============================================================
+   聊天消息样式
+   ============================================================ */
+.chat-message, .message-bubble {
+  font-family: var(--font-serif-cn);
+}
+
+.chat-message p, .message-bubble p,
+.chat-message li, .message-bubble li {
+  font-family: var(--font-serif-cn);
+  line-height: 1.7;
+}
+
+/* ============================================================
+   法律引用样式
+   ============================================================ */
+.legal-reference, .legal-quote {
+  font-family: var(--font-serif-cn);
+  border-left: 3px solid oklch(0.55 0.12 160);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: normal;
+  color: oklch(0.4 0.02 180);
+  background: linear-gradient(to right, oklch(0.98 0.01 180), transparent);
+  padding: 0.75rem 1rem;
+  border-radius: 0 4px 4px 0;
+}
+
+/* ============================================================
+   中文排版优化
+   ============================================================ */
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-mixed {
+  font-family: var(--font-serif-cn), var(--font-ui);
+  font-feature-settings: 'liga' 1, 'kern' 1;
+}
+
+/* ============================================================
+   禁用选中
+   ============================================================ */
+.no-select, .no-select *, nav, header {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+/* 内容区域允许选中 */
+.select-text, .select-text *, .content-area, .content-area *,
+.message-content, .message-content *, article, article * {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+}
+
+/* ============================================================
+   打印样式
+   ============================================================ */
+@media print {
+  body {
+    font-family: var(--font-serif-cn) !important;
+    font-size: 12pt;
+    line-height: 1.8;
+  }
+  
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
 }

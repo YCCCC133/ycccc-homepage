@@ -1,181 +1,265 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Loader2, Copy, Check, Download, ArrowLeft, ChevronRight, AlertCircle, Info, Sparkles } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Send, FileText, Loader2, Copy, Check, Download, Sparkles, ArrowDown } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/markdown';
-import { useRouter } from 'next/navigation';
 
-// 文书类型
-type DocumentType = 'litigation' | 'support_prosecution' | 'labor_dispute';
-
-interface FormData {
-  // 申请人信息
-  applicantName: string;
-  applicantGender: string;
-  applicantBirthDate: string;
-  applicantNation: string;
-  applicantIdCard: string;
-  applicantPhone: string;
-  applicantAddress: string;
-  
-  // 被告信息
-  defendantName: string;
-  defendantType: 'company' | 'individual';
-  defendantCode: string;
-  defendantAddress: string;
-  defendantLegalPerson: string;
-  defendantPhone: string;
-  
-  // 案件信息
-  projectName: string;
-  workLocation: string;
-  workStartDate: string;
-  workEndDate: string;
-  owedAmount: string;
-  owedAmountCN: string;
-  workDays: string;
-  dailyRate: string;
-  
-  // 诉讼请求
-  requestType: string[];
-  
-  // 事实与理由
-  factDescription: string;
-  
-  // 提交法院
-  courtName: string;
-  
-  // 其他
-  hasContract: boolean;
-  hasEvidence: string;
-  hasWitness: boolean;
+function detectIntent(text: string): 'greeting' | 'skip' | 'restart' | 'help' | 'normal' {
+  const lower = text.toLowerCase().trim();
+  if (['你好', '您好', 'hi', 'hello', '在', '嗨'].some(p => lower.includes(p))) return 'greeting';
+  if (['重新开始', '再来', '重置'].some(p => lower.includes(p))) return 'restart';
+  if (['帮助', '怎么用', '怎么操作'].some(p => lower.includes(p))) return 'help';
+  if (['跳过', '不知道', '没有', '啥都'].some(p => lower.includes(p))) return 'skip';
+  return 'normal';
 }
 
-const initialFormData: FormData = {
-  applicantName: '',
-  applicantGender: '',
-  applicantBirthDate: '',
-  applicantNation: '汉族',
-  applicantIdCard: '',
-  applicantPhone: '',
-  applicantAddress: '',
-  
-  defendantName: '',
-  defendantType: 'company',
-  defendantCode: '',
-  defendantAddress: '',
-  defendantLegalPerson: '',
-  defendantPhone: '',
-  
-  projectName: '',
-  workLocation: '',
-  workStartDate: '',
-  workEndDate: '',
-  owedAmount: '',
-  owedAmountCN: '',
-  workDays: '',
-  dailyRate: '',
-  
-  requestType: [],
-  
-  factDescription: '',
-  
-  courtName: '',
-  
-  hasContract: false,
-  hasEvidence: '',
-  hasWitness: false,
-};
-
 export default function DocumentPage() {
-  const router = useRouter();
-  const [step, setStep] = useState<'select' | 'form' | 'preview'>('select');
-  const [documentType, setDocumentType] = useState<DocumentType | null>(null);
-  const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [generatedDocument, setGeneratedDocument] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [formData, setFormData] = useState<Partial<FormData>>({});
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedDocument, setGeneratedDocument] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+  const [inputValue, setInputValue] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [showBackToBottom, setShowBackToBottom] = useState(false);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
+  
+  // Refs for scroll control
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const messagesListRef = useRef<HTMLDivElement>(null);
+  const bottomAreaRef = useRef<HTMLDivElement>(null);
+  const lastMessageRef = useRef<HTMLDivElement>(null);
+  
+  // Dynamic bottom padding state
+  const [bottomPadding, setBottomPadding] = useState(0);
 
-  // 更新表单字段
-  const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // 清除该字段的错误
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+  // Calculate dynamic bottom padding
+  const calculateBottomPadding = useCallback(() => {
+    if (bottomAreaRef.current) {
+      const bottomHeight = bottomAreaRef.current.offsetHeight;
+      const padding = bottomHeight + 24;
+      setBottomPadding(padding);
     }
-  };
+  }, []);
 
-  // 验证必填字段
-  const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof FormData, string>> = {};
+  // Monitor bottom area height changes
+  useEffect(() => {
+    calculateBottomPadding();
     
-    // 申请人信息验证
-    if (!formData.applicantName.trim()) newErrors.applicantName = '请输入申请人姓名';
-    if (!formData.applicantGender) newErrors.applicantGender = '请选择性别';
-    if (!formData.applicantBirthDate) newErrors.applicantBirthDate = '请输入出生日期';
-    if (!formData.applicantIdCard.trim()) newErrors.applicantIdCard = '请输入身份证号';
-    if (!formData.applicantPhone.trim()) newErrors.applicantPhone = '请输入联系电话';
+    const resizeObserver = new ResizeObserver(() => {
+      calculateBottomPadding();
+    });
     
-    // 被告信息验证
-    if (!formData.defendantName.trim()) newErrors.defendantName = '请输入被告名称';
-    if (!formData.defendantAddress.trim()) newErrors.defendantAddress = '请输入被告地址';
+    if (bottomAreaRef.current) {
+      resizeObserver.observe(bottomAreaRef.current);
+    }
     
-    // 案件信息验证
-    if (!formData.owedAmount.trim()) newErrors.owedAmount = '请输入拖欠工资金额';
-    if (!formData.workStartDate) newErrors.workStartDate = '请输入工作开始时间';
-    if (!formData.workEndDate) newErrors.workEndDate = '请输入工作结束时间';
+    window.addEventListener('resize', calculateBottomPadding);
     
-    // 事实描述
-    if (!formData.factDescription.trim()) newErrors.factDescription = '请输入事实与理由';
-    
-    // 提交法院
-    if (!formData.courtName.trim()) newErrors.courtName = '请输入管辖法院';
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', calculateBottomPadding);
+    };
+  }, [calculateBottomPadding]);
 
-  // 生成文书
-  const generateDocument = async () => {
-    if (!validateForm()) {
+  // Scroll to bottom with safety margin
+  const scrollToBottom = useCallback((smooth = true) => {
+    const container = chatContainerRef.current;
+    const lastMessage = lastMessageRef.current;
+    
+    if (!container) return;
+    
+    if (lastMessage) {
+      lastMessage.scrollIntoView({
+        behavior: smooth ? 'smooth' : 'auto',
+        block: 'end',
+      });
+    } else {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto',
+      });
+    }
+  }, []);
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    if (autoScrollEnabled) {
+      const timeout = setTimeout(() => {
+        scrollToBottom();
+      }, 50);
+      return () => clearTimeout(timeout);
+    }
+  }, [messages.length, scrollToBottom, autoScrollEnabled]);
+
+  // Continuous scroll during generation
+  useEffect(() => {
+    if (!autoScrollEnabled || (!isGenerating && !isTyping)) return;
+    
+    const intervalId = setInterval(() => {
+      scrollToBottom();
+    }, 100);
+    
+    return () => clearInterval(intervalId);
+  }, [isGenerating, isTyping, autoScrollEnabled, scrollToBottom]);
+
+  // Scroll event listener
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    const onScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      
+      if (distanceFromBottom > 150) {
+        setShowBackToBottom(true);
+      } else {
+        setShowBackToBottom(false);
+        if (!autoScrollEnabled) {
+          setAutoScrollEnabled(true);
+        }
+      }
+    };
+
+    container.addEventListener('scroll', onScroll, { passive: true });
+    return () => container.removeEventListener('scroll', onScroll);
+  }, [autoScrollEnabled]);
+
+  // Back to bottom handler
+  const handleBackToBottom = useCallback(() => {
+    scrollToBottom(true);
+    setShowBackToBottom(false);
+  }, [scrollToBottom]);
+
+  const sendMessage = useCallback((content: string, legalRefs?: LegalReference[]) => {
+    setMessages(prev => [...prev, { role: 'assistant', content, timestamp: new Date(), legalReferences: legalRefs }]);
+  }, []);
+
+  // Initialize
+  useEffect(() => {
+    if (isInitialized) return;
+    setIsInitialized(true);
+    setIsTyping(true);
+    sendMessage('您好！我是智能法律文书助手，可以帮您生成民事起诉状等法律文书。请准备好后告诉我您的姓名？');
+    setCurrentStep(1);
+    setIsTyping(false);
+  }, [isInitialized, sendMessage]);
+
+  const handleAnswer = async (answer: string) => {
+    const trimmed = answer.trim();
+    if (!trimmed) return;
+
+    setAutoScrollEnabled(true);
+    setShowBackToBottom(false);
+
+    const intent = detectIntent(trimmed);
+    const currentQ = QUESTIONS[currentStep - 1];
+    sendMessage(trimmed);
+
+    if (intent === 'greeting') {
+      setIsTyping(true);
+      await new Promise(r => setTimeout(r, 500));
+      sendMessage('您好！我们继续吧。' + currentQ.question);
+      setIsTyping(false);
       return;
     }
-    
+
+    if (intent === 'restart') {
+      setMessages([]);
+      setFormData({});
+      setCurrentStep(0);
+      setIsTyping(true);
+      await new Promise(r => setTimeout(r, 500));
+      sendMessage('好的，我们重新开始！请问您叫什么名字？');
+      setCurrentStep(1);
+      setIsTyping(false);
+      return;
+    }
+
+    if (intent === 'help') {
+      setIsTyping(true);
+      await new Promise(r => setTimeout(r, 500));
+      sendMessage('我来帮您生成法律文书。您只需要回答我的问题。请问您叫什么名字？');
+      setCurrentStep(1);
+      setIsTyping(false);
+      return;
+    }
+
+    if (intent === 'skip' && currentQ) {
+      setIsTyping(true);
+      await new Promise(r => setTimeout(r, 500));
+      setFormData(prev => ({ ...prev, [currentQ.field]: '未提供' }));
+      if (currentStep < QUESTIONS.length) {
+        sendMessage('好的，没关系。' + QUESTIONS[currentStep].question);
+        setCurrentStep(prev => prev + 1);
+      } else {
+        sendMessage('信息收集完毕，正在生成法律文书...');
+        generateDocument({ ...formData, [currentQ.field]: '未提供' } as FormData);
+      }
+      setIsTyping(false);
+      return;
+    }
+
+    setIsTyping(true);
+    if (currentQ) setFormData(prev => ({ ...prev, [currentQ.field]: trimmed }));
+    await new Promise(r => setTimeout(r, 300));
+
+    if (currentStep < QUESTIONS.length) {
+      sendMessage(QUESTIONS[currentStep].question);
+      setCurrentStep(prev => prev + 1);
+    } else {
+      sendMessage('太好了！信息收集完毕，正在为您生成法律文书...');
+      generateDocument({ ...formData, [currentQ?.field || 'name']: trimmed } as FormData);
+    }
+    setIsTyping(false);
+  };
+
+  const generateDocument = async (data: FormData) => {
     setIsGenerating(true);
     try {
       const response = await fetch('/api/document/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          documentType,
-          ...formData,
-        }),
+        body: JSON.stringify(data)
       });
       const result = await response.json();
       if (result.success) {
         setGeneratedDocument(result.data.document);
-        setStep('preview');
+        sendMessage('文书已生成完成！您可以查看、复制或下载。');
       } else {
-        alert(`生成失败：${result.error}`);
+        sendMessage(`生成失败：${result.error}`);
       }
     } catch {
-      alert('网络错误，请稍后重试');
+      sendMessage('网络错误，请稍后重试。');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // 复制文书
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputValue.trim() && !isGenerating && !isTyping) {
+      handleAnswer(inputValue);
+      setInputValue('');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (inputValue.trim() && !isGenerating && !isTyping) {
+        handleAnswer(inputValue);
+        setInputValue('');
+      }
+    }
+  };
+
   const copyToClipboard = async () => {
     if (generatedDocument) {
       await navigator.clipboard.writeText(generatedDocument);
@@ -184,741 +268,252 @@ export default function DocumentPage() {
     }
   };
 
-  // 下载文书
   const downloadDocument = () => {
     if (!generatedDocument) return;
+    // 导出为 .md 文件
     const blob = new Blob([generatedDocument], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const docTypeName = documentType === 'litigation' ? '民事起诉状' : documentType === 'support_prosecution' ? '支持起诉申请书' : '劳动争议起诉状';
-    a.download = `${docTypeName}_${formData.applicantName}_${Date.now()}.md`;
+    // 从文书内容中提取标题作为文件名
+    const titleMatch = generatedDocument.match(/^#\s+(.+)$/m);
+    const docTitle = titleMatch ? titleMatch[1] : '法律文书';
+    a.download = `${docTitle}_${formData.name || '未命名'}_${Date.now()}.md`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  // 返回上一步
-  const goBack = () => {
-    if (step === 'preview') {
-      setStep('form');
-    } else if (step === 'form') {
-      setStep('select');
-    }
-  };
+  const currentQ = QUESTIONS[currentStep - 1];
+  const progress = currentStep > 0 ? (currentStep / QUESTIONS.length) * 100 : 0;
 
   return (
-    <div className="min-h-screen">
-      {/* 背景装饰 */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 -right-40 w-96 h-96 bg-emerald-100/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 -left-40 w-[500px] h-[500px] bg-emerald-50/30 rounded-full blur-3xl" />
-      </div>
-
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur-xl border-b border-stone-200/50 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4">
+    <div 
+      className="h-[100dvh] flex flex-col bg-gradient-to-b from-emerald-50/50 to-white selection-primary overflow-hidden"
+      style={{ contain: 'layout' }}
+    >
+      {/* Header - Fixed at top */}
+      <header className="shrink-0 bg-white/80 backdrop-blur-md border-b border-emerald-100/50 z-10">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center gap-3">
-            {step !== 'select' && (
-              <button onClick={goBack} className="shrink-0 w-10 h-10 rounded-xl bg-white/80 flex items-center justify-center hover:bg-emerald-50 transition-colors">
-                <ArrowLeft className="h-5 w-5 text-stone-600" />
-              </button>
-            )}
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 shrink-0">
+            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 shrink-0">
               <FileText className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <h1 className="text-base sm:text-lg font-semibold text-stone-800">文书生成</h1>
-              <p className="text-xs text-stone-500">
-                {step === 'select' && '选择文书类型'}
-                {step === 'form' && '填写信息'}
-                {step === 'preview' && '预览与下载'}
-              </p>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-semibold text-foreground truncate">文书生成</h1>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">智能问答 · 专业规范</p>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Content */}
-      <main className="relative max-w-6xl mx-auto px-4 py-6">
-        {/* Step 1: Select Document Type */}
-        {step === 'select' && (
-          <div className="max-w-2xl mx-auto space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-xl font-semibold">选择要生成的文书类型</h2>
-              <p className="text-sm text-muted-foreground">根据您的实际需求，选择相应的法律文书类型</p>
-            </div>
-
-            <div className="grid gap-4">
-              {/* 民事起诉状 */}
-              <div 
-                className="cursor-pointer hover:-translate-y-0.5 transition-all duration-200 group"
-                onClick={() => { setDocumentType('litigation'); setStep('form'); }}
-              >
-                <div className="p-5 rounded-2xl bg-white/80 backdrop-blur-lg border border-white/60 shadow-lg hover:shadow-xl">
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <FileText className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base mb-1 text-stone-800">民事起诉状</h3>
-                      <p className="text-xs sm:text-sm text-stone-600">
-                        适用于直接向人民法院提起诉讼，请求判决被告支付拖欠工资等劳动报酬
-                      </p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-stone-400 shrink-0" />
-                  </div>
-                </div>
-              </div>
-
-              {/* 支持起诉申请书 */}
-              <div 
-                className="cursor-pointer hover:-translate-y-0.5 transition-all duration-200 group"
-                onClick={() => { setDocumentType('support_prosecution'); setStep('form'); }}
-              >
-                <div className="p-5 rounded-2xl bg-white/80 backdrop-blur-lg border border-white/60 shadow-lg hover:shadow-xl">
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <FileText className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base mb-1 text-stone-800">支持起诉申请书</h3>
-                      <p className="text-xs sm:text-sm text-stone-600">
-                        适用于请求检察机关支持起诉，由检察院向法院发出支持起诉意见书
-                      </p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-stone-400 shrink-0" />
-                  </div>
-                </div>
-              </div>
-
-              {/* 劳动争议起诉状 */}
-              <div 
-                className="cursor-pointer hover:-translate-y-0.5 transition-all duration-200 group"
-                onClick={() => { setDocumentType('labor_dispute'); setStep('form'); }}
-              >
-                <div className="p-5 rounded-2xl bg-white/80 backdrop-blur-lg border border-white/60 shadow-lg hover:shadow-xl">
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <FileText className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base mb-1 text-stone-800">劳动争议起诉状</h3>
-                      <p className="text-xs sm:text-sm text-stone-600">
-                        适用于因劳动合同履行、解除等产生的劳动争议纠纷（包含工资、工伤等）
-                      </p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-stone-400 shrink-0" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 提示信息 */}
-            <div className="p-5 rounded-2xl bg-blue-50/60 backdrop-blur-lg border border-blue-100/50 shadow-lg">
-              <div className="flex gap-3">
-                <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-700 space-y-1">
-                  <p className="font-medium">温馨提示</p>
-                  <ul className="text-xs space-y-0.5 list-disc list-inside">
-                    <li>请确保填写的信息真实有效</li>
-                    <li>带 * 号的字段为必填项</li>
-                    <li>文书生成后可复制或下载</li>
-                    <li>如需法律援助可同时申请</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+      {/* Chat Messages Area - Independent Scroll */}
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto overscroll-contain"
+        style={{
+          paddingBottom: `${bottomPadding}px`,
+          contain: 'layout style',
+        }}
+      >
+        <div ref={messagesListRef} className="container mx-auto max-w-3xl px-3 sm:px-4 py-4 sm:py-6">
+          
+          {/* Section header */}
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-4 w-4 text-emerald-500 shrink-0" />
+            <span className="text-sm font-medium text-foreground">智能问答</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">回答问题，生成专属文书</span>
           </div>
-        )}
 
-        {/* Step 2: Fill Form */}
-        {step === 'form' && documentType && (
-          <div className="max-w-3xl mx-auto space-y-6">
-            <Tabs defaultValue="applicant" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 h-auto p-1 bg-muted/50 rounded-lg">
-                <TabsTrigger value="applicant" className="text-xs sm:text-sm py-2">申请人</TabsTrigger>
-                <TabsTrigger value="defendant" className="text-xs sm:text-sm py-2">被告</TabsTrigger>
-                <TabsTrigger value="case" className="text-xs sm:text-sm py-2">案件</TabsTrigger>
-                <TabsTrigger value="request" className="text-xs sm:text-sm py-2">请求</TabsTrigger>
-              </TabsList>
-
-              {/* 申请人信息 */}
-              <TabsContent value="applicant" className="space-y-4 mt-4">
-                <div className="p-5 sm:p-6 rounded-2xl bg-white/80 backdrop-blur-lg border border-white/60 shadow-lg">
-                  <h3 className="text-base font-semibold text-stone-800 mb-1">申请人基本信息</h3>
-                  <p className="text-sm text-stone-500 mb-4">请如实填写您的个人信息</p>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="applicantName" className="text-sm font-medium text-stone-700">
-                          姓名 <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="applicantName"
-                          value={formData.applicantName}
-                          onChange={(e) => updateField('applicantName', e.target.value)}
-                          placeholder="请输入您的真实姓名"
-                          className="rounded-xl bg-white/80 border-stone-200/60 focus:border-emerald-400"
-                        />
-                        {errors.applicantName && <p className="text-xs text-red-500">{errors.applicantName}</p>}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-stone-700">
-                          性别 <span className="text-red-500">*</span>
-                        </Label>
-                        <RadioGroup
-                          value={formData.applicantGender}
-                          onValueChange={(v) => updateField('applicantGender', v)}
-                          className="flex gap-4"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="男" id="male" />
-                            <Label htmlFor="male" className="font-normal cursor-pointer text-stone-600">男</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="女" id="female" />
-                            <Label htmlFor="female" className="font-normal cursor-pointer text-stone-600">女</Label>
-                          </div>
-                        </RadioGroup>
-                        {errors.applicantGender && <p className="text-xs text-red-500">{errors.applicantGender}</p>}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="applicantBirthDate" className="text-sm font-medium text-stone-700">
-                          出生日期 <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="applicantBirthDate"
-                          type="date"
-                          value={formData.applicantBirthDate}
-                          onChange={(e) => updateField('applicantBirthDate', e.target.value)}
-                          className="rounded-xl bg-white/80 border-stone-200/60"
-                        />
-                        {errors.applicantBirthDate && <p className="text-xs text-red-500">{errors.applicantBirthDate}</p>}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="applicantNation" className="text-sm font-medium text-stone-700">民族</Label>
-                        <Input
-                          id="applicantNation"
-                          value={formData.applicantNation}
-                          onChange={(e) => updateField('applicantNation', e.target.value)}
-                          placeholder="如：汉族"
-                          className="rounded-xl bg-white/80 border-stone-200/60"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="applicantIdCard" className="text-sm font-medium text-stone-700">
-                          身份证号 <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="applicantIdCard"
-                          value={formData.applicantIdCard}
-                          onChange={(e) => updateField('applicantIdCard', e.target.value)}
-                          placeholder="18位身份证号码"
-                          className="rounded-xl bg-white/80 border-stone-200/60"
-                        />
-                        {errors.applicantIdCard && <p className="text-xs text-red-500">{errors.applicantIdCard}</p>}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="applicantPhone" className="text-sm font-medium text-stone-700">
-                          联系电话 <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="applicantPhone"
-                          type="tel"
-                          value={formData.applicantPhone}
-                          onChange={(e) => updateField('applicantPhone', e.target.value)}
-                          placeholder="手机号码"
-                          className="rounded-xl bg-white/80 border-stone-200/60"
-                        />
-                        {errors.applicantPhone && <p className="text-xs text-red-500">{errors.applicantPhone}</p>}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="applicantAddress" className="text-sm font-medium text-stone-700">户籍地址</Label>
-                      <Input
-                        id="applicantAddress"
-                        value={formData.applicantAddress}
-                        onChange={(e) => updateField('applicantAddress', e.target.value)}
-                        placeholder="请输入您的户籍地址"
-                        className="rounded-xl bg-white/80 border-stone-200/60"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Button 
-                  onClick={() => document.querySelector<HTMLElement>('[data-value="defendant"]')?.click()}
-                  className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30"
+          {/* Messages */}
+          <div className="space-y-4">
+            {messages.map((msg, idx) => {
+              const isStreaming = idx === messages.length - 1 && (isGenerating || isTyping);
+              const isLastMessage = idx === messages.length - 1;
+              
+              return (
+                <div 
+                  key={idx} 
+                  ref={isLastMessage ? lastMessageRef : null}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
                 >
-                  下一步：填写被告信息
-                </Button>
-              </TabsContent>
-
-              {/* 被告信息 */}
-              <TabsContent value="defendant" className="space-y-4 mt-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">被告信息</CardTitle>
-                    <CardDescription>填写拖欠工资的单位或个人信息</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>被告类型</Label>
-                      <RadioGroup
-                        value={formData.defendantType}
-                        onValueChange={(v) => updateField('defendantType', v as 'company' | 'individual')}
-                        className="flex gap-4"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="company" id="defCompany" />
-                          <Label htmlFor="defCompany" className="font-normal cursor-pointer">单位/公司</Label>
+                  <div className="max-w-[85%]">
+                    <div className={`rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 ${
+                      msg.role === 'user'
+                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
+                        : 'bg-white/90 text-foreground border border-emerald-100/50 shadow-sm'
+                    }`}>
+                      {msg.role === 'assistant' ? (
+                        <div className="text-sm leading-relaxed">
+                          <MarkdownRenderer content={msg.content} isStreaming={isStreaming} />
+                          {isStreaming && <span className="inline-block w-2 h-4 ml-1 bg-emerald-500 animate-pulse" />}
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="individual" id="defIndividual" />
-                          <Label htmlFor="defIndividual" className="font-normal cursor-pointer">个人</Label>
+                      ) : (
+                        <p className="whitespace-pre-wrap text-sm break-words">{msg.content}</p>
+                      )}
+                    </div>
+                    
+                    {msg.role === 'assistant' && msg.legalReferences && msg.legalReferences.length > 0 && (
+                      <div className="mt-2 px-1">
+                        <div className="text-[10px] sm:text-[11px] text-gray-400">
+                          <span className="mr-1">📖 参考：</span>
+                          {msg.legalReferences.map((ref, i) => (
+                            <span key={i}>
+                              {i > 0 && <span className="mx-1">·</span>}
+                              <a href={ref.url} target="_blank" rel="noopener noreferrer" className="hover:text-gray-500 underline">
+                                {ref.name}
+                              </a>
+                            </span>
+                          ))}
                         </div>
-                      </RadioGroup>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="defendantName">
-                        {formData.defendantType === 'company' ? '公司名称' : '姓名'} <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="defendantName"
-                        value={formData.defendantName}
-                        onChange={(e) => updateField('defendantName', e.target.value)}
-                        placeholder={formData.defendantType === 'company' ? '如：北京某某建筑公司' : '请输入被告姓名'}
-                      />
-                      {errors.defendantName && <p className="text-xs text-red-500">{errors.defendantName}</p>}
-                    </div>
-
-                    {formData.defendantType === 'company' && (
-                      <div className="space-y-2">
-                        <Label htmlFor="defendantCode">统一社会信用代码</Label>
-                        <Input
-                          id="defendantCode"
-                          value={formData.defendantCode}
-                          onChange={(e) => updateField('defendantCode', e.target.value)}
-                          placeholder="18位统一社会信用代码"
-                        />
                       </div>
                     )}
-
-                    <div className="space-y-2">
-                      <Label htmlFor="defendantAddress">
-                        {formData.defendantType === 'company' ? '住所地' : '住址'} <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="defendantAddress"
-                        value={formData.defendantAddress}
-                        onChange={(e) => updateField('defendantAddress', e.target.value)}
-                        placeholder="被告的详细地址"
-                      />
-                      {errors.defendantAddress && <p className="text-xs text-red-500">{errors.defendantAddress}</p>}
-                    </div>
-
-                    {formData.defendantType === 'company' && (
-                      <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="defendantLegalPerson">法定代表人/负责人</Label>
-                            <Input
-                              id="defendantLegalPerson"
-                              value={formData.defendantLegalPerson}
-                              onChange={(e) => updateField('defendantLegalPerson', e.target.value)}
-                              placeholder="公司法定代表人姓名"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="defendantPhone">联系电话</Label>
-                            <Input
-                              id="defendantPhone"
-                              type="tel"
-                              value={formData.defendantPhone}
-                              onChange={(e) => updateField('defendantPhone', e.target.value)}
-                              placeholder="被告联系电话"
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <div className="flex gap-3">
-                  <Button 
-                    variant="outline"
-                    onClick={() => document.querySelector<HTMLElement>('[data-value="applicant"]')?.click()}
-                    className="flex-1"
-                  >
-                    上一步
-                  </Button>
-                  <Button 
-                    onClick={() => document.querySelector<HTMLElement>('[data-value="case"]')?.click()}
-                    className="flex-1 bg-emerald-500 hover:bg-emerald-600"
-                  >
-                    下一步：填写案件信息
-                  </Button>
+                  </div>
                 </div>
-              </TabsContent>
-
-              {/* 案件信息 */}
-              <TabsContent value="case" className="space-y-4 mt-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">案件基本情况</CardTitle>
-                    <CardDescription>填写与欠薪相关的详细信息</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="projectName">工程/项目名称</Label>
-                      <Input
-                        id="projectName"
-                        value={formData.projectName}
-                        onChange={(e) => updateField('projectName', e.target.value)}
-                        placeholder="如：某某工地 / 某某工程项目"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="workLocation">工作地点</Label>
-                      <Input
-                        id="workLocation"
-                        value={formData.workLocation}
-                        onChange={(e) => updateField('workLocation', e.target.value)}
-                        placeholder="具体工作地点"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="workStartDate">
-                          工作开始时间 <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="workStartDate"
-                          type="date"
-                          value={formData.workStartDate}
-                          onChange={(e) => updateField('workStartDate', e.target.value)}
-                        />
-                        {errors.workStartDate && <p className="text-xs text-red-500">{errors.workStartDate}</p>}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="workEndDate">
-                          工作结束时间 <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="workEndDate"
-                          type="date"
-                          value={formData.workEndDate}
-                          onChange={(e) => updateField('workEndDate', e.target.value)}
-                        />
-                        {errors.workEndDate && <p className="text-xs text-red-500">{errors.workEndDate}</p>}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="owedAmount">
-                          拖欠工资金额(元) <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="owedAmount"
-                          type="number"
-                          value={formData.owedAmount}
-                          onChange={(e) => updateField('owedAmount', e.target.value)}
-                          placeholder="请输入金额"
-                        />
-                        {errors.owedAmount && <p className="text-xs text-red-500">{errors.owedAmount}</p>}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="owedAmountCN">金额大写</Label>
-                        <Input
-                          id="owedAmountCN"
-                          value={formData.owedAmountCN}
-                          onChange={(e) => updateField('owedAmountCN', e.target.value)}
-                          placeholder="如：伍万元整"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="factDescription">
-                        事实与理由 <span className="text-red-500">*</span>
-                      </Label>
-                      <Textarea
-                        id="factDescription"
-                        value={formData.factDescription}
-                        onChange={(e) => updateField('factDescription', e.target.value)}
-                        placeholder="请详细描述拖欠工资的事实经过，包括时间、地点、经过、金额等"
-                        className="min-h-[120px]"
-                      />
-                      {errors.factDescription && <p className="text-xs text-red-500">{errors.factDescription}</p>}
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <Label>相关材料</Label>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="hasContract" 
-                          checked={formData.hasContract}
-                          onCheckedChange={(v) => updateField('hasContract', v as boolean)}
-                        />
-                        <Label htmlFor="hasContract" className="font-normal cursor-pointer">
-                          有签订劳动合同
-                        </Label>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="hasEvidence">证据材料</Label>
-                      <Textarea
-                        id="hasEvidence"
-                        value={formData.hasEvidence}
-                        onChange={(e) => updateField('hasEvidence', e.target.value)}
-                        placeholder="请列出您掌握的证据，如：劳动合同、工资条、聊天记录、考勤记录等"
-                        className="min-h-[80px]"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="flex gap-3">
-                  <Button 
-                    variant="outline"
-                    onClick={() => document.querySelector<HTMLElement>('[data-value="defendant"]')?.click()}
-                    className="flex-1"
-                  >
-                    上一步
-                  </Button>
-                  <Button 
-                    onClick={() => document.querySelector<HTMLElement>('[data-value="request"]')?.click()}
-                    className="flex-1 bg-emerald-500 hover:bg-emerald-600"
-                  >
-                    下一步：填写诉讼请求
-                  </Button>
+              );
+            })}
+            
+            {/* Loading indicator */}
+            {(isGenerating || isTyping) && (
+              <div className="flex justify-start">
+                <div className="bg-white/90 text-foreground border border-emerald-100/50 rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 shadow-sm">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm">
+                    <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin text-emerald-500" />
+                    {isGenerating ? '正在生成文书...' : '思考中...'}
+                  </div>
                 </div>
-              </TabsContent>
-
-              {/* 诉讼请求 */}
-              <TabsContent value="request" className="space-y-4 mt-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">诉讼请求与提交信息</CardTitle>
-                    <CardDescription>选择您的诉讼请求并填写管辖法院</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <Label>诉讼请求（可多选）</Label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                          onClick={() => {
-                            const newRequests = formData.requestType.includes('salary') 
-                              ? formData.requestType.filter(r => r !== 'salary')
-                              : [...formData.requestType, 'salary'];
-                            updateField('requestType', newRequests);
-                          }}
-                        >
-                          <Checkbox 
-                            checked={formData.requestType.includes('salary')}
-                            onCheckedChange={() => {}}
-                          />
-                          <Label className="font-normal cursor-pointer">支付拖欠工资</Label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                          onClick={() => {
-                            const newRequests = formData.requestType.includes('compensation') 
-                              ? formData.requestType.filter(r => r !== 'compensation')
-                              : [...formData.requestType, 'compensation'];
-                            updateField('requestType', newRequests);
-                          }}
-                        >
-                          <Checkbox 
-                            checked={formData.requestType.includes('compensation')}
-                            onCheckedChange={() => {}}
-                          />
-                          <Label className="font-normal cursor-pointer">支付赔偿金</Label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                          onClick={() => {
-                            const newRequests = formData.requestType.includes('economic') 
-                              ? formData.requestType.filter(r => r !== 'economic')
-                              : [...formData.requestType, 'economic'];
-                            updateField('requestType', newRequests);
-                          }}
-                        >
-                          <Checkbox 
-                            checked={formData.requestType.includes('economic')}
-                            onCheckedChange={() => {}}
-                          />
-                          <Label className="font-normal cursor-pointer">经济补偿金</Label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
-                          onClick={() => {
-                            const newRequests = formData.requestType.includes('double') 
-                              ? formData.requestType.filter(r => r !== 'double')
-                              : [...formData.requestType, 'double'];
-                            updateField('requestType', newRequests);
-                          }}
-                        >
-                          <Checkbox 
-                            checked={formData.requestType.includes('double')}
-                            onCheckedChange={() => {}}
-                          />
-                          <Label className="font-normal cursor-pointer">未签合同双倍工资</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="courtName">
-                        管辖法院 <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="courtName"
-                        value={formData.courtName}
-                        onChange={(e) => updateField('courtName', e.target.value)}
-                        placeholder="如：XX区人民法院"
-                      />
-                      {errors.courtName && <p className="text-xs text-red-500">{errors.courtName}</p>}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-amber-50/50 border-amber-100">
-                  <CardContent className="p-4">
-                    <div className="flex gap-3">
-                      <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                      <div className="text-sm text-amber-700 space-y-1">
-                        <p className="font-medium">提交前检查</p>
-                        <ul className="text-xs space-y-0.5 list-disc list-inside">
-                          <li>确认申请人信息填写正确</li>
-                          <li>确认被告信息完整</li>
-                          <li>确认欠薪金额准确</li>
-                          <li>确认管辖法院正确</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Button 
-                  onClick={generateDocument}
-                  disabled={isGenerating}
-                  className="w-full h-12 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      正在生成文书...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-5 w-5 mr-2" />
-                      生成法律文书
-                    </>
-                  )}
-                </Button>
-              </TabsContent>
-            </Tabs>
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Step 3: Preview */}
-        {step === 'preview' && generatedDocument && (
-          <div className="max-w-3xl mx-auto space-y-4">
-            <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50/30 to-white shadow-xl shadow-emerald-500/10">
-              <CardHeader className="pb-2 bg-gradient-to-r from-emerald-100/50 to-transparent">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-emerald-600 shrink-0" />
+          {/* Generated Document Card */}
+          {generatedDocument && (
+            <Card className="mt-6 border-emerald-200 bg-gradient-to-br from-emerald-50/30 to-white shadow-xl shadow-emerald-500/10">
+              <CardHeader className="pb-2 border-b bg-gradient-to-r from-emerald-100/50 to-transparent">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-emerald-600 shrink-0" />
                   生成的法律文书
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4">
-                <div className="bg-white/80 p-4 rounded-xl border border-emerald-100/50 max-h-[500px] overflow-y-auto">
+              <CardContent className="p-3 sm:p-4">
+                {/* 使用 Markdown 渲染器展示文书内容 */}
+                <div className="bg-white/80 p-3 sm:p-4 rounded-xl border border-emerald-100/50 max-h-[400px] sm:max-h-[500px] overflow-y-auto">
                   <MarkdownRenderer 
                     content={generatedDocument} 
                     className="document-preview"
                   />
                 </div>
-                <div className="flex gap-2 mt-4">
-                  <Button 
-                    variant="outline" 
-                    onClick={copyToClipboard} 
-                    className="flex-1 gap-2 border-emerald-200 hover:bg-emerald-50"
-                  >
-                    {copied ? <><Check className="h-4 w-4" /> 已复制</> : <><Copy className="h-4 w-4" /> 复制文书</>}
+                <div className="flex gap-2 mt-3 sm:mt-4">
+                  <Button variant="outline" size="sm" onClick={copyToClipboard} className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm border-emerald-200 hover:bg-emerald-50">
+                    {copied ? <><Check className="h-3 w-3 sm:h-4 sm:w-4" /> 已复制</> : <><Copy className="h-3 w-3 sm:h-4 sm:w-4" /> 复制文书</>}
                   </Button>
-                  <Button 
-                    onClick={downloadDocument} 
-                    className="flex-1 gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30"
-                  >
-                    <Download className="h-4 w-4" />
+                  <Button size="sm" onClick={downloadDocument} className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30">
+                    <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                     下载.md
                   </Button>
                 </div>
               </CardContent>
             </Card>
+          )}
+        </div>
+      </div>
 
-            <Card className="bg-blue-50/50 border-blue-100">
-              <CardContent className="p-4">
-                <div className="flex gap-3">
-                  <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-700 space-y-1">
-                    <p className="font-medium">文书使用说明</p>
-                    <ul className="text-xs space-y-0.5 list-disc list-inside">
-                      <li>请仔细核对文书内容，确保信息准确</li>
-                      <li>如有需要，可手动调整文书格式</li>
-                      <li>下载后请打印签字，并按要求提交法院</li>
-                      <li>如需帮助，请联系平台客服或前往线下服务点</li>
-                    </ul>
-                  </div>
+      {/* Back to bottom button */}
+      {showBackToBottom && (
+        <button 
+          onClick={handleBackToBottom} 
+          className="fixed bottom-[140px] sm:bottom-[160px] right-4 sm:right-6 z-50 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-emerald-500 text-white shadow-lg hover:bg-emerald-600 hover:shadow-xl flex items-center justify-center transition-all active:scale-95"
+        >
+          <ArrowDown className="h-5 w-5" />
+        </button>
+      )}
+
+      {/* Fixed Bottom Input Area */}
+      {!generatedDocument && (
+        <div 
+          ref={bottomAreaRef}
+          className="shrink-0 bg-white/95 backdrop-blur-md border-t border-emerald-100/50 z-40 safe-area-bottom"
+          style={{
+            paddingBottom: 'env(safe-area-inset-bottom, 8px)',
+          }}
+        >
+          <div className="container mx-auto max-w-3xl px-3 sm:px-4 py-2.5 sm:py-3">
+            
+            {/* Quick action buttons */}
+            {currentStep > 0 && (
+              <div className="flex gap-1.5 sm:gap-2 mb-2 sm:mb-3 text-[10px] sm:text-xs overflow-x-auto scrollbar-hide -mx-1 px-1">
+                <button onClick={() => handleAnswer('跳过')} className="shrink-0 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">跳过</button>
+                <button onClick={() => handleAnswer('重新开始')} className="shrink-0 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">重新开始</button>
+                <button onClick={() => handleAnswer('帮助')} className="shrink-0 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">帮助</button>
+              </div>
+            )}
+            
+            {/* Input form */}
+            <form onSubmit={handleSubmit} className="flex gap-2">
+              <Input 
+                value={inputValue} 
+                onChange={(e) => setInputValue(e.target.value)} 
+                onKeyDown={handleKeyDown}
+                placeholder={currentQ?.options ? `请选择：${currentQ.options.join(' / ')}` : currentQ?.placeholder || '请输入'}
+                className="flex-1 text-sm border-emerald-200 focus-visible:ring-emerald-500 focus-visible:border-emerald-300 bg-white/80"
+                disabled={isGenerating || isTyping} 
+              />
+              <Button 
+                type="submit" 
+                size="icon"
+                disabled={isGenerating || isTyping || !inputValue.trim()}
+                className="shrink-0 h-10 w-10 sm:h-11 sm:w-11 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30 transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+            
+            {/* Quick options */}
+            {currentQ?.options && (
+              <div className="flex gap-1.5 sm:gap-2 mt-2 sm:mt-3 justify-center flex-wrap">
+                {currentQ.options.map(opt => (
+                  <Button 
+                    key={opt} 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleAnswer(opt)}
+                    disabled={isGenerating || isTyping}
+                    className="text-[10px] sm:text-xs border-emerald-200 hover:bg-emerald-50 transition-colors disabled:opacity-50"
+                  >
+                    {opt}
+                  </Button>
+                ))}
+              </div>
+            )}
+            
+            {/* Progress bar */}
+            {currentStep > 0 && (
+              <div className="mt-2 sm:mt-3 flex items-center gap-2">
+                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all" style={{ width: `${progress}%` }} />
                 </div>
-              </CardContent>
-            </Card>
-
-            <div className="flex gap-3">
-              <Button 
-                variant="outline"
-                onClick={() => {
-                  setStep('select');
-                  setFormData(initialFormData);
-                  setGeneratedDocument(null);
-                }}
-                className="flex-1"
-              >
-                生成新文书
-              </Button>
-              <Button 
-                onClick={() => router.push('/apply')}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-600"
-              >
-                在线申请
-              </Button>
-            </div>
+                <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0">{currentStep}/{QUESTIONS.length}</span>
+              </div>
+            )}
           </div>
-        )}
-      </main>
+        </div>
+      )}
     </div>
   );
 }
+
+const QUESTIONS = [
+  { id: 'name', field: 'name', question: '请问您叫什么名字？', placeholder: '请输入您的姓名' },
+  { id: 'phone', field: 'phone', question: '请问您的联系电话是多少？', placeholder: '请输入手机号码' },
+  { id: 'companyName', field: 'companyName', question: '是哪家单位或个人拖欠了您的工资？', placeholder: '如：某某建筑公司' },
+  { id: 'owedAmount', field: 'owedAmount', question: '被拖欠的工资金额大概是多少？', placeholder: '如：5万元' },
+  { id: 'workPeriod', field: 'workPeriod', question: '您是什么时候开始在那工作的？', placeholder: '如：2024年3月至2025年1月' },
+  { id: 'hasContract', field: 'hasContract', question: '您和用人单位签订劳动合同了吗？', options: ['有', '没有', '不确定'] },
+  { id: 'hasEvidence', field: 'hasEvidence', question: '您有哪些证据？（工资条、聊天记录等）', placeholder: '如：工资条、微信记录' },
+  { id: 'description', field: 'description', question: '请简单描述一下拖欠工资的情况', placeholder: '越详细越好' }
+];
+
+interface LegalReference { name: string; fullName: string; url: string; }
+interface ChatMessage { role: 'user' | 'assistant'; content: string; timestamp: Date; legalReferences?: LegalReference[]; }
+interface FormData { name: string; phone: string; companyName: string; owedAmount: string; workPeriod: string; hasContract: string; hasEvidence: string; description: string; }

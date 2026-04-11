@@ -28,32 +28,10 @@ interface MarkdownRendererProps {
 }
 
 // ============================================================
-// 工具函数：将 ==text== 语法转换为标记文本
-// ============================================================
-function preprocessHighlight(text: string): string {
-  // 使用双括号 [[text]] 标记高亮内容，后续通过组件渲染
-  // 匹配 ==...== 语法，支持多行内容
-  return text.replace(/==([^=]+)==/g, (match, content) => {
-    // 对内容进行 HTML 转义，防止 XSS
-    const escaped = content
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-    return `<mark data-highlight="true">${escaped}</mark>`;
-  });
-}
-
-// ============================================================
 // MarkdownRenderer 组件
 // 功能：安全的 Markdown 到 React 组件渲染
 // ============================================================
 export function MarkdownRenderer({ content, className = '', isStreaming = false }: MarkdownRendererProps) {
-  // 预处理：处理 ==text== 高亮语法
-  const processedContent = useMemo(() => {
-    return preprocessHighlight(content);
-  }, [content]);
-
   // 流式输出时的样式：文字渐显效果
   const streamingStyle = isStreaming ? {
     animation: 'fadeIn 0.1s ease-in',
@@ -142,79 +120,14 @@ export function MarkdownRenderer({ content, className = '', isStreaming = false 
               {children}
             </li>
           ),
-          // 高亮标记 ==text== 
-          mark: ({ children, ...props }) => {
-            // 交替使用浅绿色和浅黄色
-            const useGreen = Math.random() > 0.5;
-            return (
-              <mark 
-                {...props}
-                style={{
-                  backgroundColor: useGreen ? '#dcfce7' : '#fef9c3',
-                  color: useGreen ? '#166534' : '#854d0e',
-                  padding: '2px 6px',
-                  borderRadius: '6px',
-                  fontWeight: 500,
-                  boxShadow: useGreen 
-                    ? '0 1px 2px rgba(22, 163, 74, 0.1)' 
-                    : '0 1px 2px rgba(217, 119, 6, 0.1)',
-                }}
-              >
-                {children}
-              </mark>
-            );
-          },
-          // 强调 - 重点内容高亮
-          strong: ({ children }) => {
-            // 判断内容是否为数字（金额、日期等）
-            const text = String(children);
-            const isNumeric = /^\d+([万千万百元角分])?[元]?$/.test(text) || 
-                             /^\d{4}[-/年]\d{1,2}[-/月]\d{1,2}[日]?$/.test(text) ||
-                             /^\d+%?$/.test(text);
-            
-            // 判断是否为关键提示词
-            const keyWords = ['注意', '重要', '建议', '必须', '应当', '可以', '违法', '合法', '赔偿', '支付', '时限', '证据', '申请', '起诉'];
-            const hasKeyWord = keyWords.some(kw => text.includes(kw));
-            
-            // 如果是数字或关键内容，使用高亮样式
-            if (isNumeric || hasKeyWord) {
-              return (
-                <strong style={{ 
-                  fontWeight: 600,
-                  backgroundColor: '#fef9c3',
-                  padding: '1px 4px',
-                  borderRadius: '4px',
-                  color: '#854d0e'
-                }}>
-                  {children}
-                </strong>
-              );
-            }
-            
-            return (
-              <strong style={{ 
-                fontWeight: 600, 
-                color: '#1f2937' 
-              }}>
-                {children}
-              </strong>
-            );
-          },
-          // 引用 - 使用浅绿色背景
-          blockquote: ({ children }) => (
-            <blockquote style={{
-              borderLeft: '4px solid #10b981',
-              paddingLeft: '12px',
-              padding: '8px 12px',
-              marginLeft: 0,
-              marginBottom: '8px',
-              color: '#374151',
-              backgroundColor: '#ecfdf5',
-              borderRadius: '0 6px 6px 0',
-              fontStyle: 'normal'
+          // 强调
+          strong: ({ children }) => (
+            <strong style={{ 
+              fontWeight: 600, 
+              color: '#1f2937' 
             }}>
               {children}
-            </blockquote>
+            </strong>
           ),
           em: ({ children }) => (
             <em style={{ fontStyle: 'italic' }}>
@@ -260,6 +173,19 @@ export function MarkdownRenderer({ content, className = '', isStreaming = false 
             }}>
               {children}
             </pre>
+          ),
+          // 引用
+          blockquote: ({ children }) => (
+            <blockquote style={{
+              borderLeft: '4px solid #10b981',
+              paddingLeft: '12px',
+              marginLeft: 0,
+              marginBottom: '8px',
+              color: '#4b5563',
+              fontStyle: 'italic'
+            }}>
+              {children}
+            </blockquote>
           ),
           // 链接
           a: ({ href, children }) => (
@@ -321,7 +247,7 @@ export function MarkdownRenderer({ content, className = '', isStreaming = false 
           ),
         }}
       >
-        {processedContent}
+        {content}
       </ReactMarkdown>
       
       {/* 渐显动画样式 */}

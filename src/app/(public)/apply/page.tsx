@@ -5,14 +5,35 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import Link from 'next/link';
-import { Send, CheckCircle2, FileText, Heart, Shield, Users, Loader2 } from 'lucide-react';
+import {
+  Send,
+  CheckCircle2,
+  FileText,
+  Heart,
+  Shield,
+  Clock,
+  Users,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Badge } from '@/components/ui/badge';
 
 const formSchema = z.object({
   name: z.string().min(2, '请输入姓名'),
@@ -29,11 +50,6 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-const applicationTypes = [
-  { value: 'support', label: '支持起诉', desc: '请求检察机关支持起诉', icon: Shield },
-  { value: 'legal_aid', label: '法律援助', desc: '请求法律援助机构提供帮助', icon: Heart },
-];
-
 export default function ApplyPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -42,232 +58,404 @@ export default function ApplyPage() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '', idCard: '', phone: '', address: '',
-      applicationType: undefined, caseDescription: '', requestContent: '', agreeTerms: false,
+      name: '',
+      idCard: '',
+      phone: '',
+      address: '',
+      applicationType: undefined,
+      caseDescription: '',
+      requestContent: '',
+      agreeTerms: false,
     },
   });
 
   async function onSubmit(data: FormData) {
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/applications', {
+      const res = await fetch('/api/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          applicant_name: data.name, applicant_phone: data.phone,
-          applicant_id_card: data.idCard, applicant_address: data.address,
+          applicant_name: data.name,
+          applicant_phone: data.phone,
+          applicant_id_card: data.idCard,
+          applicant_address: data.address,
           application_type: data.applicationType,
-          case_description: data.caseDescription,
+          case_brief: data.caseDescription,
           request_content: data.requestContent,
         }),
       });
+      
       const result = await res.json();
+      
       if (result.success) {
-        setApplicationNumber(result.data?.applicationNumber || `SQ${Date.now()}`);
+        // Extract application number from response or generate one
+        const appNumber = result.data?.application_number || result.data?.id 
+          ? `SQ${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(result.data.id || Date.now()).padStart(6, '0')}`
+          : `SQ${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Date.now()).slice(-6)}`;
+        setApplicationNumber(appNumber);
         setSubmitSuccess(true);
       } else {
-        alert(result.error || '提交失败');
+        alert(result.error || '提交失败，请稍后重试');
       }
-    } catch { alert('网络错误'); }
-    finally { setIsSubmitting(false); }
+    } catch (error) {
+      console.error('提交申请失败:', error);
+      alert('网络错误，请稍后重试');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
+
+  const applicationTypes = [
+    {
+      id: 'support',
+      title: '支持起诉申请',
+      description: '申请检察机关支持您提起民事诉讼',
+      icon: Shield,
+      features: [
+        '检察机关支持起诉',
+        '提供法律专业支持',
+        '协助收集证据',
+        '出庭支持诉讼',
+      ],
+    },
+    {
+      id: 'legal_aid',
+      title: '法律援助申请',
+      description: '申请免费法律援助服务',
+      icon: Heart,
+      features: [
+        '免费律师服务',
+        '代写法律文书',
+        '代理诉讼案件',
+        '经济困难可申请',
+      ],
+    },
+  ];
 
   if (submitSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-12">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-20 -right-20 w-60 h-60 bg-emerald-100/30 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 -left-20 w-72 h-72 bg-emerald-50/40 rounded-full blur-3xl" />
-        </div>
-        <div className="relative w-full max-w-lg">
-          <div className="p-8 sm:p-10 rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-xl text-center">
-            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-              <CheckCircle2 className="w-8 h-8 text-white" />
+      <div className="mx-auto max-w-3xl bg-background px-4 py-16 selection-primary select-text">
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="pt-8 text-center">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2 className="h-10 w-10 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold text-stone-800 mb-3">提交成功</h2>
-            <p className="text-stone-600 mb-6">您的申请已提交，我们将在3-5个工作日内审核</p>
-            <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 mb-6">
-              <div className="text-sm text-stone-600 mb-1">申请编号</div>
-              <div className="text-lg font-mono font-semibold text-emerald-700">{applicationNumber}</div>
+            <h2 className="mb-2 text-2xl font-bold text-green-900">
+              申请提交成功！
+            </h2>
+            <p className="mb-6 text-green-700">
+              您的申请已成功提交，我们将在3个工作日内审核并与您联系。
+            </p>
+            <div className="mb-6 rounded-lg bg-white p-4 text-left">
+              <div className="mb-2 text-sm text-muted-foreground">
+                申请编号：<span className="font-mono font-medium text-foreground">{applicationNumber}</span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                提交时间：{new Date().toLocaleString('zh-CN')}
+              </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button variant="outline" onClick={() => window.location.reload()} className="flex-1">继续申请</Button>
-              <Link href="/cases" className="flex-1">
-                <Button className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600">查看进度</Button>
+            <div className="flex gap-4 justify-center">
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                继续申请
+              </Button>
+              <Link href="/cases">
+                <Button>查看申请进度</Button>
               </Link>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen px-4 py-8">
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 -right-40 w-96 h-96 bg-emerald-100/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 -left-40 w-[500px] h-[500px] bg-emerald-50/30 rounded-full blur-3xl" />
+    <div className="mx-auto max-w-6xl bg-background px-4 py-8 selection-primary select-text">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="mb-2 text-3xl font-bold text-foreground">在线申请</h1>
+        <p className="text-muted-foreground">
+          在线申请支持起诉、法律援助，全流程在线办理
+        </p>
       </div>
-      
-      <div className="relative max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-stone-800 mb-2">在线申请</h1>
-          <p className="text-sm text-stone-600">选择申请类型并填写相关信息</p>
-        </div>
 
-        {/* Types */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          {applicationTypes.map((type) => {
-            const Icon = type.icon;
-            const isSelected = form.watch('applicationType') === type.value;
-            return (
-              <button
-                key={type.value}
-                type="button"
-                onClick={() => form.setValue('applicationType', type.value as 'support' | 'legal_aid')}
-                className={`
-                  p-5 rounded-2xl border-2 text-left transition-all duration-200
-                  ${isSelected 
-                    ? 'bg-emerald-50/80 border-emerald-400 shadow-lg shadow-emerald-100' 
-                    : 'bg-white/70 backdrop-blur-lg border-white/60 hover:border-emerald-200'}
-                `}
-              >
-                <div className={`
-                  w-10 h-10 rounded-xl flex items-center justify-center mb-3
-                  ${isSelected ? 'bg-emerald-500 text-white' : 'bg-stone-100 text-stone-500'}
-                `}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <h3 className={`font-semibold mb-1 ${isSelected ? 'text-emerald-700' : 'text-stone-700'}`}>
-                  {type.label}
-                </h3>
-                <p className="text-sm text-stone-500">{type.desc}</p>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Form */}
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            <div className="p-5 sm:p-6 rounded-2xl bg-white/70 backdrop-blur-lg border border-white/60 shadow-lg">
-              <h2 className="text-lg font-semibold text-stone-800 mb-4">申请人信息</h2>
-              <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField control={form.control} name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>姓名 <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="请输入姓名" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField control={form.control} name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>手机号码 <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="请输入手机号" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField control={form.control} name="idCard"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>身份证号 <span className="text-red-500">*</span></FormLabel>
-                      <FormControl><Input placeholder="请输入18位身份证号" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField control={form.control} name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>现居住地址 <span className="text-red-500">*</span></FormLabel>
-                      <FormControl><Input placeholder="请输入详细地址" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+      {/* Service Introduction */}
+      <div className="mb-8 grid gap-6 md:grid-cols-3">
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="pt-6">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+              <Clock className="h-6 w-6 text-primary" />
             </div>
+            <h3 className="mb-2 font-semibold">快速响应</h3>
+            <p className="text-sm text-muted-foreground">
+              3个工作日内完成审核，及时反馈申请结果
+            </p>
+          </CardContent>
+        </Card>
 
-            <div className="p-5 sm:p-6 rounded-2xl bg-white/70 backdrop-blur-lg border border-white/60 shadow-lg">
-              <h2 className="text-lg font-semibold text-stone-800 mb-4">申请详情</h2>
-              <div className="space-y-4">
-                <FormField control={form.control} name="caseDescription"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>案件情况说明 <span className="text-red-500">*</span></FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="请详细描述案件情况..." className="min-h-[100px]" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField control={form.control} name="requestContent"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>申请事项 <span className="text-red-500">*</span></FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="请描述您希望获得的帮助..." className="min-h-[80px]" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+        <Card className="border-[var(--gold)]/30 bg-[var(--gold)]/5">
+          <CardContent className="pt-6">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--gold)]/10">
+              <Heart className="h-6 w-6 text-[var(--gold-foreground)]" />
             </div>
+            <h3 className="mb-2 font-semibold">全程免费</h3>
+            <p className="text-sm text-muted-foreground">
+              符合条件的申请人可享受免费法律服务
+            </p>
+          </CardContent>
+        </Card>
 
-            {/* Agreement */}
-            <div className="p-5 rounded-2xl bg-amber-50/60 backdrop-blur-lg border border-amber-200/50">
-              <FormField control={form.control} name="agreeTerms"
-                render={({ field }) => (
-                  <FormItem className="flex items-start gap-3">
-                    <FormControl>
-                      <input
-                        type="checkbox"
-                        checked={field.value}
-                        onChange={field.onChange}
-                        className="mt-1 w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal text-sm text-stone-600">
-                      我已阅读并同意
-                      <a href="/terms" className="text-emerald-600 hover:underline mx-1">《用户协议》</a>
-                      和
-                      <a href="/privacy" className="text-emerald-600 hover:underline mx-1">《隐私政策》</a>
-                    </FormLabel>
-                  </FormItem>
-                )}
-              />
-              <FormMessage className="mt-2" />
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="pt-6">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-green-100">
+              <Users className="h-6 w-6 text-green-600" />
             </div>
+            <h3 className="mb-2 font-semibold">专业团队</h3>
+            <p className="text-sm text-muted-foreground">
+              专业检察官和律师团队为您提供优质服务
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-            {/* Submit */}
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full h-12 text-base bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  提交中...
-                </>
-              ) : (
-                <>
-                  <Send className="w-5 h-5 mr-2" />
-                  提交申请
-                </>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Application Type Selection */}
+        <div className="lg:col-span-1">
+          <Card className="sticky top-28 md:top-36">
+            <CardHeader>
+              <CardTitle className="text-lg">选择申请类型</CardTitle>
+              <CardDescription>
+                请根据您的需求选择合适的申请类型
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {applicationTypes.map((type) => (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => form.setValue('applicationType', type.id as 'support' | 'legal_aid')}
+                  className={`w-full rounded-lg border p-4 text-left outline-none transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                    form.watch('applicationType') === type.id
+                      ? 'border-primary bg-primary/5 shadow-md'
+                      : 'border-border hover:border-primary/50 hover:shadow-sm'
+                  }`}
+                >
+                  <div className="mb-3 flex items-center gap-3">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                        type.id === 'support'
+                          ? 'bg-primary/10 text-primary'
+                          : 'bg-[var(--gold)]/10 text-[var(--gold-foreground)]'
+                      }`}
+                    >
+                      <type.icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="font-medium">{type.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {type.description}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    {type.features.map((feature, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 text-xs text-muted-foreground"
+                      >
+                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                        {feature}
+                      </div>
+                    ))}
+                  </div>
+                  {form.watch('applicationType') === type.id && (
+                    <Badge className="mt-3" variant="secondary">
+                      已选择
+                    </Badge>
+                  )}
+                </button>
+              ))}
+              {form.formState.errors.applicationType && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.applicationType.message}
+                </p>
               )}
-            </Button>
-          </form>
-        </Form>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Application Form */}
+        <div className="lg:col-span-2">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Personal Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    申请人信息
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>姓名 *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="请输入姓名" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>联系电话 *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="请输入手机号码" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="idCard"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>身份证号 *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="请输入18位身份证号码" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>联系地址 *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="请输入详细地址" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Application Details */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">申请详情</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="caseDescription"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>案件情况说明 *</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="请详细描述您的案件情况，包括：欠薪金额、欠薪时间、已采取的措施等..."
+                            className="min-h-[120px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          详细描述有助于我们更快审核您的申请
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="requestContent"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>申请事项 *</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="请描述您希望获得的帮助，例如：希望检察机关支持起诉、希望获得法律援助律师代理案件等..."
+                            className="min-h-[80px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Terms Agreement */}
+              <Card className="border-orange-200 bg-orange-50/50">
+                <CardContent className="pt-6">
+                  <FormField
+                    control={form.control}
+                    name="agreeTerms"
+                    render={({ field }) => (
+                      <FormItem className="flex items-start gap-3">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value}
+                            onChange={field.onChange}
+                            className="mt-1 h-4 w-4"
+                          />
+                        </FormControl>
+                        <div className="flex-1">
+                          <FormLabel className="font-normal">
+                            我已阅读并同意
+                            <a href="/terms" className="text-primary hover:underline mx-1">
+                              《用户协议》
+                            </a>
+                            和
+                            <a href="/privacy" className="text-primary hover:underline mx-1">
+                              《隐私政策》
+                            </a>
+                          </FormLabel>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  '提交中...'
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    提交申请
+                  </>
+                )}
+              </Button>
+            </form>
+          </Form>
+        </div>
       </div>
     </div>
   );

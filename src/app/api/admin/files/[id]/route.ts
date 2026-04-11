@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { pool } from '@/storage/database/pg-pool';
 
 // 验证管理员身份
 function isAuthenticated(request: NextRequest): boolean {
@@ -17,41 +17,29 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const numId = parseInt(id);
-
-  if (isNaN(numId)) {
-    return NextResponse.json({ error: '无效的ID' }, { status: 400 });
-  }
 
   try {
-    const client = getSupabaseClient();
+    const client = await pool.connect();
     
-    // 获取文件信息
-    const { data: fileData, error: getError } = await client
-      .from('files')
-      .select('*')
-      .eq('id', numId)
-      .single();
-
-    if (getError) {
-      if (getError.code === 'PGRST116') {
+    try {
+      // 获取文件信息
+      const fileResult = await client.query('SELECT * FROM files WHERE id = $1', [id]);
+      
+      if (fileResult.rows.length === 0) {
         return NextResponse.json({ error: '文件不存在' }, { status: 404 });
       }
-      throw getError;
+
+      // 删除文件记录
+      await client.query('DELETE FROM files WHERE id = $1', [id]);
+
+      // 注意：实际删除文件需要调用对象存储API
+      // const file = fileResult.rows[0];
+      // if (file.url) { ... 删除对象存储中的文件 ... }
+
+      return NextResponse.json({ success: true });
+    } finally {
+      client.release();
     }
-
-    // 删除文件记录
-    const { error: deleteError } = await client
-      .from('files')
-      .delete()
-      .eq('id', numId);
-
-    if (deleteError) throw deleteError;
-
-    // 注意：实际删除对象存储中的文件需要额外的存储SDK调用
-    // 如果需要删除对象存储中的文件，可以使用 S3 SDK
-
-    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('删除文件失败:', error);
     return NextResponse.json({ error: '删除文件失败' }, { status: 500 });

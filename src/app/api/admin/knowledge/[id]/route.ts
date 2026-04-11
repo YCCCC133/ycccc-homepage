@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { pool } from '@/storage/database/pg-pool';
 
 // 验证管理员身份
 function isAuthenticated(request: NextRequest): boolean {
@@ -16,29 +16,23 @@ export async function GET(
     return NextResponse.json({ error: '未授权' }, { status: 401 });
   }
 
-  const { id } = await params;
-  const numId = parseInt(id);
-
-  if (isNaN(numId)) {
-    return NextResponse.json({ error: '无效的ID' }, { status: 400 });
-  }
-
   try {
-    const client = getSupabaseClient();
-    const { data, error } = await client
-      .from('knowledge_base')
-      .select('*')
-      .eq('id', numId)
-      .single();
+    const { id } = await params;
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        `SELECT * FROM knowledge_base WHERE id = $1`,
+        [id]
+      );
 
-    if (error) {
-      if (error.code === 'PGRST116') {
+      if (result.rows.length === 0) {
         return NextResponse.json({ error: '知识库条目不存在' }, { status: 404 });
       }
-      throw error;
-    }
 
-    return NextResponse.json({ success: true, data });
+      return NextResponse.json({ success: true, data: result.rows[0] });
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error('获取知识库详情失败:', error);
     return NextResponse.json({ error: '获取数据失败' }, { status: 500 });
@@ -54,51 +48,53 @@ export async function PUT(
     return NextResponse.json({ error: '未授权' }, { status: 401 });
   }
 
-  const { id } = await params;
-  const numId = parseInt(id);
-
-  if (isNaN(numId)) {
-    return NextResponse.json({ error: '无效的ID' }, { status: 400 });
-  }
-
   try {
+    const { id } = await params;
     const body = await request.json();
-    const updateData: Record<string, unknown> = {};
+    const {
+      category,
+      court,
+      case_number,
+      parties,
+      case_type,
+      procedure_type,
+      result,
+      summary,
+      full_text,
+      is_active
+    } = body;
 
-    const allowedFields = [
-      'category', 'court', 'case_number', 'parties', 'case_type',
-      'procedure_type', 'result', 'summary', 'full_text', 'is_active'
-    ];
+    const client = await pool.connect();
+    try {
+      const result_db = await client.query(
+        `UPDATE knowledge_base 
+         SET category = COALESCE($1, category),
+             court = COALESCE($2, court),
+             case_number = COALESCE($3, case_number),
+             parties = COALESCE($4, parties),
+             case_type = COALESCE($5, case_type),
+             procedure_type = COALESCE($6, procedure_type),
+             result = COALESCE($7, result),
+             summary = COALESCE($8, summary),
+             full_text = COALESCE($9, full_text),
+             is_active = COALESCE($10, is_active),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $11
+         RETURNING *`,
+        [category, court, case_number, parties, case_type, procedure_type, result, summary, full_text, is_active, id]
+      );
 
-    for (const field of allowedFields) {
-      if (body[field] !== undefined) {
-        updateData[field] = body[field];
+      if (result_db.rows.length === 0) {
+        return NextResponse.json({ error: '知识库条目不存在' }, { status: 404 });
       }
+
+      return NextResponse.json({ success: true, data: result_db.rows[0] });
+    } finally {
+      client.release();
     }
-
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({ error: '没有要更新的字段' }, { status: 400 });
-    }
-
-    updateData.updated_at = new Date().toISOString();
-
-    const client = getSupabaseClient();
-    const { data, error } = await client
-      .from('knowledge_base')
-      .update(updateData)
-      .eq('id', numId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    if (!data) {
-      return NextResponse.json({ error: '知识库条目不存在' }, { status: 404 });
-    }
-
-    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('更新知识库条目失败:', error);
-    return NextResponse.json({ error: '更新数据失败' }, { status: 500 });
+    console.error('更新知识库失败:', error);
+    return NextResponse.json({ error: '更新失败' }, { status: 500 });
   }
 }
 
@@ -111,25 +107,25 @@ export async function DELETE(
     return NextResponse.json({ error: '未授权' }, { status: 401 });
   }
 
-  const { id } = await params;
-  const numId = parseInt(id);
-
-  if (isNaN(numId)) {
-    return NextResponse.json({ error: '无效的ID' }, { status: 400 });
-  }
-
   try {
-    const client = getSupabaseClient();
-    const { error } = await client
-      .from('knowledge_base')
-      .delete()
-      .eq('id', numId);
+    const { id } = await params;
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        'DELETE FROM knowledge_base WHERE id = $1 RETURNING id',
+        [id]
+      );
 
-    if (error) throw error;
+      if (result.rows.length === 0) {
+        return NextResponse.json({ error: '知识库条目不存在' }, { status: 404 });
+      }
 
-    return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true });
+    } finally {
+      client.release();
+    }
   } catch (error) {
-    console.error('删除知识库条目失败:', error);
-    return NextResponse.json({ error: '删除数据失败' }, { status: 500 });
+    console.error('删除知识库失败:', error);
+    return NextResponse.json({ error: '删除失败' }, { status: 500 });
   }
 }
