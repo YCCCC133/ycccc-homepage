@@ -28,10 +28,32 @@ interface MarkdownRendererProps {
 }
 
 // ============================================================
+// 工具函数：将 ==text== 语法转换为标记文本
+// ============================================================
+function preprocessHighlight(text: string): string {
+  // 使用双括号 [[text]] 标记高亮内容，后续通过组件渲染
+  // 匹配 ==...== 语法，支持多行内容
+  return text.replace(/==([^=]+)==/g, (match, content) => {
+    // 对内容进行 HTML 转义，防止 XSS
+    const escaped = content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    return `<mark data-highlight="true">${escaped}</mark>`;
+  });
+}
+
+// ============================================================
 // MarkdownRenderer 组件
 // 功能：安全的 Markdown 到 React 组件渲染
 // ============================================================
 export function MarkdownRenderer({ content, className = '', isStreaming = false }: MarkdownRendererProps) {
+  // 预处理：处理 ==text== 高亮语法
+  const processedContent = useMemo(() => {
+    return preprocessHighlight(content);
+  }, [content]);
+
   // 流式输出时的样式：文字渐显效果
   const streamingStyle = isStreaming ? {
     animation: 'fadeIn 0.1s ease-in',
@@ -120,6 +142,28 @@ export function MarkdownRenderer({ content, className = '', isStreaming = false 
               {children}
             </li>
           ),
+          // 高亮标记 ==text== 
+          mark: ({ children, ...props }) => {
+            // 交替使用浅绿色和浅黄色
+            const useGreen = Math.random() > 0.5;
+            return (
+              <mark 
+                {...props}
+                style={{
+                  backgroundColor: useGreen ? '#dcfce7' : '#fef9c3',
+                  color: useGreen ? '#166534' : '#854d0e',
+                  padding: '2px 6px',
+                  borderRadius: '6px',
+                  fontWeight: 500,
+                  boxShadow: useGreen 
+                    ? '0 1px 2px rgba(22, 163, 74, 0.1)' 
+                    : '0 1px 2px rgba(217, 119, 6, 0.1)',
+                }}
+              >
+                {children}
+              </mark>
+            );
+          },
           // 强调 - 重点内容高亮
           strong: ({ children }) => {
             // 判断内容是否为数字（金额、日期等）
@@ -129,7 +173,7 @@ export function MarkdownRenderer({ content, className = '', isStreaming = false 
                              /^\d+%?$/.test(text);
             
             // 判断是否为关键提示词
-            const keyWords = ['注意', '重要', '建议', '必须', '应当', '可以', '违法', '合法', '赔偿', '支付', '时限', '证据'];
+            const keyWords = ['注意', '重要', '建议', '必须', '应当', '可以', '违法', '合法', '赔偿', '支付', '时限', '证据', '申请', '起诉'];
             const hasKeyWord = keyWords.some(kw => text.includes(kw));
             
             // 如果是数字或关键内容，使用高亮样式
@@ -137,9 +181,9 @@ export function MarkdownRenderer({ content, className = '', isStreaming = false 
               return (
                 <strong style={{ 
                   fontWeight: 600,
-                  backgroundColor: '#fef9c3', // 浅黄色背景
+                  backgroundColor: '#fef9c3',
                   padding: '1px 4px',
-                  borderRadius: '3px',
+                  borderRadius: '4px',
                   color: '#854d0e'
                 }}>
                   {children}
@@ -165,7 +209,7 @@ export function MarkdownRenderer({ content, className = '', isStreaming = false 
               marginLeft: 0,
               marginBottom: '8px',
               color: '#374151',
-              backgroundColor: '#ecfdf5', // 浅绿色背景
+              backgroundColor: '#ecfdf5',
               borderRadius: '0 6px 6px 0',
               fontStyle: 'normal'
             }}>
@@ -277,7 +321,7 @@ export function MarkdownRenderer({ content, className = '', isStreaming = false 
           ),
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
       
       {/* 渐显动画样式 */}
