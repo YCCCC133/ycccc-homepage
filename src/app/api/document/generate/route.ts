@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 
 interface GenerateRequest {
   // 文书类型
-  documentType?: 'litigation' | 'support_prosecution' | 'labor_dispute';
+  documentType?: 'litigation' | 'support_prosecution' | 'labor_dispute' | 'payment_order';
   
   // 申请人信息
   applicantName: string;
@@ -18,6 +18,8 @@ interface GenerateRequest {
   applicantIdCard?: string;
   applicantPhone?: string;
   applicantAddress?: string;
+  applicantResidence?: string;  // 户籍地址
+  applicantWorkUnit?: string;   // 工作单位
   
   // 被告信息
   defendantName: string;
@@ -26,19 +28,38 @@ interface GenerateRequest {
   defendantAddress?: string;
   defendantLegalPerson?: string;
   defendantPhone?: string;
+  // 第二被告
+  hasSecondDefendant?: boolean;
+  secondDefendantName?: string;
+  secondDefendantIdCard?: string;
+  secondDefendantAddress?: string;
   
   // 案件信息
   projectName?: string;
   workLocation?: string;
+  workPosition?: string;     // 工作岗位
+  workContent?: string;      // 工作内容
   workStartDate?: string;
   workEndDate?: string;
-  owedAmount: string;
+  owedAmount: string;        // 欠薪金额（注意：表单用 unpaidAmount）
   owedAmountCN?: string;
   workDays?: string;
   dailyRate?: string;
+  // 表单字段兼容（unpaidAmount -> owedAmount）
+  unpaidAmount?: string;
+  unpaidStartDate?: string;
+  unpaidReason?: string;
+  unpaidCompanyName?: string;
+  unpaidCompanyPhone?: string;
   
   // 诉讼请求
   requestType?: string[];
+  salaryAmount?: string;            // 工资金额
+  doubleWageAmount?: string;        // 双倍工资
+  overtimeAmount?: string;          // 加班费
+  economicCompensationAmount?: string; // 经济补偿
+  otherRequests?: string;          // 其他请求
+  totalAmount?: string;             // 总金额
   
   // 事实与理由
   factDescription?: string;
@@ -48,7 +69,7 @@ interface GenerateRequest {
   
   // 其他（兼容新旧字段）
   hasContract?: boolean | string;
-  hasEvidence?: string;
+  hasEvidence?: boolean | string;
   hasWitness?: boolean;
   
   // 兼容旧字段
@@ -278,6 +299,84 @@ function getDocumentTemplate(documentType?: string): {
 7. 严格保持Markdown层级结构，不要省略任何必要模块`
       };
 
+    case 'payment_order':
+      return {
+        title: '支付令申请书',
+        systemPrompt: `你是一位专业的劳动法律师，擅长为农民工撰写支付令申请书。
+
+## 输出格式要求【关键】
+严格按照以下规范Markdown格式生成文书，**禁止输出纯文本或格式混乱的内容**：
+
+# 支付令申请书
+
+## 申请人（债权人）
+
+- **姓名**：[填入姓名]
+- **性别**：[男/女]
+- **出生日期**：[年-月-日]
+- **民族**：[民族]
+- **住所地**：[详细地址]
+- **联系电话**：[电话号码]
+
+## 被申请人（债务人）
+
+- **名称/姓名**：[公司全称或个人姓名]
+- **住所地**：[公司注册地址或个人住址]
+- **法定代表人/负责人**：[姓名，如不清楚填"不详"]
+- **联系电话**：[电话，如不清楚填"不详"]
+
+## 请求事项
+
+请求人民法院向被申请人发出支付令，督促被申请人立即支付拖欠申请人的工资人民币[金额]元。
+
+## 事实与理由
+
+### 一、基本情况
+[描述入职时间、工作岗位、工作地点等]
+
+### 二、欠薪事实
+[详细描述欠薪发生的时间、金额、未支付原因等]
+
+### 三、法律依据
+1. 《中华人民共和国民事诉讼法》第二百二十一条：债权人请求债务人给付金钱、有价证券，符合下列条件的，可以向有管辖权的基层人民法院申请支付令...
+2. 《中华人民共和国劳动合同法》第三十条：用人单位应当按照劳动合同约定和国家规定，向劳动者及时足额支付劳动报酬。
+
+### 四、证据材料
+[根据用户提供的证据信息列举]
+
+| 序号 | 证据名称 | 证明内容 |
+|------|----------|----------|
+| 1 | 工资流水 | 证明劳动关系和工资标准 |
+| 2 | [其他证据] | [证明内容] |
+
+## 此致
+
+**[填写基层人民法院名称，如：XX市XX区人民法院]**
+
+**申请人（签名）**：[姓名]  
+**联系电话**：[电话]  
+**日期**：[年]年[月]月[日]日
+
+---
+
+**附件：**
+1. 申请人身份证复印件 1 份
+2. 证据材料清单及证据复印件 X 份
+3. 欠薪证明材料 [X] 份
+
+---
+
+## 生成要求
+1. 所有"[...]"为需要填写的内容，按用户提供的真实信息填充
+2. 无法确认的信息填"不详"，不要留空
+3. 事实与理由要清晰分段，使用"### "小标题
+4. 证据清单必须使用Markdown表格格式
+5. 金额使用具体数字
+6. 日期如无法确定，使用"[年]年[月]月[日]日"占位
+7. 严格保持Markdown层级结构，不要省略任何必要模块
+8. 支付令申请书适用于劳动关系明确、欠薪事实清楚的案件`
+      };
+
     default: // civil_complaint
       return {
         title: '民事起诉状',
@@ -368,14 +467,24 @@ export async function POST(request: NextRequest) {
   try {
     const body: GenerateRequest = await request.json();
     
-    // 兼容新旧字段
+    // 兼容新旧字段 - 表单字段映射
     const applicantName = body.applicantName || body.name;
     const applicantPhone = body.applicantPhone || body.phone;
     const defendantName = body.defendantName || body.companyName;
-    const owedAmount = body.owedAmount || body.owedAmountOld;
-    const factDescription = body.factDescription || body.description;
+    // 欠薪金额：表单用 unpaidAmount，API用 owedAmount
+    const owedAmount = body.owedAmount || body.unpaidAmount || body.owedAmountOld;
+    const factDescription = body.factDescription || body.unpaidReason || body.description;
     const hasContract = body.hasContract !== undefined ? body.hasContract : body.hasContractOld;
     const hasEvidence = body.hasEvidence || body.hasEvidenceOld;
+    
+    // 表单字段：documentType 映射
+    const documentTypeMap: Record<string, string> = {
+      'support': 'support_prosecution',
+      'labor_dispute': 'labor_dispute',
+      'litigation': 'civil_complaint',
+      'payment_order': 'payment_order'
+    };
+    const normalizedDocType = documentTypeMap[body.documentType || ''] || body.documentType || 'civil_complaint';
 
     // 工作时间
     const workPeriod = body.workStartDate && body.workEndDate 
@@ -394,11 +503,11 @@ export async function POST(request: NextRequest) {
     const category = inferCategory(body);
     const relatedCases = await getRelatedCases(category);
 
-    // 获取文书模板
-    const { title, systemPrompt } = getDocumentTemplate(body.documentType);
+    // 获取文书模板（使用规范化的类型）
+    const { title, systemPrompt } = getDocumentTemplate(normalizedDocType);
     const documentTitle = title;
 
-    // 构建详细的用户提示词
+    // 构建详细的用户提示词 - 包含所有表单字段
     const userPrompt = `## 用户提供的真实信息
 
 ### 一、申请人（原告）信息
@@ -410,7 +519,8 @@ export async function POST(request: NextRequest) {
 | 民族 | ${body.applicantNation || '不详'} |
 | 身份证号 | ${body.applicantIdCard || '不详'} |
 | 联系电话 | ${applicantPhone || '不详'} |
-| 户籍地址 | ${body.applicantAddress || '不详'} |
+| 户籍地址 | ${body.applicantAddress || body.applicantResidence || '不详'} |
+| 工作单位 | ${body.applicantWorkUnit || '不详'} |
 
 ### 二、被告（被申请人）信息
 | 字段 | 内容 |
@@ -421,12 +531,18 @@ export async function POST(request: NextRequest) {
 | 住所地/地址 | ${body.defendantAddress || '不详'} |
 | 法定代表人/负责人 | ${body.defendantLegalPerson || '不详'} |
 | 联系电话 | ${body.defendantPhone || '不详'} |
+${body.hasSecondDefendant ? `| 是否有第二被告 | 是 |
+| 第二被告姓名 | ${body.secondDefendantName || '不详'} |
+| 第二被告身份证号 | ${body.secondDefendantIdCard || '不详'} |
+| 第二被告地址 | ${body.secondDefendantAddress || '不详'} |` : ''}
 
 ### 三、案件基本情况
 | 字段 | 内容 |
 |------|------|
 | 工程/项目名称 | ${body.projectName || '不详'} |
 | 工作地点 | ${body.workLocation || '不详'} |
+| 工作岗位 | ${body.workPosition || '不详'} |
+| 工作内容 | ${body.workContent || '不详'} |
 | 工作开始时间 | ${body.workStartDate || '不详'} |
 | 工作结束时间 | ${body.workEndDate || '不详'} |
 | 工作时间段 | ${workPeriod || '用户未提供'} |
@@ -435,7 +551,15 @@ export async function POST(request: NextRequest) {
 | 工作天数 | ${body.workDays || '不详'} |
 | 日工资标准 | ${body.dailyRate || '不详'} |
 
-### 四、诉讼请求
+### 四、欠薪详情
+| 字段 | 内容 |
+|------|------|
+| 欠薪开始时间 | ${body.unpaidStartDate || '不详'} |
+| 欠薪原因 | ${body.unpaidReason || '不详'} |
+| 欠薪单位名称 | ${body.unpaidCompanyName || '不详'} |
+| 欠薪单位电话 | ${body.unpaidCompanyPhone || '不详'} |
+
+### 五、诉讼请求
 ${body.requestType && body.requestType.length > 0 
   ? body.requestType.map(r => {
       const map: Record<string, string> = {
@@ -447,17 +571,24 @@ ${body.requestType && body.requestType.length > 0
       return `- ${map[r] || r}`;
     }).join('\n')
   : '- 请求判令被告支付拖欠的工资'}
+${body.salaryAmount ? `\n- 工资金额：${body.salaryAmount}元` : ''}
+${body.doubleWageAmount ? `\n- 双倍工资差额：${body.doubleWageAmount}元` : ''}
+${body.overtimeAmount ? `\n- 加班费：${body.overtimeAmount}元` : ''}
+${body.economicCompensationAmount ? `\n- 经济补偿金：${body.economicCompensationAmount}元` : ''}
+${body.totalAmount ? `\n- 诉讼请求总金额：${body.totalAmount}元` : ''}
+${body.otherRequests ? `\n- 其他请求：${body.otherRequests}` : ''}
 
-### 五、事实与理由
+### 六、事实与理由
 ${factDescription || '用户未提供详细描述'}
 
-### 六、证据材料
+### 七、证据材料
 | 字段 | 内容 |
 |------|------|
 | 是否有劳动合同 | ${hasContract ? '有' : '无'} |
+| 是否有证据 | ${hasEvidence ? '有' : '不详'} |
 | 证据清单 | ${hasEvidence || '用户未提供具体证据'} |
 
-### 七、管辖法院
+### 八、管辖法院
 ${body.courtName || '待填写'}
 
 ${relatedCases ? `## 参考案例

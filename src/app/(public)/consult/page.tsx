@@ -4,13 +4,14 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Bot, User, Loader2, AlertCircle, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MarkdownRenderer } from '@/components/markdown';
+import { LegalReferences, LegalReference } from '@/components/legal-references';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
-  legalReferences?: Array<{ name: string; fullName: string; url: string }>;
+  legalReferences?: LegalReference[];
 }
 
 const quickQuestions = [
@@ -253,16 +254,12 @@ export default function ConsultPage() {
                     )}
                   </div>
                   
-                  {/* 法律参考 */}
+                  {/* 法律依据引用区 - 独立模块，位于气泡下方 */}
                   {!isUser && msg.legalReferences && msg.legalReferences.length > 0 && (
-                    <div className="flex gap-1 mt-1">
-                      {msg.legalReferences.slice(0, 2).map((ref, i) => (
-                        <a key={i} href={ref.url} target="_blank" rel="noopener noreferrer"
-                          className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
-                          {ref.name}
-                        </a>
-                      ))}
-                    </div>
+                    <LegalReferences 
+                      references={msg.legalReferences} 
+                      isStreaming={showCursor}
+                    />
                   )}
                 </div>
               </div>
