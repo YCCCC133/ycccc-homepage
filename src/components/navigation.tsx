@@ -23,8 +23,7 @@ const navigation = [
   { name: '线索填报', href: '/report', icon: FileText },
   { name: '智能咨询', href: '/consult', icon: MessageSquare },
   { name: '文书生成', href: '/document', icon: PenTool },
-  { name: '在线申请', href: '/apply', icon: Send },
-  { name: '案件查询', href: '/cases', icon: FolderOpen },
+  { name: '支持起诉', href: '/apply', icon: Send },
 ];
 
 const quickLinks = [

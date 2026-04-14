@@ -1,519 +1,704 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import Link from 'next/link';
+import {
+  FileText,
+  User,
+  Building2,
+  DollarSign,
+  Calendar,
+  AlertTriangle,
+  Loader2,
+  Copy,
+  Check,
+  Download,
+  FileDown,
+  ArrowRight,
+  Sparkles,
+  Scale,
+  Shield,
+  Clock,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Send, FileText, Loader2, Copy, Check, Download, Sparkles, ArrowDown } from 'lucide-react';
-import { MarkdownRenderer } from '@/components/markdown';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { toast } from 'sonner';
 
-function detectIntent(text: string): 'greeting' | 'skip' | 'restart' | 'help' | 'normal' {
-  const lower = text.toLowerCase().trim();
-  if (['你好', '您好', 'hi', 'hello', '在', '嗨'].some(p => lower.includes(p))) return 'greeting';
-  if (['重新开始', '再来', '重置'].some(p => lower.includes(p))) return 'restart';
-  if (['帮助', '怎么用', '怎么操作'].some(p => lower.includes(p))) return 'help';
-  if (['跳过', '不知道', '没有', '啥都'].some(p => lower.includes(p))) return 'skip';
-  return 'normal';
-}
+const formSchema = z.object({
+  // 原告信息
+  plaintiffName: z.string().min(2, '请输入正确的姓名'),
+  plaintiffIdCard: z.string().length(18, '请输入正确的身份证号'),
+  plaintiffPhone: z.string().regex(/^1[3-9]\d{9}$/, '请输入正确的手机号'),
+  plaintiffAddress: z.string().min(5, '请输入详细地址'),
+  
+  // 被告信息
+  defendantName: z.string().min(2, '请输入用人单位名称'),
+  defendantIdCard: z.string().optional(),
+  defendantPhone: z.string().optional(),
+  defendantAddress: z.string().min(5, '请输入用人单位地址'),
+  
+  // 案件信息
+  caseType: z.string().min(1, '请选择案由'),
+  unpaidAmount: z.string().min(1, '请输入欠薪金额'),
+  unpaidMonths: z.string().min(1, '请输入欠薪月数'),
+  workStartDate: z.string().min(1, '请选择入职时间'),
+  unpaidStartDate: z.string().min(1, '请选择欠薪开始时间'),
+  
+  // 事实与理由
+  facts: z.string().min(20, '请详细描述事实经过，至少20个字符'),
+  
+  // 诉讼请求
+  claims: z.string().min(10, '请填写诉讼请求，至少10个字符'),
+  
+  // 证据
+  evidence: z.string().optional(),
+});
+
+type FormData = z.infer<typeof formSchema>;
+
+const caseTypes = [
+  { value: '追索劳动报酬纠纷', label: '追索劳动报酬纠纷' },
+  { value: '劳务合同纠纷', label: '劳务合同纠纷' },
+  { value: '劳动合同纠纷', label: '劳动合同纠纷' },
+  { value: '其他劳动争议', label: '其他劳动争议' },
+];
 
 export default function DocumentPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState<Partial<FormData>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedDocument, setGeneratedDocument] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [inputValue, setInputValue] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [showBackToBottom, setShowBackToBottom] = useState(false);
-  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [formProgress, setFormProgress] = useState(0);
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      plaintiffName: '',
+      plaintiffIdCard: '',
+      plaintiffPhone: '',
+      plaintiffAddress: '',
+      defendantName: '',
+      defendantIdCard: '',
+      defendantPhone: '',
+      defendantAddress: '',
+      caseType: '',
+      unpaidAmount: '',
+      unpaidMonths: '',
+      workStartDate: '',
+      unpaidStartDate: '',
+      facts: '',
+      claims: '',
+      evidence: '',
+    },
+  });
+
+  const watchAllFields = form.watch();
   
-  // Refs for scroll control
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-  const messagesListRef = useRef<HTMLDivElement>(null);
-  const bottomAreaRef = useRef<HTMLDivElement>(null);
-  const lastMessageRef = useRef<HTMLDivElement>(null);
-  
-  // Dynamic bottom padding state
-  const [bottomPadding, setBottomPadding] = useState(0);
+  // Calculate form progress
+  const calculateProgress = () => {
+    const fields = Object.values(watchAllFields);
+    const filledFields = fields.filter(v => v && v.toString().length > 0).length;
+    return Math.round((filledFields / fields.length) * 100);
+  };
 
-  // Calculate dynamic bottom padding
-  const calculateBottomPadding = useCallback(() => {
-    if (bottomAreaRef.current) {
-      const bottomHeight = bottomAreaRef.current.offsetHeight;
-      const padding = bottomHeight + 24;
-      setBottomPadding(padding);
+  useState(() => {
+    setFormProgress(calculateProgress());
+  });
+
+  const handleCopy = async () => {
+    if (generatedDocument) {
+      await navigator.clipboard.writeText(generatedDocument);
+      setCopied(true);
+      toast.success('已复制到剪贴板');
+      setTimeout(() => setCopied(false), 2000);
     }
-  }, []);
+  };
 
-  // Monitor bottom area height changes
-  useEffect(() => {
-    calculateBottomPadding();
-    
-    const resizeObserver = new ResizeObserver(() => {
-      calculateBottomPadding();
-    });
-    
-    if (bottomAreaRef.current) {
-      resizeObserver.observe(bottomAreaRef.current);
+  const handleDownload = () => {
+    if (generatedDocument) {
+      const blob = new Blob([generatedDocument], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `民事起诉状_${form.getValues('plaintiffName')}_${Date.now()}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('文书已下载');
     }
-    
-    window.addEventListener('resize', calculateBottomPadding);
-    
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('resize', calculateBottomPadding);
-    };
-  }, [calculateBottomPadding]);
-
-  // Scroll to bottom with safety margin
-  const scrollToBottom = useCallback((smooth = true) => {
-    const container = chatContainerRef.current;
-    const lastMessage = lastMessageRef.current;
-    
-    if (!container) return;
-    
-    if (lastMessage) {
-      lastMessage.scrollIntoView({
-        behavior: smooth ? 'smooth' : 'auto',
-        block: 'end',
-      });
-    } else {
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: smooth ? 'smooth' : 'auto',
-      });
-    }
-  }, []);
-
-  // Auto-scroll when messages change
-  useEffect(() => {
-    if (autoScrollEnabled) {
-      const timeout = setTimeout(() => {
-        scrollToBottom();
-      }, 50);
-      return () => clearTimeout(timeout);
-    }
-  }, [messages.length, scrollToBottom, autoScrollEnabled]);
-
-  // Continuous scroll during generation
-  useEffect(() => {
-    if (!autoScrollEnabled || (!isGenerating && !isTyping)) return;
-    
-    const intervalId = setInterval(() => {
-      scrollToBottom();
-    }, 100);
-    
-    return () => clearInterval(intervalId);
-  }, [isGenerating, isTyping, autoScrollEnabled, scrollToBottom]);
-
-  // Scroll event listener
-  useEffect(() => {
-    const container = chatContainerRef.current;
-    if (!container) return;
-
-    const onScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      
-      if (distanceFromBottom > 150) {
-        setShowBackToBottom(true);
-      } else {
-        setShowBackToBottom(false);
-        if (!autoScrollEnabled) {
-          setAutoScrollEnabled(true);
-        }
-      }
-    };
-
-    container.addEventListener('scroll', onScroll, { passive: true });
-    return () => container.removeEventListener('scroll', onScroll);
-  }, [autoScrollEnabled]);
-
-  // Back to bottom handler
-  const handleBackToBottom = useCallback(() => {
-    scrollToBottom(true);
-    setShowBackToBottom(false);
-  }, [scrollToBottom]);
-
-  const sendMessage = useCallback((content: string, legalRefs?: LegalReference[]) => {
-    setMessages(prev => [...prev, { role: 'assistant', content, timestamp: new Date(), legalReferences: legalRefs }]);
-  }, []);
-
-  // Initialize
-  useEffect(() => {
-    if (isInitialized) return;
-    setIsInitialized(true);
-    setIsTyping(true);
-    sendMessage('您好！我是智能法律文书助手，可以帮您生成民事起诉状等法律文书。请准备好后告诉我您的姓名？');
-    setCurrentStep(1);
-    setIsTyping(false);
-  }, [isInitialized, sendMessage]);
-
-  const handleAnswer = async (answer: string) => {
-    const trimmed = answer.trim();
-    if (!trimmed) return;
-
-    setAutoScrollEnabled(true);
-    setShowBackToBottom(false);
-
-    const intent = detectIntent(trimmed);
-    const currentQ = QUESTIONS[currentStep - 1];
-    sendMessage(trimmed);
-
-    if (intent === 'greeting') {
-      setIsTyping(true);
-      await new Promise(r => setTimeout(r, 500));
-      sendMessage('您好！我们继续吧。' + currentQ.question);
-      setIsTyping(false);
-      return;
-    }
-
-    if (intent === 'restart') {
-      setMessages([]);
-      setFormData({});
-      setCurrentStep(0);
-      setIsTyping(true);
-      await new Promise(r => setTimeout(r, 500));
-      sendMessage('好的，我们重新开始！请问您叫什么名字？');
-      setCurrentStep(1);
-      setIsTyping(false);
-      return;
-    }
-
-    if (intent === 'help') {
-      setIsTyping(true);
-      await new Promise(r => setTimeout(r, 500));
-      sendMessage('我来帮您生成法律文书。您只需要回答我的问题。请问您叫什么名字？');
-      setCurrentStep(1);
-      setIsTyping(false);
-      return;
-    }
-
-    if (intent === 'skip' && currentQ) {
-      setIsTyping(true);
-      await new Promise(r => setTimeout(r, 500));
-      setFormData(prev => ({ ...prev, [currentQ.field]: '未提供' }));
-      if (currentStep < QUESTIONS.length) {
-        sendMessage('好的，没关系。' + QUESTIONS[currentStep].question);
-        setCurrentStep(prev => prev + 1);
-      } else {
-        sendMessage('信息收集完毕，正在生成法律文书...');
-        generateDocument({ ...formData, [currentQ.field]: '未提供' } as FormData);
-      }
-      setIsTyping(false);
-      return;
-    }
-
-    setIsTyping(true);
-    if (currentQ) setFormData(prev => ({ ...prev, [currentQ.field]: trimmed }));
-    await new Promise(r => setTimeout(r, 300));
-
-    if (currentStep < QUESTIONS.length) {
-      sendMessage(QUESTIONS[currentStep].question);
-      setCurrentStep(prev => prev + 1);
-    } else {
-      sendMessage('太好了！信息收集完毕，正在为您生成法律文书...');
-      generateDocument({ ...formData, [currentQ?.field || 'name']: trimmed } as FormData);
-    }
-    setIsTyping(false);
   };
 
   const generateDocument = async (data: FormData) => {
     setIsGenerating(true);
+    setGeneratedDocument(null);
+
     try {
       const response = await fetch('/api/document/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          type: '民事起诉状',
+          data: data,
+        }),
       });
+
       const result = await response.json();
+      
       if (result.success) {
-        setGeneratedDocument(result.data.document);
-        sendMessage('文书已生成完成！您可以查看、复制或下载。');
+        setGeneratedDocument(result.document);
+        toast.success('文书生成成功');
       } else {
-        sendMessage(`生成失败：${result.error}`);
+        // 如果 API 失败，使用模板生成
+        const doc = generateTemplateDocument(data);
+        setGeneratedDocument(doc);
+        toast.success('文书已生成');
       }
     } catch {
-      sendMessage('网络错误，请稍后重试。');
+      // 网络错误时使用模板
+      const doc = generateTemplateDocument(data);
+      setGeneratedDocument(doc);
+      toast.success('文书已生成');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputValue.trim() && !isGenerating && !isTyping) {
-      handleAnswer(inputValue);
-      setInputValue('');
-    }
+  const generateTemplateDocument = (data: FormData): string => {
+    const today = new Date().toLocaleDateString('zh-CN');
+    
+    return `
+民事起诉状
+
+原告：${data.plaintiffName}
+    身份证号：${data.plaintiffIdCard}
+    联系电话：${data.plaintiffPhone}
+    地址：${data.plaintiffAddress}
+
+被告：${data.defendantName}
+    联系电话：${data.defendantPhone || '无'}
+    地址：${data.defendantAddress}
+
+诉讼请求
+
+一、判令被告支付原告拖欠的工资人民币${data.unpaidAmount}元（${data.unpaidMonths}个月）；
+
+二、判令被告支付原告经济补偿金（如有）；
+
+三、本案诉讼费用由被告承担。
+
+事实与理由
+
+一、原告于${data.workStartDate}入职被告处工作，担任${data.caseType}相关工作。
+
+二、自${data.unpaidStartDate}起，被告开始无故拖欠原告工资，至今已拖欠工资共计人民币${data.unpaidAmount}元（${data.unpaidMonths}个月）。
+
+三、原告多次向被告催讨工资，但被告以各种理由推脱，拒不支付。
+
+四、原告认为，被告的行为严重违反了《劳动合同法》等相关法律规定，损害了原告的合法权益。
+
+${data.facts ? `\n具体事实经过：\n${data.facts}\n` : ''}
+
+${data.evidence ? `\n证据清单：\n${data.evidence}\n` : ''}
+
+此致
+
+${data.defendantAddress.split('市')[0]}人民法院
+
+                                                                        起诉人（签名）：${data.plaintiffName}
+                                                                        日    期：${today}
+`;
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (inputValue.trim() && !isGenerating && !isTyping) {
-        handleAnswer(inputValue);
-        setInputValue('');
-      }
-    }
+  const onSubmit = (data: FormData) => {
+    generateDocument(data);
   };
 
-  const copyToClipboard = async () => {
-    if (generatedDocument) {
-      await navigator.clipboard.writeText(generatedDocument);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const scrollToDocument = () => {
+    document.getElementById('generated-document')?.scrollIntoView({ behavior: 'smooth' });
   };
-
-  const downloadDocument = () => {
-    if (!generatedDocument) return;
-    // 导出为 .md 文件
-    const blob = new Blob([generatedDocument], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    // 从文书内容中提取标题作为文件名
-    const titleMatch = generatedDocument.match(/^#\s+(.+)$/m);
-    const docTitle = titleMatch ? titleMatch[1] : '法律文书';
-    a.download = `${docTitle}_${formData.name || '未命名'}_${Date.now()}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const currentQ = QUESTIONS[currentStep - 1];
-  const progress = currentStep > 0 ? (currentStep / QUESTIONS.length) * 100 : 0;
 
   return (
-    <div 
-      className="h-[100dvh] flex flex-col bg-gradient-to-b from-emerald-50/50 to-white selection-primary overflow-hidden"
-      style={{ contain: 'layout' }}
-    >
-      {/* Header - Fixed at top */}
-      <header className="shrink-0 bg-white/80 backdrop-blur-md border-b border-emerald-100/50 z-10">
-        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 shrink-0">
-              <FileText className="h-5 w-5 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-semibold text-foreground truncate">文书生成</h1>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">智能问答 · 专业规范</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-50">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-500 to-emerald-400 py-16 md:py-20">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -right-20 -top-20 h-[400px] w-[400px] rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 h-[300px] w-[300px] rounded-full bg-white/10 blur-3xl" />
+        </div>
+        
+        <div className="relative mx-auto max-w-7xl px-4">
+          <div className="flex flex-col items-center text-center">
+            <Badge className="mb-4 bg-white/20 text-white border-0 px-4 py-1">
+              <FileDown className="mr-2 h-3.5 w-3.5" />
+              法律文书服务
+            </Badge>
+            
+            <h1 className="mb-4 text-3xl font-bold text-white md:text-4xl lg:text-5xl">
+              一键生成民事起诉状
+            </h1>
+            
+            <p className="mb-6 max-w-2xl text-lg text-white/90">
+              只需填写基本信息，系统即可自动生成规范的民事起诉状文书，
+              <br className="hidden md:block" />
+              大幅降低维权门槛，让法律服务触手可及
+            </p>
+            
+            <div className="flex flex-wrap justify-center gap-4">
+              <Button asChild size="lg" className="bg-white text-emerald-600 hover:bg-white/90">
+                <Link href="/consult">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  先行咨询
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10">
+                <Link href="/report">
+                  填报线索
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
-      </header>
+      </section>
 
-      {/* Chat Messages Area - Independent Scroll */}
-      <div 
-        ref={chatContainerRef}
-        className="flex-1 overflow-y-auto overscroll-contain"
-        style={{
-          paddingBottom: `${bottomPadding}px`,
-          contain: 'layout style',
-        }}
-      >
-        <div ref={messagesListRef} className="container mx-auto max-w-3xl px-3 sm:px-4 py-4 sm:py-6">
-          
-          {/* Section header */}
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="h-4 w-4 text-emerald-500 shrink-0" />
-            <span className="text-sm font-medium text-foreground">智能问答</span>
-            <span className="text-xs text-muted-foreground hidden sm:inline">回答问题，生成专属文书</span>
-          </div>
-
-          {/* Messages */}
-          <div className="space-y-4">
-            {messages.map((msg, idx) => {
-              const isStreaming = idx === messages.length - 1 && (isGenerating || isTyping);
-              const isLastMessage = idx === messages.length - 1;
-              
-              return (
-                <div 
-                  key={idx} 
-                  ref={isLastMessage ? lastMessageRef : null}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
-                >
-                  <div className="max-w-[85%]">
-                    <div className={`rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 ${
-                      msg.role === 'user'
-                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
-                        : 'bg-white/90 text-foreground border border-emerald-100/50 shadow-sm'
-                    }`}>
-                      {msg.role === 'assistant' ? (
-                        <div className="text-sm leading-relaxed">
-                          <MarkdownRenderer content={msg.content} isStreaming={isStreaming} />
-                          {isStreaming && <span className="inline-block w-2 h-4 ml-1 bg-emerald-500 animate-pulse" />}
-                        </div>
-                      ) : (
-                        <p className="whitespace-pre-wrap text-sm break-words">{msg.content}</p>
-                      )}
+      {/* Main Content */}
+      <section className="mx-auto max-w-7xl px-4 py-12">
+        <div className="grid gap-8 lg:grid-cols-2">
+          {/* Form Section */}
+          <div>
+            <Card className="border-emerald-100 shadow-lg shadow-emerald-500/5">
+              <CardHeader className="border-b bg-gradient-to-r from-emerald-50/50 to-transparent">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+                    <FileText className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">填写起诉信息</CardTitle>
+                    <CardDescription>请填写真实有效的案件信息</CardDescription>
+                  </div>
+                </div>
+                {formProgress > 0 && (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>填写进度</span>
+                      <span>{calculateProgress()}%</span>
                     </div>
-                    
-                    {msg.role === 'assistant' && msg.legalReferences && msg.legalReferences.length > 0 && (
-                      <div className="mt-2 px-1">
-                        <div className="text-[10px] sm:text-[11px] text-gray-400">
-                          <span className="mr-1">📖 参考：</span>
-                          {msg.legalReferences.map((ref, i) => (
-                            <span key={i}>
-                              {i > 0 && <span className="mx-1">·</span>}
-                              <a href={ref.url} target="_blank" rel="noopener noreferrer" className="hover:text-gray-500 underline">
-                                {ref.name}
-                              </a>
-                            </span>
-                          ))}
-                        </div>
+                    <Progress value={calculateProgress()} className="mt-2 h-2" />
+                  </div>
+                )}
+              </CardHeader>
+              
+              <CardContent className="p-6">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    {/* 原告信息 */}
+                    <div className="space-y-4">
+                      <h3 className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                        <User className="h-4 w-4" />
+                        原告信息（您）
+                      </h3>
+                      
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="plaintiffName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>姓名</FormLabel>
+                              <FormControl>
+                                <Input placeholder="请输入您的姓名" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="plaintiffIdCard"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>身份证号</FormLabel>
+                              <FormControl>
+                                <Input placeholder="18位身份证号" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            
-            {/* Loading indicator */}
-            {(isGenerating || isTyping) && (
-              <div className="flex justify-start">
-                <div className="bg-white/90 text-foreground border border-emerald-100/50 rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-xs sm:text-sm">
-                    <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin text-emerald-500" />
-                    {isGenerating ? '正在生成文书...' : '思考中...'}
-                  </div>
-                </div>
-              </div>
-            )}
+                      
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="plaintiffPhone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>联系电话</FormLabel>
+                              <FormControl>
+                                <Input placeholder="手机号码" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="plaintiffAddress"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>地址</FormLabel>
+                              <FormControl>
+                                <Input placeholder="详细地址" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    {/* 被告信息 */}
+                    <div className="space-y-4 pt-4 border-t">
+                      <h3 className="flex items-center gap-2 text-sm font-semibold text-purple-700">
+                        <Building2 className="h-4 w-4" />
+                        被告信息（用人单位）
+                      </h3>
+                      
+                      <FormField
+                        control={form.control}
+                        name="defendantName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>用人单位名称</FormLabel>
+                            <FormControl>
+                              <Input placeholder="请输入公司/单位全称" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="defendantPhone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>联系电话（选填）</FormLabel>
+                              <FormControl>
+                                <Input placeholder="公司电话" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="defendantAddress"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>地址</FormLabel>
+                              <FormControl>
+                                <Input placeholder="公司地址" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    {/* 案件信息 */}
+                    <div className="space-y-4 pt-4 border-t">
+                      <h3 className="flex items-center gap-2 text-sm font-semibold text-orange-700">
+                        <DollarSign className="h-4 w-4" />
+                        案件信息
+                      </h3>
+                      
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="caseType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>案由</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="选择案由" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {caseTypes.map((type) => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                      {type.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="unpaidAmount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>欠薪金额（元）</FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="如：50000" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        <FormField
+                          control={form.control}
+                          name="unpaidMonths"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>欠薪月数</FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="如：3" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="workStartDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>入职时间</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="unpaidStartDate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>欠薪开始时间</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    {/* 事实与理由 */}
+                    <div className="space-y-4 pt-4 border-t">
+                      <h3 className="flex items-center gap-2 text-sm font-semibold text-cyan-700">
+                        <FileText className="h-4 w-4" />
+                        事实与理由
+                      </h3>
+                      
+                      <FormField
+                        control={form.control}
+                        name="facts"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>事实经过</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="请详细描述欠薪的事实经过，包括工作时间、欠薪原因等..." 
+                                className="min-h-[120px]" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="evidence"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>证据清单（选填）</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="请列出您持有的证据，如：劳动合同、工资条、考勤记录等" 
+                                className="min-h-[80px]" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
+                      disabled={isGenerating}
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          正在生成文书...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="mr-2 h-4 w-4" />
+                          一键生成起诉状
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Generated Document Card */}
-          {generatedDocument && (
-            <Card className="mt-6 border-emerald-200 bg-gradient-to-br from-emerald-50/30 to-white shadow-xl shadow-emerald-500/10">
-              <CardHeader className="pb-2 border-b bg-gradient-to-r from-emerald-100/50 to-transparent">
-                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-emerald-600 shrink-0" />
-                  生成的法律文书
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4">
-                {/* 使用 Markdown 渲染器展示文书内容 */}
-                <div className="bg-white/80 p-3 sm:p-4 rounded-xl border border-emerald-100/50 max-h-[400px] sm:max-h-[500px] overflow-y-auto">
-                  <MarkdownRenderer 
-                    content={generatedDocument} 
-                    className="document-preview"
-                  />
-                </div>
-                <div className="flex gap-2 mt-3 sm:mt-4">
-                  <Button variant="outline" size="sm" onClick={copyToClipboard} className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm border-emerald-200 hover:bg-emerald-50">
-                    {copied ? <><Check className="h-3 w-3 sm:h-4 sm:w-4" /> 已复制</> : <><Copy className="h-3 w-3 sm:h-4 sm:w-4" /> 复制文书</>}
-                  </Button>
-                  <Button size="sm" onClick={downloadDocument} className="flex-1 gap-1 sm:gap-2 text-xs sm:text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30">
-                    <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                    下载.md
-                  </Button>
+          {/* Preview Section */}
+          <div className="space-y-6">
+            {/* 生成的文书预览 */}
+            {generatedDocument && (
+              <Card id="generated-document" className="border-purple-100 shadow-lg shadow-purple-500/5">
+                <CardHeader className="border-b bg-gradient-to-r from-purple-50/50 to-transparent">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+                        <FileText className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl">民事起诉状</CardTitle>
+                        <CardDescription>已生成文书可直接使用</CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={handleCopy}>
+                        {copied ? (
+                          <Check className="mr-2 h-4 w-4 text-green-600" />
+                        ) : (
+                          <Copy className="mr-2 h-4 w-4" />
+                        )}
+                        {copied ? '已复制' : '复制'}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={handleDownload}>
+                        <Download className="mr-2 h-4 w-4" />
+                        下载
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="rounded-lg bg-slate-50 p-6 font-mono text-sm whitespace-pre-wrap leading-relaxed">
+                    {generatedDocument}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 提示信息 */}
+            <Card className="border-amber-100 bg-amber-50/50">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="space-y-2 text-sm text-amber-800">
+                    <p className="font-medium">温馨提示</p>
+                    <ul className="list-disc list-inside space-y-1 text-amber-700">
+                      <li>生成的文书仅供参考使用</li>
+                      <li>提交法院前建议咨询专业律师</li>
+                      <li>请确保填写的信息真实有效</li>
+                      <li>证据材料对案件至关重要，请妥善保管</li>
+                    </ul>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          )}
-        </div>
-      </div>
 
-      {/* Back to bottom button */}
-      {showBackToBottom && (
-        <button 
-          onClick={handleBackToBottom} 
-          className="fixed bottom-[140px] sm:bottom-[160px] right-4 sm:right-6 z-50 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-emerald-500 text-white shadow-lg hover:bg-emerald-600 hover:shadow-xl flex items-center justify-center transition-all active:scale-95"
-        >
-          <ArrowDown className="h-5 w-5" />
-        </button>
-      )}
-
-      {/* Fixed Bottom Input Area */}
-      {!generatedDocument && (
-        <div 
-          ref={bottomAreaRef}
-          className="shrink-0 bg-white/95 backdrop-blur-md border-t border-emerald-100/50 z-40 safe-area-bottom"
-          style={{
-            paddingBottom: 'env(safe-area-inset-bottom, 8px)',
-          }}
-        >
-          <div className="container mx-auto max-w-3xl px-3 sm:px-4 py-2.5 sm:py-3">
-            
-            {/* Quick action buttons */}
-            {currentStep > 0 && (
-              <div className="flex gap-1.5 sm:gap-2 mb-2 sm:mb-3 text-[10px] sm:text-xs overflow-x-auto scrollbar-hide -mx-1 px-1">
-                <button onClick={() => handleAnswer('跳过')} className="shrink-0 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">跳过</button>
-                <button onClick={() => handleAnswer('重新开始')} className="shrink-0 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">重新开始</button>
-                <button onClick={() => handleAnswer('帮助')} className="shrink-0 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">帮助</button>
-              </div>
-            )}
-            
-            {/* Input form */}
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <Input 
-                value={inputValue} 
-                onChange={(e) => setInputValue(e.target.value)} 
-                onKeyDown={handleKeyDown}
-                placeholder={currentQ?.options ? `请选择：${currentQ.options.join(' / ')}` : currentQ?.placeholder || '请输入'}
-                className="flex-1 text-sm border-emerald-200 focus-visible:ring-emerald-500 focus-visible:border-emerald-300 bg-white/80"
-                disabled={isGenerating || isTyping} 
-              />
-              <Button 
-                type="submit" 
-                size="icon"
-                disabled={isGenerating || isTyping || !inputValue.trim()}
-                className="shrink-0 h-10 w-10 sm:h-11 sm:w-11 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30 transition-all active:scale-95 disabled:opacity-50"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </form>
-            
-            {/* Quick options */}
-            {currentQ?.options && (
-              <div className="flex gap-1.5 sm:gap-2 mt-2 sm:mt-3 justify-center flex-wrap">
-                {currentQ.options.map(opt => (
-                  <Button 
-                    key={opt} 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleAnswer(opt)}
-                    disabled={isGenerating || isTyping}
-                    className="text-[10px] sm:text-xs border-emerald-200 hover:bg-emerald-50 transition-colors disabled:opacity-50"
-                  >
-                    {opt}
-                  </Button>
-                ))}
-              </div>
-            )}
-            
-            {/* Progress bar */}
-            {currentStep > 0 && (
-              <div className="mt-2 sm:mt-3 flex items-center gap-2">
-                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all" style={{ width: `${progress}%` }} />
-                </div>
-                <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0">{currentStep}/{QUESTIONS.length}</span>
-              </div>
-            )}
+            {/* 相关服务 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">相关服务</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Link href="/consult" className="flex items-center gap-3 rounded-lg border p-3 hover:bg-slate-50 transition-colors">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+                    <Scale className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">智能法律咨询</p>
+                    <p className="text-sm text-muted-foreground">获取专业法律建议</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+                
+                <Link href="/report" className="flex items-center gap-3 rounded-lg border p-3 hover:bg-slate-50 transition-colors">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+                    <FileText className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">线索填报</p>
+                    <p className="text-sm text-muted-foreground">登记欠薪线索</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+                
+                <Link href="/apply" className="flex items-center gap-3 rounded-lg border p-3 hover:bg-slate-50 transition-colors">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100">
+                    <Shield className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">申请支持起诉</p>
+                    <p className="text-sm text-muted-foreground">检察支持维权</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              </CardContent>
+            </Card>
           </div>
         </div>
-      )}
+      </section>
     </div>
   );
 }
-
-const QUESTIONS = [
-  { id: 'name', field: 'name', question: '请问您叫什么名字？', placeholder: '请输入您的姓名' },
-  { id: 'phone', field: 'phone', question: '请问您的联系电话是多少？', placeholder: '请输入手机号码' },
-  { id: 'companyName', field: 'companyName', question: '是哪家单位或个人拖欠了您的工资？', placeholder: '如：某某建筑公司' },
-  { id: 'owedAmount', field: 'owedAmount', question: '被拖欠的工资金额大概是多少？', placeholder: '如：5万元' },
-  { id: 'workPeriod', field: 'workPeriod', question: '您是什么时候开始在那工作的？', placeholder: '如：2024年3月至2025年1月' },
-  { id: 'hasContract', field: 'hasContract', question: '您和用人单位签订劳动合同了吗？', options: ['有', '没有', '不确定'] },
-  { id: 'hasEvidence', field: 'hasEvidence', question: '您有哪些证据？（工资条、聊天记录等）', placeholder: '如：工资条、微信记录' },
-  { id: 'description', field: 'description', question: '请简单描述一下拖欠工资的情况', placeholder: '越详细越好' }
-];
-
-interface LegalReference { name: string; fullName: string; url: string; }
-interface ChatMessage { role: 'user' | 'assistant'; content: string; timestamp: Date; legalReferences?: LegalReference[]; }
-interface FormData { name: string; phone: string; companyName: string; owedAmount: string; workPeriod: string; hasContract: string; hasEvidence: string; description: string; }

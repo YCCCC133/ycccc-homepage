@@ -42,27 +42,19 @@ const features = [
   },
   {
     title: '文书生成',
-    description: '一键生成起诉状、支持起诉书等法律文书，降低维权门槛',
+    description: '一键生成民事起诉状等法律文书，降低维权门槛',
     icon: PenTool,
     href: '/document',
     color: 'text-purple-600',
     bgColor: 'bg-purple-50',
   },
   {
-    title: '在线申请',
-    description: '在线申请支持起诉、法律援助，全流程在线办理',
+    title: '支持起诉',
+    description: '在线申请检察支持起诉，全流程在线办理',
     icon: Send,
     href: '/apply',
     color: 'text-orange-600',
     bgColor: 'bg-orange-50',
-  },
-  {
-    title: '案件查询',
-    description: '实时追踪案件进度，掌握维权动态，透明高效',
-    icon: FolderOpen,
-    href: '/cases',
-    color: 'text-cyan-600',
-    bgColor: 'bg-cyan-50',
   },
 ];
 
@@ -76,7 +68,7 @@ const stats = [
 const steps = [
   {
     step: '01',
-    title: '填报线索',
+    title: '线索填报',
     description: '填写基本信息和欠薪情况',
   },
   {
@@ -86,13 +78,8 @@ const steps = [
   },
   {
     step: '03',
-    title: '生成文书',
-    description: '一键生成所需法律文书',
-  },
-  {
-    step: '04',
-    title: '提交申请',
-    description: '在线提交支持起诉申请',
+    title: '文书申请',
+    description: '生成起诉状并申请支持起诉',
   },
 ];
 
