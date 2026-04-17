@@ -391,7 +391,7 @@ export default function ApplyPage() {
                   先行咨询
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10">
+              <Button asChild size="lg" className="bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 border border-white/30">
                 <Link href="/document">
                   生成起诉状
                   <ArrowRight className="ml-2 h-4 w-4" />
