@@ -212,18 +212,27 @@ export default function ApplyPage() {
     if (!ctx) return;
     
     const rect = canvas.getBoundingClientRect();
+    // 计算缩放比例，将 CSS 尺寸映射到 canvas 实际尺寸
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
     let x, y;
     
     if ('touches' in e) {
-      x = e.touches[0].clientX - rect.left;
-      y = e.touches[0].clientY - rect.top;
+      x = (e.touches[0].clientX - rect.left) * scaleX;
+      y = (e.touches[0].clientY - rect.top) * scaleY;
     } else {
-      x = e.clientX - rect.left;
-      y = e.clientY - rect.top;
+      x = (e.clientX - rect.left) * scaleX;
+      y = (e.clientY - rect.top) * scaleY;
     }
     
     ctx.beginPath();
     ctx.moveTo(x, y);
+    // 设置笔画样式
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#000';
   };
 
   const handleSignatureMove = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -236,14 +245,18 @@ export default function ApplyPage() {
     if (!ctx) return;
     
     const rect = canvas.getBoundingClientRect();
+    // 计算缩放比例，将 CSS 尺寸映射到 canvas 实际尺寸
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
     let x, y;
     
     if ('touches' in e) {
-      x = e.touches[0].clientX - rect.left;
-      y = e.touches[0].clientY - rect.top;
+      x = (e.touches[0].clientX - rect.left) * scaleX;
+      y = (e.touches[0].clientY - rect.top) * scaleY;
     } else {
-      x = e.clientX - rect.left;
-      y = e.clientY - rect.top;
+      x = (e.clientX - rect.left) * scaleX;
+      y = (e.clientY - rect.top) * scaleY;
     }
     
     ctx.lineTo(x, y);
