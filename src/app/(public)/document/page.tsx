@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -25,6 +25,14 @@ import {
   Users,
   ChevronDown,
   ChevronUp,
+  Upload,
+  X,
+  Image,
+  CheckCircle2,
+  Camera,
+  File,
+  Trash2,
+  PenTool,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -65,13 +73,13 @@ const formSchema = z.object({
   plaintiffName: z.string().min(2, '请输入正确的姓名'),
   plaintiffGender: z.string().min(1, '请选择性别'),
   plaintiffBirthDate: z.string().min(1, '请选择出生日期'),
-  plaintiffNation: z.string().optional(), // 民族
-  plaintiffWorkUnit: z.string().optional(), // 工作单位
-  plaintiffPosition: z.string().optional(), // 职务
+  plaintiffNation: z.string().optional(),
+  plaintiffWorkUnit: z.string().optional(),
+  plaintiffPosition: z.string().optional(),
   plaintiffPhone: z.string().regex(/^1[3-9]\d{9}$/, '请输入正确的手机号'),
   plaintiffResidence: z.string().min(5, '请输入住所地（户籍所在地）'),
-  plaintiffHabitualResidence: z.string().optional(), // 经常居住地
-  plaintiffIdType: z.string().optional(), // 证件类型
+  plaintiffHabitualResidence: z.string().optional(),
+  plaintiffIdType: z.string().optional(),
   plaintiffIdCard: z.string().length(18, '请输入正确的身份证号'),
   
   // ===== 委托诉讼代理人 =====
@@ -80,43 +88,33 @@ const formSchema = z.object({
   agentUnit: z.string().optional(),
   agentPosition: z.string().optional(),
   agentPhone: z.string().optional(),
-  agentPermission: z.string().optional(), // 一般授权/特别授权
+  agentPermission: z.string().optional(),
   
   // ===== 被告信息 =====
   defendantName: z.string().min(2, '请输入用人单位名称'),
   defendantAddress: z.string().min(5, '请输入住所地'),
-  defendantRegisterAddress: z.string().optional(), // 注册地
-  defendantLegalPerson: z.string().optional(), // 法定代表人
-  defendantLegalPersonPosition: z.string().optional(), // 法定代表人职务
-  defendantLegalPersonPhone: z.string().optional(), // 法定代表人电话
-  defendantCreditCode: z.string().optional(), // 统一社会信用代码
-  defendantType: z.string().optional(), // 类型
+  defendantRegisterAddress: z.string().optional(),
+  defendantLegalPerson: z.string().optional(),
+  defendantLegalPersonPosition: z.string().optional(),
+  defendantLegalPersonPhone: z.string().optional(),
+  defendantCreditCode: z.string().optional(),
+  defendantType: z.string().optional(),
   
   // ===== 诉讼请求 =====
-  // 工资支付
   claimWage: z.boolean().optional(),
   claimWageDetail: z.string().optional(),
-  // 未签合同双倍工资
   claimDoubleWage: z.boolean().optional(),
   claimDoubleWageDetail: z.string().optional(),
-  // 加班费
   claimOvertime: z.boolean().optional(),
   claimOvertimeDetail: z.string().optional(),
-  // 未休年休假工资
   claimAnnualLeave: z.boolean().optional(),
   claimAnnualLeaveDetail: z.string().optional(),
-  // 社会保险损失
   claimSocialInsurance: z.boolean().optional(),
   claimSocialInsuranceDetail: z.string().optional(),
-  // 解除劳动合同经济补偿
   claimTerminationCompensation: z.boolean().optional(),
-  // 违法解除劳动合同赔偿金
   claimIllegalTermination: z.boolean().optional(),
-  // 诉讼费用
   claimLitigationFee: z.boolean().optional(),
-  // 其他诉讼请求
   claimOther: z.string().optional(),
-  // 标的总额
   claimTotalAmount: z.string().min(1, '请输入标的总额'),
   
   // ===== 诉前保全 =====
@@ -126,30 +124,22 @@ const formSchema = z.object({
   preservationCaseNo: z.string().optional(),
   
   // ===== 事实与理由 =====
-  contractSignInfo: z.string().optional(), // 合同签订情况
+  contractSignInfo: z.string().optional(),
   contractExecutionInfo: z.string().min(10, '请填写劳动合同履行情况'),
-  terminationInfo: z.string().optional(), // 解除劳动关系情况
-  injuryInfo: z.string().optional(), // 工伤情况
-  arbitrationInfo: z.string().optional(), // 劳动仲裁情况
-  otherFacts: z.string().optional(), // 其他相关情况
-  legalBasis: z.string().optional(), // 诉请依据
-  evidenceList: z.string().optional(), // 证据清单
+  terminationInfo: z.string().optional(),
+  injuryInfo: z.string().optional(),
+  arbitrationInfo: z.string().optional(),
+  otherFacts: z.string().optional(),
+  legalBasis: z.string().optional(),
+  evidenceList: z.string().optional(),
   
   // ===== 纠纷解决意愿 =====
   understandMediation: z.boolean().optional(),
   understandMediationBenefits: z.boolean().optional(),
-  considerMediation: z.string().optional(), // 是否考虑先行调解
+  considerMediation: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
-
-// 案由选项
-const caseTypes = [
-  { value: '追索劳动报酬纠纷', label: '追索劳动报酬纠纷' },
-  { value: '劳务合同纠纷', label: '劳务合同纠纷' },
-  { value: '劳动合同纠纷', label: '劳动合同纠纷' },
-  { value: '其他劳动争议', label: '其他劳动争议' },
-];
 
 // 民族选项
 const nations = [
@@ -190,11 +180,269 @@ const mediationOptions = [
   { value: 'uncertain', label: '暂不确定，想要了解更多内容' },
 ];
 
+// 文件上传组件
+const FileUpload = ({ 
+  label, 
+  accept, 
+  value, 
+  onChange,
+  description,
+}: { 
+  label: string;
+  accept: string;
+  value?: string;
+  onChange: (value: string | undefined) => void;
+  description?: string;
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | undefined>(value);
+  
+  useEffect(() => {
+    setPreview(value);
+  }, [value]);
+  
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      const base64 = await fileToBase64(file);
+      setPreview(base64);
+      onChange(base64);
+    } catch (error) {
+      console.error('File conversion error:', error);
+      toast.error('文件处理失败');
+    }
+  };
+  
+  const handleRemove = () => {
+    setPreview(undefined);
+    onChange(undefined);
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+  };
+  
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      {preview ? (
+        <div className="relative rounded-lg border overflow-hidden">
+          {accept.includes('image') ? (
+            <img 
+              src={preview} 
+              alt="Preview" 
+              className="w-full h-32 object-cover"
+            />
+          ) : (
+            <div className="flex items-center gap-2 p-4 bg-slate-50">
+              <File className="h-8 w-8 text-slate-400" />
+              <span className="text-sm text-slate-600">文件已上传</span>
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="absolute top-2 right-2 h-8 w-8 p-0"
+            onClick={handleRemove}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <div
+          className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors cursor-pointer"
+          onClick={() => inputRef.current?.click()}
+        >
+          <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
+          <p className="text-sm text-slate-600">点击上传</p>
+          {description && (
+            <p className="text-xs text-slate-400 mt-1">{description}</p>
+          )}
+        </div>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        className="hidden"
+        onChange={handleFileChange}
+      />
+    </div>
+  );
+};
+
+// 电子签名组件 - 带坐标缩放比例计算
+const SignatureCanvas = ({
+  value,
+  onChange,
+}: {
+  value?: string;
+  onChange: (value: string) => void;
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [hasSignature, setHasSignature] = useState(!!value);
+  
+  // 初始化画布
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // 设置画布尺寸
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * 2; // 2x 像素密度
+    canvas.height = rect.height * 2;
+    ctx.scale(2, 2);
+    
+    // 设置绘图样式
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // 如果有值，加载已有签名
+    if (value) {
+      const img = new window.Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      };
+      img.src = value;
+    }
+  }, [value]);
+  
+  const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width / 2; // 反向计算
+    const scaleY = canvas.height / rect.height / 2;
+    
+    if ('touches' in e) {
+      return {
+        x: (e.touches[0].clientX - rect.left) * scaleX,
+        y: (e.touches[0].clientY - rect.top) * scaleY,
+      };
+    }
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  };
+  
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx) return;
+    
+    setIsDrawing(true);
+    const { x, y } = getCoordinates(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+  
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    if (!isDrawing) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx) return;
+    
+    const { x, y } = getCoordinates(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+  
+  const stopDrawing = () => {
+    if (!isDrawing) return;
+    setIsDrawing(false);
+    
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const signature = canvas.toDataURL('image/png');
+      setHasSignature(true);
+      onChange(signature);
+    }
+  };
+  
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    setHasSignature(false);
+    onChange('');
+  };
+  
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label>电子签名</Label>
+        {hasSignature && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={clearSignature}
+            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            清除
+          </Button>
+        )}
+      </div>
+      <div className="relative">
+        <canvas
+          ref={canvasRef}
+          className="w-full h-32 border-2 border-slate-200 rounded-lg bg-white cursor-crosshair touch-none"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
+        />
+        {!hasSignature && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <p className="text-slate-400 text-sm">请在此处签名</p>
+          </div>
+        )}
+      </div>
+      <p className="text-xs text-slate-400">
+        请用鼠标或手指在上面的区域内签名
+      </p>
+    </div>
+  );
+};
+
+// Base64 转换工具
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function DocumentPage() {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedDocument, setGeneratedDocument] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [formProgress, setFormProgress] = useState(0);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [docNumber, setDocNumber] = useState('');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     plaintiff: true,
     agent: false,
@@ -203,12 +451,22 @@ export default function DocumentPage() {
     preservation: false,
     facts: true,
     mediation: false,
+    files: true,
   });
-
+  
+  // 文件上传状态
+  const [uploadedFiles, setUploadedFiles] = useState<{
+    idCardFront?: string;
+    idCardBack?: string;
+    evidenceFiles: string[];
+  }>({ evidenceFiles: [] });
+  
+  // 签名状态
+  const [signature, setSignature] = useState('');
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      // 原告信息
       plaintiffName: '',
       plaintiffGender: '',
       plaintiffBirthDate: '',
@@ -220,14 +478,12 @@ export default function DocumentPage() {
       plaintiffHabitualResidence: '',
       plaintiffIdType: '',
       plaintiffIdCard: '',
-      // 代理人
       hasAgent: false,
       agentName: '',
       agentUnit: '',
       agentPosition: '',
       agentPhone: '',
       agentPermission: '',
-      // 被告
       defendantName: '',
       defendantAddress: '',
       defendantRegisterAddress: '',
@@ -236,7 +492,6 @@ export default function DocumentPage() {
       defendantLegalPersonPhone: '',
       defendantCreditCode: '',
       defendantType: '',
-      // 诉讼请求
       claimWage: false,
       claimWageDetail: '',
       claimDoubleWage: false,
@@ -252,12 +507,10 @@ export default function DocumentPage() {
       claimLitigationFee: true,
       claimOther: '',
       claimTotalAmount: '',
-      // 诉前保全
       hasPreservation: false,
       preservationCourt: '',
       preservationDate: '',
       preservationCaseNo: '',
-      // 事实与理由
       contractSignInfo: '',
       contractExecutionInfo: '',
       terminationInfo: '',
@@ -266,7 +519,6 @@ export default function DocumentPage() {
       otherFacts: '',
       legalBasis: '',
       evidenceList: '',
-      // 调解意愿
       understandMediation: false,
       understandMediationBenefits: false,
       considerMediation: '',
@@ -354,7 +606,7 @@ export default function DocumentPage() {
     // 构建代理人信息
     let agentText = '无';
     if (data.hasAgent && data.agentName) {
-      agentText = `有\n委托诉讼代理人：${data.agentName || ''}\n单位：${data.agentUnit || ''} 职务：${data.agentPosition || ''} 联系电话：${data.agentPhone || ''}\n代理权限：${data.agentPermission || '一般授权'}`;
+      agentText = `有\n委托诉讼代理人：${data.agentName || ''}\n单位：${data.agentUnit || ''} 职务：${data.agentPosition || ''} 联系电话：${data.agentPhone || ''}\n代理权限：${data.agentPermission === 'special' ? '特别授权' : '一般授权'}`;
     }
 
     // 构建事实与理由
@@ -451,24 +703,153 @@ XXXX人民法院
 `;
   };
 
-  const generateDocument = async (data: FormData) => {
+  // 生成并提交文书
+  const generateAndSubmitDocument = async (data: FormData) => {
+    setIsSubmitting(true);
+    
+    try {
+      // 1. 生成文书内容
+      const content = generateComplaintDocument(data);
+      setGeneratedDocument(content);
+      
+      // 2. 构建提交数据
+      const submitData = {
+        // 基础信息
+        document_type: '民事起诉状',
+        applicant_name: data.plaintiffName,
+        applicant_phone: data.plaintiffPhone,
+        document_content: content,
+        
+        // 原告信息
+        plaintiff_name: data.plaintiffName,
+        plaintiff_gender: data.plaintiffGender,
+        plaintiff_birth_date: data.plaintiffBirthDate,
+        plaintiff_nation: data.plaintiffNation || null,
+        plaintiff_work_unit: data.plaintiffWorkUnit || null,
+        plaintiff_position: data.plaintiffPosition || null,
+        plaintiff_phone: data.plaintiffPhone,
+        plaintiff_residence: data.plaintiffResidence,
+        plaintiff_habitual_residence: data.plaintiffHabitualResidence || null,
+        plaintiff_id_type: data.plaintiffIdType || '居民身份证',
+        plaintiff_id_card: data.plaintiffIdCard,
+        
+        // 被告信息
+        defendant_name: data.defendantName,
+        defendant_address: data.defendantAddress,
+        defendant_register_address: data.defendantRegisterAddress || null,
+        defendant_legal_person: data.defendantLegalPerson || null,
+        defendant_legal_person_position: data.defendantLegalPersonPosition || null,
+        defendant_legal_person_phone: data.defendantLegalPersonPhone || null,
+        defendant_credit_code: data.defendantCreditCode || null,
+        defendant_type: data.defendantType || null,
+        
+        // 代理人
+        has_agent: data.hasAgent || false,
+        agent_name: data.agentName || null,
+        agent_unit: data.agentUnit || null,
+        agent_position: data.agentPosition || null,
+        agent_phone: data.agentPhone || null,
+        agent_permission: data.agentPermission || null,
+        
+        // 诉讼请求
+        claims: JSON.stringify({
+          claimWage: data.claimWage,
+          claimWageDetail: data.claimWageDetail,
+          claimDoubleWage: data.claimDoubleWage,
+          claimDoubleWageDetail: data.claimDoubleWageDetail,
+          claimOvertime: data.claimOvertime,
+          claimOvertimeDetail: data.claimOvertimeDetail,
+          claimAnnualLeave: data.claimAnnualLeave,
+          claimAnnualLeaveDetail: data.claimAnnualLeaveDetail,
+          claimSocialInsurance: data.claimSocialInsurance,
+          claimSocialInsuranceDetail: data.claimSocialInsuranceDetail,
+          claimTerminationCompensation: data.claimTerminationCompensation,
+          claimIllegalTermination: data.claimIllegalTermination,
+          claimLitigationFee: data.claimLitigationFee,
+          claimOther: data.claimOther,
+        }),
+        claim_total_amount: data.claimTotalAmount,
+        
+        // 诉前保全
+        has_preservation: data.hasPreservation || false,
+        preservation_court: data.preservationCourt || null,
+        preservation_date: data.preservationDate || null,
+        preservation_case_no: data.preservationCaseNo || null,
+        
+        // 事实与理由
+        contract_sign_info: data.contractSignInfo || null,
+        contract_execution_info: data.contractExecutionInfo,
+        termination_info: data.terminationInfo || null,
+        injury_info: data.injuryInfo || null,
+        arbitration_info: data.arbitrationInfo || null,
+        other_facts: data.otherFacts || null,
+        legal_basis: data.legalBasis || null,
+        evidence_list: data.evidenceList || null,
+        
+        // 调解意愿
+        understand_mediation: data.understandMediation || false,
+        understand_mediation_benefits: data.understandMediationBenefits || false,
+        consider_mediation: data.considerMediation || null,
+        
+        // 文件
+        id_card_front: uploadedFiles.idCardFront,
+        id_card_back: uploadedFiles.idCardBack,
+        evidence_files: uploadedFiles.evidenceFiles,
+        signature: signature,
+        
+        // 完整表单数据
+        form_data: data,
+      };
+      
+      // 3. 调用 API 提交
+      const response = await fetch('/api/documents/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submitData),
+      });
+      
+      const result = await response.json();
+      console.log('[document] Submit result:', result);
+      
+      if (result.success && result.data) {
+        setDocNumber(result.data.doc_number || result.data.id);
+        setSubmitSuccess(true);
+        toast.success('文书已生成并提交成功');
+        
+        // 滚动到预览区域
+        setTimeout(() => {
+          document.getElementById('generated-document')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      } else {
+        toast.error(result.error || '提交失败，请重试');
+      }
+    } catch (error) {
+      console.error('[document] Submit error:', error);
+      toast.error('网络错误，请检查网络连接后重试');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const onSubmit = (data: FormData) => {
+    generateAndSubmitDocument(data);
+  };
+
+  // 仅生成预览（不提交）
+  const generatePreview = async (data: FormData) => {
     setIsGenerating(true);
     setGeneratedDocument(null);
 
     try {
-      const doc = generateComplaintDocument(data);
-      setGeneratedDocument(doc);
-      toast.success('文书已生成');
+      const content = generateComplaintDocument(data);
+      setGeneratedDocument(content);
+      toast.success('文书预览已生成');
     } catch (error) {
       console.error('生成文书失败:', error);
       toast.error('生成文书失败，请稍后重试');
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const onSubmit = (data: FormData) => {
-    generateDocument(data);
   };
 
   const SectionHeader = ({ 
@@ -508,6 +889,42 @@ XXXX人民法院
       )}
     </button>
   );
+
+  // 提交成功页面
+  if (submitSuccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full border-emerald-200 shadow-xl shadow-emerald-500/10">
+          <CardContent className="pt-8 pb-8 text-center">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+              <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+            </div>
+            <h2 className="mb-2 text-2xl font-bold text-emerald-700">文书提交成功</h2>
+            <p className="mb-4 text-muted-foreground">
+              您的民事起诉状已成功提交，检察机关将在3个工作日内审核
+            </p>
+            <div className="mb-6 rounded-lg bg-slate-50 p-4">
+              <p className="text-sm text-muted-foreground">文书编号</p>
+              <p className="text-xl font-mono font-bold text-primary">{docNumber}</p>
+            </div>
+            <div className="space-y-3">
+              <Button asChild className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600">
+                <Link href="/apply">
+                  <FileText className="mr-2 h-4 w-4" />
+                  申请支持起诉
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/">
+                  返回首页
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-50">
@@ -1593,23 +2010,146 @@ XXXX人民法院
                       )}
                     </div>
 
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-6 text-lg"
-                      disabled={isGenerating}
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          正在生成文书...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="mr-2 h-5 w-5" />
-                          一键生成民事起诉状
-                        </>
+                    {/* ===== 文件上传与签名 ===== */}
+                    <div className="space-y-3">
+                      <SectionHeader 
+                        title="八、身份证件与证据上传" 
+                        icon={Upload} 
+                        section="files" 
+                        color="blue"
+                      />
+                      
+                      {expandedSections.files && (
+                        <div className="space-y-6 rounded-lg border bg-white p-4">
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <FileUpload
+                              label="身份证正面"
+                              accept="image/*"
+                              value={uploadedFiles.idCardFront}
+                              onChange={(value) => setUploadedFiles(prev => ({ ...prev, idCardFront: value }))}
+                              description="上传身份证人像面"
+                            />
+                            
+                            <FileUpload
+                              label="身份证背面"
+                              accept="image/*"
+                              value={uploadedFiles.idCardBack}
+                              onChange={(value) => setUploadedFiles(prev => ({ ...prev, idCardBack: value }))}
+                              description="上传身份证国徽面"
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label className="mb-2 block">证据材料</Label>
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                              {uploadedFiles.evidenceFiles.map((file, index) => (
+                                <div key={index} className="relative rounded-lg border overflow-hidden">
+                                  {file.startsWith('data:image') ? (
+                                    <img 
+                                      src={file} 
+                                      alt={`证据 ${index + 1}`} 
+                                      className="w-full h-24 object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex items-center gap-2 p-3 bg-slate-50">
+                                      <File className="h-6 w-6 text-slate-400" />
+                                      <span className="text-sm text-slate-600 truncate">证据 {index + 1}</span>
+                                    </div>
+                                  )}
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    className="absolute top-1 right-1 h-6 w-6 p-0"
+                                    onClick={() => {
+                                      setUploadedFiles(prev => ({
+                                        ...prev,
+                                        evidenceFiles: prev.evidenceFiles.filter((_, i) => i !== index)
+                                      }));
+                                    }}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ))}
+                              
+                              <div
+                                className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 p-4 hover:border-emerald-400 transition-colors cursor-pointer min-h-[100px]"
+                                onClick={() => {
+                                  const input = document.createElement('input');
+                                  input.type = 'file';
+                                  input.accept = 'image/*,.pdf,.doc,.docx';
+                                  input.onchange = async (e) => {
+                                    const file = (e.target as HTMLInputElement).files?.[0];
+                                    if (file) {
+                                      try {
+                                        const base64 = await fileToBase64(file);
+                                        setUploadedFiles(prev => ({
+                                          ...prev,
+                                          evidenceFiles: [...prev.evidenceFiles, base64]
+                                        }));
+                                      } catch (error) {
+                                        toast.error('文件处理失败');
+                                      }
+                                    }
+                                  };
+                                  input.click();
+                                }}
+                              >
+                                <Upload className="h-6 w-6 text-slate-400 mb-1" />
+                                <span className="text-xs text-slate-500">添加证据</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <SignatureCanvas
+                            value={signature}
+                            onChange={setSignature}
+                          />
+                        </div>
                       )}
-                    </Button>
+                    </div>
+
+                    {/* 提交按钮 */}
+                    <div className="space-y-3 pt-4 border-t">
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-6 text-lg"
+                        disabled={isSubmitting || isGenerating}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            正在生成并提交文书...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="mr-2 h-5 w-5" />
+                            一键生成并提交民事起诉状
+                          </>
+                        )}
+                      </Button>
+                      
+                      <Button 
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => generatePreview(form.getValues())}
+                        disabled={isSubmitting || isGenerating}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            正在生成预览...
+                          </>
+                        ) : (
+                          <>
+                            <FileDown className="mr-2 h-4 w-4" />
+                            仅生成预览
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </form>
                 </Form>
               </CardContent>
@@ -1621,98 +2161,100 @@ XXXX人民法院
             {/* 生成的文书预览 */}
             {generatedDocument && (
               <Card id="generated-document" className="border-purple-100 shadow-lg shadow-purple-500/5">
-                <CardHeader className="border-b bg-gradient-to-r from-purple-50/50 to-transparent">
+                <CardHeader className="bg-gradient-to-r from-purple-50/50 to-transparent">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
                         <FileText className="h-5 w-5 text-purple-600" />
                       </div>
                       <div>
-                        <CardTitle className="text-xl">劳动争议纠纷民事起诉状</CardTitle>
-                        <CardDescription>已生成文书可直接使用</CardDescription>
+                        <CardTitle className="text-lg">文书预览</CardTitle>
+                        <CardDescription>已生成的民事起诉状</CardDescription>
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={handleCopy}>
-                        {copied ? (
-                          <Check className="mr-2 h-4 w-4 text-green-600" />
-                        ) : (
-                          <Copy className="mr-2 h-4 w-4" />
-                        )}
-                        {copied ? '已复制' : '复制'}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={handleDownload}>
-                        <Download className="mr-2 h-4 w-4" />
-                        下载
-                      </Button>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="max-h-[600px] overflow-y-auto rounded-lg bg-slate-50 p-4 font-mono text-xs whitespace-pre-wrap leading-relaxed">
-                    {generatedDocument}
+                  <div className="rounded-lg bg-slate-50 p-4 max-h-[600px] overflow-y-auto">
+                    <pre className="text-sm whitespace-pre-wrap font-mono text-slate-700">
+                      {generatedDocument}
+                    </pre>
+                  </div>
+                  
+                  <div className="flex gap-2 mt-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleCopy}
+                      className="flex-1"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="mr-1 h-4 w-4" />
+                          已复制
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="mr-1 h-4 w-4" />
+                          复制
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleDownload}
+                      className="flex-1"
+                    >
+                      <Download className="mr-1 h-4 w-4" />
+                      下载
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             )}
-
-            {/* 提示信息 */}
-            <Card className="border-amber-100 bg-amber-50/50">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                  <div className="space-y-2 text-sm text-amber-800">
-                    <p className="font-medium">温馨提示</p>
-                    <ul className="list-disc list-inside space-y-1 text-amber-700">
-                      <li>生成的文书仅供参考使用</li>
-                      <li>提交法院前建议咨询专业律师</li>
-                      <li>请确保填写的信息真实有效</li>
-                      <li>证据材料对案件至关重要，请妥善保管</li>
-                      <li>起诉时需提交身份证复印件等证明身份的材料</li>
-                    </ul>
-                  </div>
-                </div>
+            
+            {/* 帮助提示 */}
+            <Card className="border-slate-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  填写提示
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-slate-600 space-y-2">
+                <p>1. 请确保填写的所有信息真实有效</p>
+                <p>2. 带 * 号的字段为必填项</p>
+                <p>3. 建议提前准备好身份证等证件照片</p>
+                <p>4. 证据材料支持图片、PDF、Word文档</p>
+                <p>5. 文书提交后将进入审核流程</p>
+                <p>6. 如需帮助，请先使用&quot;智能咨询&quot;功能</p>
               </CardContent>
             </Card>
-
-            {/* 相关服务 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">相关服务</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Link href="/consult" className="flex items-center gap-3 rounded-lg border p-3 hover:bg-slate-50 transition-colors">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
-                    <Scale className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">智能法律咨询</p>
-                    <p className="text-sm text-muted-foreground">获取专业法律建议</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
-                
-                <Link href="/report" className="flex items-center gap-3 rounded-lg border p-3 hover:bg-slate-50 transition-colors">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                    <FileText className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">线索填报</p>
-                    <p className="text-sm text-muted-foreground">登记欠薪线索</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
-                
-                <Link href="/apply" className="flex items-center gap-3 rounded-lg border p-3 hover:bg-slate-50 transition-colors">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100">
-                    <Shield className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">申请支持起诉</p>
-                    <p className="text-sm text-muted-foreground">检察支持维权</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
+            
+            {/* 相关链接 */}
+            <Card className="border-slate-200">
+              <CardContent className="p-4">
+                <div className="space-y-2">
+                  <Button asChild variant="outline" className="w-full justify-start">
+                    <Link href="/consult">
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      智能法律咨询
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full justify-start">
+                    <Link href="/apply">
+                      <FileText className="mr-2 h-4 w-4" />
+                      申请支持起诉
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full justify-start">
+                    <Link href="/report">
+                      <AlertTriangle className="mr-2 h-4 w-4" />
+                      填报欠薪线索
+                    </Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
