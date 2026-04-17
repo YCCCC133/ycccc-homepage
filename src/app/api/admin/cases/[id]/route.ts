@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pool } from '@/storage/database/pg-pool';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 // 验证管理员身份
 function isAuthenticated(request: NextRequest): boolean {
@@ -19,30 +19,34 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const client = await pool.connect();
+    const client = getSupabaseClient();
     
-    try {
-      const result = await client.query('SELECT * FROM cases WHERE id = $1', [id]);
-      
-      if (result.rows.length === 0) {
-        return NextResponse.json({ error: '案件不存在' }, { status: 404 });
-      }
-
-      // 获取关联的文件
-      const filesResult = await client.query('SELECT * FROM files WHERE case_id = $1', [id]);
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          ...result.rows[0],
-          files: filesResult.rows,
-        },
-      });
-    } finally {
-      client.release();
+    const { data, error } = await client
+      .from('cases')
+      .select('*')
+      .eq('id', parseInt(id))
+      .single();
+    
+    if (error) {
+      console.error('[cases/id] Query error:', error);
+      return NextResponse.json({ error: '案件不存在' }, { status: 404 });
     }
+
+    // 获取关联的文件
+    const { data: filesData } = await client
+      .from('files')
+      .select('*')
+      .eq('case_id', parseInt(id));
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...data,
+        files: filesData || [],
+      },
+    });
   } catch (error) {
-    console.error('获取案件详情失败:', error);
+    console.error('[cases/id] Error:', error);
     return NextResponse.json({ error: '获取案件详情失败' }, { status: 500 });
   }
 }
@@ -60,47 +64,41 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const client = await pool.connect();
+    const client = getSupabaseClient();
     
-    try {
-      const fields: string[] = [];
-      const values: (string | number | null)[] = [];
-      let paramIndex = 1;
+    const updateData: Record<string, unknown> = {};
+    const allowedFields = [
+      'case_number', 'plaintiff_name', 'plaintiff_phone', 'defendant_name',
+      'case_type', 'amount', 'status', 'filing_date', 'close_date', 'handler', 'notes'
+    ];
 
-      const allowedFields = [
-        'case_number', 'plaintiff_name', 'plaintiff_phone', 'defendant_name',
-        'case_type', 'amount', 'status', 'filing_date', 'close_date', 'handler', 'notes'
-      ];
-
-      for (const field of allowedFields) {
-        if (body[field] !== undefined) {
-          fields.push(`${field} = $${paramIndex}`);
-          values.push(body[field]);
-          paramIndex++;
-        }
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updateData[field] = body[field];
       }
-
-      if (fields.length === 0) {
-        return NextResponse.json({ error: '没有要更新的字段' }, { status: 400 });
-      }
-
-      fields.push(`updated_at = $${paramIndex}`);
-      values.push(new Date().toISOString());
-      values.push(id);
-
-      const query = `UPDATE cases SET ${fields.join(', ')} WHERE id = $${paramIndex + 1} RETURNING *`;
-      const result = await client.query(query, values);
-
-      if (result.rows.length === 0) {
-        return NextResponse.json({ error: '案件不存在' }, { status: 404 });
-      }
-
-      return NextResponse.json({ success: true, data: result.rows[0] });
-    } finally {
-      client.release();
     }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: '没有要更新的字段' }, { status: 400 });
+    }
+
+    updateData.updated_at = new Date().toISOString();
+
+    const { data, error } = await client
+      .from('cases')
+      .update(updateData)
+      .eq('id', parseInt(id))
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[cases/id] Update error:', error);
+      return NextResponse.json({ error: '更新案件失败' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('更新案件失败:', error);
+    console.error('[cases/id] Error:', error);
     return NextResponse.json({ error: '更新案件失败' }, { status: 500 });
   }
 }
@@ -117,25 +115,39 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const client = await pool.connect();
+    const client = getSupabaseClient();
     
-    try {
-      // 先删除关联的文件
-      await client.query('DELETE FROM files WHERE case_id = $1', [id]);
-      
-      // 再删除案件
-      const result = await client.query('DELETE FROM cases WHERE id = $1 RETURNING id', [id]);
+    // 先检查案件是否存在
+    const { data: existingCase, error: checkError } = await client
+      .from('cases')
+      .select('id')
+      .eq('id', parseInt(id))
+      .single();
 
-      if (result.rows.length === 0) {
-        return NextResponse.json({ error: '案件不存在' }, { status: 404 });
-      }
-
-      return NextResponse.json({ success: true });
-    } finally {
-      client.release();
+    if (checkError || !existingCase) {
+      return NextResponse.json({ error: '案件不存在' }, { status: 404 });
     }
+
+    // 先删除关联的文件
+    await client
+      .from('files')
+      .delete()
+      .eq('case_id', parseInt(id));
+    
+    // 再删除案件
+    const { error: deleteError } = await client
+      .from('cases')
+      .delete()
+      .eq('id', parseInt(id));
+
+    if (deleteError) {
+      console.error('[cases/id] Delete error:', deleteError);
+      return NextResponse.json({ error: '删除案件失败' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('删除案件失败:', error);
+    console.error('[cases/id] Error:', error);
     return NextResponse.json({ error: '删除案件失败' }, { status: 500 });
   }
 }

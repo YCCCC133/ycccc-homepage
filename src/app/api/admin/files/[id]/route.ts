@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pool } from '@/storage/database/pg-pool';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 // 验证管理员身份
 function isAuthenticated(request: NextRequest): boolean {
@@ -19,29 +19,37 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const client = await pool.connect();
+    const client = getSupabaseClient();
     
-    try {
-      // 获取文件信息
-      const fileResult = await client.query('SELECT * FROM files WHERE id = $1', [id]);
-      
-      if (fileResult.rows.length === 0) {
-        return NextResponse.json({ error: '文件不存在' }, { status: 404 });
-      }
-
-      // 删除文件记录
-      await client.query('DELETE FROM files WHERE id = $1', [id]);
-
-      // 注意：实际删除文件需要调用对象存储API
-      // const file = fileResult.rows[0];
-      // if (file.url) { ... 删除对象存储中的文件 ... }
-
-      return NextResponse.json({ success: true });
-    } finally {
-      client.release();
+    // 先检查文件是否存在
+    const { data: existingFile, error: checkError } = await client
+      .from('files')
+      .select('id, url')
+      .eq('id', parseInt(id))
+      .single();
+    
+    if (checkError || !existingFile) {
+      return NextResponse.json({ error: '文件不存在' }, { status: 404 });
     }
+
+    // 删除文件记录
+    const { error: deleteError } = await client
+      .from('files')
+      .delete()
+      .eq('id', parseInt(id));
+
+    if (deleteError) {
+      console.error('[files/id] Delete error:', deleteError);
+      return NextResponse.json({ error: '删除文件失败' }, { status: 500 });
+    }
+
+    // 注意：实际删除文件需要调用对象存储API
+    // const file = existingFile;
+    // if (file.url) { ... 删除对象存储中的文件 ... }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('删除文件失败:', error);
+    console.error('[files/id] Error:', error);
     return NextResponse.json({ error: '删除文件失败' }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pool } from '@/storage/database/pg-pool';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 // 验证管理员身份
 function isAuthenticated(request: NextRequest): boolean {
@@ -18,23 +18,22 @@ export async function GET(
 
   try {
     const { id } = await params;
-    const client = await pool.connect();
-    try {
-      const result = await client.query(
-        `SELECT * FROM knowledge_base WHERE id = $1`,
-        [id]
-      );
+    const client = getSupabaseClient();
+    
+    const { data, error } = await client
+      .from('knowledge_base')
+      .select('*')
+      .eq('id', parseInt(id))
+      .single();
 
-      if (result.rows.length === 0) {
-        return NextResponse.json({ error: '知识库条目不存在' }, { status: 404 });
-      }
-
-      return NextResponse.json({ success: true, data: result.rows[0] });
-    } finally {
-      client.release();
+    if (error) {
+      console.error('[knowledge/id] Query error:', error);
+      return NextResponse.json({ error: '知识库条目不存在' }, { status: 404 });
     }
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('获取知识库详情失败:', error);
+    console.error('[knowledge/id] Error:', error);
     return NextResponse.json({ error: '获取数据失败' }, { status: 500 });
   }
 }
@@ -64,36 +63,36 @@ export async function PUT(
       is_active
     } = body;
 
-    const client = await pool.connect();
-    try {
-      const result_db = await client.query(
-        `UPDATE knowledge_base 
-         SET category = COALESCE($1, category),
-             court = COALESCE($2, court),
-             case_number = COALESCE($3, case_number),
-             parties = COALESCE($4, parties),
-             case_type = COALESCE($5, case_type),
-             procedure_type = COALESCE($6, procedure_type),
-             result = COALESCE($7, result),
-             summary = COALESCE($8, summary),
-             full_text = COALESCE($9, full_text),
-             is_active = COALESCE($10, is_active),
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = $11
-         RETURNING *`,
-        [category, court, case_number, parties, case_type, procedure_type, result, summary, full_text, is_active, id]
-      );
+    const client = getSupabaseClient();
+    
+    const updateData: Record<string, unknown> = {};
+    if (category !== undefined) updateData.category = category;
+    if (court !== undefined) updateData.court = court;
+    if (case_number !== undefined) updateData.case_number = case_number;
+    if (parties !== undefined) updateData.parties = parties;
+    if (case_type !== undefined) updateData.case_type = case_type;
+    if (procedure_type !== undefined) updateData.procedure_type = procedure_type;
+    if (result !== undefined) updateData.result = result;
+    if (summary !== undefined) updateData.summary = summary;
+    if (full_text !== undefined) updateData.full_text = full_text;
+    if (is_active !== undefined) updateData.is_active = is_active;
+    updateData.updated_at = new Date().toISOString();
 
-      if (result_db.rows.length === 0) {
-        return NextResponse.json({ error: '知识库条目不存在' }, { status: 404 });
-      }
+    const { data, error } = await client
+      .from('knowledge_base')
+      .update(updateData)
+      .eq('id', parseInt(id))
+      .select()
+      .single();
 
-      return NextResponse.json({ success: true, data: result_db.rows[0] });
-    } finally {
-      client.release();
+    if (error) {
+      console.error('[knowledge/id] Update error:', error);
+      return NextResponse.json({ error: '更新失败' }, { status: 500 });
     }
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('更新知识库失败:', error);
+    console.error('[knowledge/id] Error:', error);
     return NextResponse.json({ error: '更新失败' }, { status: 500 });
   }
 }
@@ -109,23 +108,21 @@ export async function DELETE(
 
   try {
     const { id } = await params;
-    const client = await pool.connect();
-    try {
-      const result = await client.query(
-        'DELETE FROM knowledge_base WHERE id = $1 RETURNING id',
-        [id]
-      );
+    const client = getSupabaseClient();
+    
+    const { error } = await client
+      .from('knowledge_base')
+      .delete()
+      .eq('id', parseInt(id));
 
-      if (result.rows.length === 0) {
-        return NextResponse.json({ error: '知识库条目不存在' }, { status: 404 });
-      }
-
-      return NextResponse.json({ success: true });
-    } finally {
-      client.release();
+    if (error) {
+      console.error('[knowledge/id] Delete error:', error);
+      return NextResponse.json({ error: '删除失败' }, { status: 500 });
     }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('删除知识库失败:', error);
+    console.error('[knowledge/id] Error:', error);
     return NextResponse.json({ error: '删除失败' }, { status: 500 });
   }
 }

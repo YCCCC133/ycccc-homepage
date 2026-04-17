@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pool } from '@/storage/database/pg-pool';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { S3Storage } from 'coze-coding-dev-sdk';
 
 // 初始化存储
@@ -38,90 +38,65 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     const sortBy = searchParams.get('sortBy') || 'created_at';
-    const sortOrder = searchParams.get('sortOrder') || 'DESC';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
     const featuredOnly = searchParams.get('featured_only') === 'true';
 
-    const client = await pool.connect();
-    try {
-      const conditions: string[] = [];
-      const values: (string | number | boolean)[] = [];
-      let paramIndex = 1;
+    const client = getSupabaseClient();
 
-      if (publishedOnly) {
-        conditions.push(`is_published = $${paramIndex++}`);
-        values.push(true);
-      }
+    let query = client
+      .from('announcements')
+      .select('id, title, summary, content, category, image_url, is_published, is_top, is_banner, sort_order, author, created_at, updated_at', { count: 'exact' });
 
-      if (bannerOnly) {
-        conditions.push(`is_banner = $${paramIndex++}`);
-        values.push(true);
-      }
-
-      if (featuredOnly) {
-        conditions.push(`(is_top = $${paramIndex++} OR is_banner = $${paramIndex++})`);
-        values.push(true, true);
-      }
-
-      if (category) {
-        conditions.push(`category = $${paramIndex++}`);
-        values.push(category);
-      }
-
-      if (search) {
-        conditions.push(`(title ILIKE $${paramIndex} OR content ILIKE $${paramIndex} OR summary ILIKE $${paramIndex})`);
-        values.push(`%${search}%`);
-        paramIndex++;
-      }
-
-      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
-      const validSortFields = ['created_at', 'updated_at', 'sort_order', 'title'];
-      const safeSortBy = validSortFields.includes(sortBy) ? sortBy : 'created_at';
-      const safeSortOrder = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-
-      const orderClause = `ORDER BY is_top DESC, ${safeSortBy} ${safeSortOrder}`;
-
-      const query = `
-        SELECT id, title, summary, content, category, image_url, 
-               is_published, is_top, is_banner, sort_order,
-               author, created_at, updated_at
-        FROM announcements
-        ${whereClause}
-        ${orderClause}
-        LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-      `;
-      values.push(limit, offset);
-
-      const countQuery = `
-        SELECT COUNT(*) as total FROM announcements ${whereClause}
-      `;
-      const countValues = values.slice(0, -2);
-
-      const [result, countResult] = await Promise.all([
-        client.query(query, values),
-        client.query(countQuery, countValues)
-      ]);
-
-      // 格式化图片 URL
-      const formattedData = await Promise.all(
-        result.rows.map((row) => formatAnnouncement(row as Record<string, unknown>))
-      );
-
-      return NextResponse.json({
-        success: true,
-        data: formattedData,
-        pagination: {
-          total: parseInt(countResult.rows[0].total),
-          limit,
-          offset,
-          hasMore: offset + result.rows.length < parseInt(countResult.rows[0].total)
-        }
-      });
-    } finally {
-      client.release();
+    // 过滤条件
+    if (publishedOnly) {
+      query = query.eq('is_published', true);
     }
+    if (bannerOnly) {
+      query = query.eq('is_banner', true);
+    }
+    if (featuredOnly) {
+      query = query.or('is_top.eq.true,is_banner.eq.true');
+    }
+    if (category) {
+      query = query.eq('category', category);
+    }
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%,summary.ilike.%${search}%`);
+    }
+
+    // 排序
+    const validSortFields: Record<string, string> = {
+      'created_at': 'created_at',
+      'updated_at': 'updated_at',
+      'sort_order': 'sort_order',
+      'title': 'title'
+    };
+    const safeSortBy = validSortFields[sortBy] || 'created_at';
+    query = query.order(safeSortBy as any, { ascending: sortOrder.toLowerCase() === 'asc' });
+    query = query.order('is_top', { ascending: false });
+
+    // 分页
+    query = query.range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('[announcements] Query error:', error);
+      return NextResponse.json({ success: false, error: '获取公告列表失败' }, { status: 500 });
+    }
+
+    // 格式化图片 URL
+    const formattedData = await Promise.all(
+      (data || []).map(item => formatAnnouncement(item as Record<string, unknown>))
+    );
+
+    return NextResponse.json({
+      success: true,
+      data: formattedData,
+      total: count ?? 0,
+    });
   } catch (error) {
-    console.error('获取公告列表失败:', error);
+    console.error('[announcements] Error:', error);
     return NextResponse.json({ success: false, error: '获取公告列表失败' }, { status: 500 });
   }
 }
@@ -135,45 +110,44 @@ export async function POST(request: NextRequest) {
       content,
       summary,
       category,
-      is_published,
       image_url,
       author,
+      is_published,
       is_top,
       is_banner,
       sort_order
     } = body;
 
-    if (!title || !content) {
-      return NextResponse.json({ success: false, error: '标题和内容不能为空' }, { status: 400 });
+    if (!title) {
+      return NextResponse.json({ success: false, error: '标题不能为空' }, { status: 400 });
     }
 
-    const client = await pool.connect();
-    try {
-      const result = await client.query(
-        `INSERT INTO announcements (title, summary, content, category, is_published, image_url, author, is_top, is_banner, sort_order)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING *`,
-        [
-          title,
-          summary || null,
-          content,
-          category || '通知',
-          is_published ?? true,
-          image_url || null,
-          author || '管理员',
-          is_top ?? false,
-          is_banner ?? false,
-          sort_order ?? 0
-        ]
-      );
-      
-      const formatted = await formatAnnouncement(result.rows[0] as Record<string, unknown>);
-      return NextResponse.json({ success: true, data: formatted });
-    } finally {
-      client.release();
+    const client = getSupabaseClient();
+    const { data, error } = await client
+      .from('announcements')
+      .insert({
+        title,
+        content: content || null,
+        summary: summary || null,
+        category: category || 'general',
+        image_url: image_url || null,
+        author: author || '管理员',
+        is_published: is_published ?? true,
+        is_top: is_top ?? false,
+        is_banner: is_banner ?? false,
+        sort_order: sort_order ?? 0,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[announcements] Insert error:', error);
+      return NextResponse.json({ success: false, error: '创建公告失败' }, { status: 500 });
     }
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('创建公告失败:', error);
+    console.error('[announcements] Error:', error);
     return NextResponse.json({ success: false, error: '创建公告失败' }, { status: 500 });
   }
 }

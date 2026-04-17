@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pool } from '@/storage/database/pg-pool';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 // 验证管理员身份
 function isAuthenticated(request: NextRequest): boolean {
@@ -19,21 +19,22 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const client = await pool.connect();
+    const client = getSupabaseClient();
     
-    try {
-      const result = await client.query('SELECT * FROM templates WHERE id = $1', [id]);
-      
-      if (result.rows.length === 0) {
-        return NextResponse.json({ error: '模板不存在' }, { status: 404 });
-      }
-
-      return NextResponse.json({ success: true, data: result.rows[0] });
-    } finally {
-      client.release();
+    const { data, error } = await client
+      .from('templates')
+      .select('*')
+      .eq('id', parseInt(id))
+      .single();
+    
+    if (error) {
+      console.error('[templates/id] Query error:', error);
+      return NextResponse.json({ error: '模板不存在' }, { status: 404 });
     }
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('获取模板详情失败:', error);
+    console.error('[templates/id] Error:', error);
     return NextResponse.json({ error: '获取模板详情失败' }, { status: 500 });
   }
 }
@@ -51,49 +52,46 @@ export async function PUT(
 
   try {
     const body = await request.json();
-    const client = await pool.connect();
+    const client = getSupabaseClient();
     
-    try {
-      const fields: string[] = [];
-      const values: (string | number | boolean | null)[] = [];
-      let paramIndex = 1;
+    const updateData: Record<string, unknown> = {};
+    const allowedFields = ['name', 'type', 'content', 'is_active'];
 
-      const allowedFields = ['name', 'type', 'content', 'variables', 'is_active'];
-
-      for (const field of allowedFields) {
-        if (body[field] !== undefined) {
-          if (field === 'variables') {
-            fields.push(`${field} = $${paramIndex}`);
-            values.push(JSON.stringify(body[field]));
-          } else {
-            fields.push(`${field} = $${paramIndex}`);
-            values.push(body[field]);
-          }
-          paramIndex++;
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        if (field === 'variables') {
+          updateData[field] = JSON.stringify(body[field]);
+        } else {
+          updateData[field] = body[field];
         }
       }
-
-      if (fields.length === 0) {
-        return NextResponse.json({ error: '没有要更新的字段' }, { status: 400 });
-      }
-
-      fields.push(`updated_at = $${paramIndex}`);
-      values.push(new Date().toISOString());
-      values.push(id);
-
-      const query = `UPDATE templates SET ${fields.join(', ')} WHERE id = $${paramIndex + 1} RETURNING *`;
-      const result = await client.query(query, values);
-
-      if (result.rows.length === 0) {
-        return NextResponse.json({ error: '模板不存在' }, { status: 404 });
-      }
-
-      return NextResponse.json({ success: true, data: result.rows[0] });
-    } finally {
-      client.release();
     }
+
+    if (body.variables !== undefined) {
+      updateData.variables = JSON.stringify(body.variables);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: '没有要更新的字段' }, { status: 400 });
+    }
+
+    updateData.updated_at = new Date().toISOString();
+
+    const { data, error } = await client
+      .from('templates')
+      .update(updateData)
+      .eq('id', parseInt(id))
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[templates/id] Update error:', error);
+      return NextResponse.json({ error: '更新模板失败' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('更新模板失败:', error);
+    console.error('[templates/id] Error:', error);
     return NextResponse.json({ error: '更新模板失败' }, { status: 500 });
   }
 }
@@ -110,21 +108,21 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const client = await pool.connect();
+    const client = getSupabaseClient();
     
-    try {
-      const result = await client.query('DELETE FROM templates WHERE id = $1 RETURNING id', [id]);
+    const { error } = await client
+      .from('templates')
+      .delete()
+      .eq('id', parseInt(id));
 
-      if (result.rows.length === 0) {
-        return NextResponse.json({ error: '模板不存在' }, { status: 404 });
-      }
-
-      return NextResponse.json({ success: true });
-    } finally {
-      client.release();
+    if (error) {
+      console.error('[templates/id] Delete error:', error);
+      return NextResponse.json({ error: '删除模板失败' }, { status: 500 });
     }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('删除模板失败:', error);
+    console.error('[templates/id] Error:', error);
     return NextResponse.json({ error: '删除模板失败' }, { status: 500 });
   }
 }

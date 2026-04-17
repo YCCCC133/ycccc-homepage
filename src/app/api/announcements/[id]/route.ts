@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pool } from '@/storage/database/pg-pool';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { S3Storage } from 'coze-coding-dev-sdk';
 
 // 初始化存储
@@ -34,27 +34,23 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const client = await pool.connect();
-    try {
-      const result = await client.query(
-        `SELECT id, title, summary, content, category, image_url,
-                is_published, is_top, is_banner, sort_order,
-                author, created_at, updated_at
-         FROM announcements WHERE id = $1`,
-        [id]
-      );
-      
-      if (result.rows.length === 0) {
-        return NextResponse.json({ success: false, error: '公告不存在' }, { status: 404 });
-      }
-      
-      const formatted = await formatAnnouncement(result.rows[0] as Record<string, unknown>);
-      return NextResponse.json({ success: true, data: formatted });
-    } finally {
-      client.release();
+    const client = getSupabaseClient();
+    
+    const { data, error } = await client
+      .from('announcements')
+      .select('id, title, summary, content, category, image_url, is_published, is_top, is_banner, sort_order, author, created_at, updated_at')
+      .eq('id', parseInt(id))
+      .single();
+
+    if (error) {
+      console.error('[announcements/id] Query error:', error);
+      return NextResponse.json({ success: false, error: '公告不存在' }, { status: 404 });
     }
+    
+    const formatted = await formatAnnouncement(data as Record<string, unknown>);
+    return NextResponse.json({ success: true, data: formatted });
   } catch (error) {
-    console.error('获取公告详情失败:', error);
+    console.error('[announcements/id] Error:', error);
     return NextResponse.json({ success: false, error: '获取公告详情失败' }, { status: 500 });
   }
 }
@@ -80,37 +76,36 @@ export async function PUT(
       sort_order
     } = body;
 
-    const client = await pool.connect();
-    try {
-      const result = await client.query(
-        `UPDATE announcements 
-         SET title = COALESCE($1, title),
-             summary = COALESCE($2, summary),
-             content = COALESCE($3, content),
-             category = COALESCE($4, category),
-             is_published = COALESCE($5, is_published),
-             image_url = COALESCE($6, image_url),
-             author = COALESCE($7, author),
-             is_top = COALESCE($8, is_top),
-             is_banner = COALESCE($9, is_banner),
-             sort_order = COALESCE($10, sort_order),
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = $11
-         RETURNING *`,
-        [title, summary, content, category, is_published, image_url, author, is_top, is_banner, sort_order, id]
-      );
-      
-      if (result.rows.length === 0) {
-        return NextResponse.json({ success: false, error: '公告不存在' }, { status: 404 });
-      }
-      
-      const formatted = await formatAnnouncement(result.rows[0] as Record<string, unknown>);
-      return NextResponse.json({ success: true, data: formatted });
-    } finally {
-      client.release();
+    const client = getSupabaseClient();
+    
+    const updateData: Record<string, unknown> = {};
+    if (title !== undefined) updateData.title = title;
+    if (content !== undefined) updateData.content = content;
+    if (summary !== undefined) updateData.summary = summary;
+    if (category !== undefined) updateData.category = category;
+    if (is_published !== undefined) updateData.is_published = is_published;
+    if (image_url !== undefined) updateData.image_url = image_url;
+    if (author !== undefined) updateData.author = author;
+    if (is_top !== undefined) updateData.is_top = is_top;
+    if (is_banner !== undefined) updateData.is_banner = is_banner;
+    if (sort_order !== undefined) updateData.sort_order = sort_order;
+    updateData.updated_at = new Date().toISOString();
+
+    const { data, error } = await client
+      .from('announcements')
+      .update(updateData)
+      .eq('id', parseInt(id))
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[announcements/id] Update error:', error);
+      return NextResponse.json({ success: false, error: '更新公告失败' }, { status: 500 });
     }
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('更新公告失败:', error);
+    console.error('[announcements/id] Error:', error);
     return NextResponse.json({ success: false, error: '更新公告失败' }, { status: 500 });
   }
 }
@@ -122,75 +117,21 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const client = await pool.connect();
-    try {
-      const result = await client.query(
-        'DELETE FROM announcements WHERE id = $1 RETURNING id',
-        [id]
-      );
-      if (result.rows.length === 0) {
-        return NextResponse.json({ success: false, error: '公告不存在' }, { status: 404 });
-      }
-      return NextResponse.json({ success: true });
-    } finally {
-      client.release();
+    const client = getSupabaseClient();
+    
+    const { error } = await client
+      .from('announcements')
+      .delete()
+      .eq('id', parseInt(id));
+
+    if (error) {
+      console.error('[announcements/id] Delete error:', error);
+      return NextResponse.json({ success: false, error: '删除公告失败' }, { status: 500 });
     }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('删除公告失败:', error);
+    console.error('[announcements/id] Error:', error);
     return NextResponse.json({ success: false, error: '删除公告失败' }, { status: 500 });
-  }
-}
-
-// 批量更新状态
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
-    const { action, value } = body;
-
-    if (!action) {
-      return NextResponse.json({ success: false, error: '缺少操作类型' }, { status: 400 });
-    }
-
-    let field: string;
-    switch (action) {
-      case 'status':
-        field = 'is_published';
-        break;
-      case 'top':
-        field = 'is_top';
-        break;
-      case 'banner':
-        field = 'is_banner';
-        break;
-      default:
-        return NextResponse.json({ success: false, error: '未知操作类型' }, { status: 400 });
-    }
-
-    const client = await pool.connect();
-    try {
-      const result = await client.query(
-        `UPDATE announcements 
-         SET ${field} = $1, updated_at = CURRENT_TIMESTAMP
-         WHERE id = $2
-         RETURNING *`,
-        [value ?? true, id]
-      );
-      
-      if (result.rows.length === 0) {
-        return NextResponse.json({ success: false, error: '公告不存在' }, { status: 404 });
-      }
-      
-      const formatted = await formatAnnouncement(result.rows[0] as Record<string, unknown>);
-      return NextResponse.json({ success: true, data: formatted });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('更新公告状态失败:', error);
-    return NextResponse.json({ success: false, error: '更新公告状态失败' }, { status: 500 });
   }
 }

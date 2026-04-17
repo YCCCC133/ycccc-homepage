@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pool } from '@/storage/database/pg-pool';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 // 验证管理员身份
 function isAuthenticated(request: NextRequest): boolean {
@@ -20,50 +20,35 @@ export async function GET(request: NextRequest) {
   const offset = (page - 1) * pageSize;
 
   try {
-    const client = await pool.connect();
+    const client = getSupabaseClient();
     
-    try {
-      let whereClause = '1=1';
-      const params: (string | number)[] = [];
-      let paramIndex = 1;
+    let query = client
+      .from('files')
+      .select('id, name, type, size, case_id, uploaded_by, url, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
 
-      if (caseId) {
-        whereClause += ` AND case_id = $${paramIndex}`;
-        params.push(caseId);
-        paramIndex++;
-      }
-
-      // 获取总数
-      const countQuery = `SELECT COUNT(*) as total FROM files WHERE ${whereClause}`;
-      const countResult = await client.query(countQuery, params);
-      const total = parseInt(countResult.rows[0].total);
-
-      // 获取数据
-      const dataQuery = `
-        SELECT f.*, c.case_number 
-        FROM files f 
-        LEFT JOIN cases c ON f.case_id = c.id
-        WHERE ${whereClause}
-        ORDER BY f.created_at DESC
-        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-      `;
-      params.push(pageSize, offset);
-      
-      const dataResult = await client.query(dataQuery, params);
-
-      return NextResponse.json({
-        success: true,
-        data: dataResult.rows,
-        total,
-        page,
-        pageSize,
-        totalPages: Math.ceil(total / pageSize),
-      });
-    } finally {
-      client.release();
+    if (caseId) {
+      query = query.eq('case_id', parseInt(caseId));
     }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('[files] Query error:', error);
+      return NextResponse.json({ error: '获取文件列表失败' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: data || [],
+      total: count ?? 0,
+      page,
+      pageSize,
+      totalPages: Math.ceil((count ?? 0) / pageSize),
+    });
   } catch (error) {
-    console.error('获取文件列表失败:', error);
+    console.error('[files] Error:', error);
     return NextResponse.json({ error: '获取文件列表失败' }, { status: 500 });
   }
 }
@@ -89,22 +74,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '文件名为必填项' }, { status: 400 });
     }
 
-    const client = await pool.connect();
-    
-    try {
-      const result = await client.query(
-        `INSERT INTO files (name, type, size, case_id, uploaded_by, url)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING *`,
-        [name, type, size || 0, case_id, uploaded_by || '管理员', url]
-      );
+    const client = getSupabaseClient();
+    const { data, error } = await client
+      .from('files')
+      .insert({
+        name,
+        type: type || 'document',
+        size: size || 0,
+        case_id: case_id ? parseInt(case_id) : null,
+        uploaded_by: uploaded_by || '管理员',
+        url: url || null,
+      })
+      .select()
+      .single();
 
-      return NextResponse.json({ success: true, data: result.rows[0] });
-    } finally {
-      client.release();
+    if (error) {
+      console.error('[files] Insert error:', error);
+      return NextResponse.json({ error: '创建文件记录失败' }, { status: 500 });
     }
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('创建文件记录失败:', error);
+    console.error('[files] Error:', error);
     return NextResponse.json({ error: '创建文件记录失败' }, { status: 500 });
   }
 }

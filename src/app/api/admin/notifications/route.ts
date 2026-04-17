@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pool } from '@/storage/database/pg-pool';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 // 验证管理员身份
 function isAuthenticated(request: NextRequest): boolean {
@@ -14,16 +14,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const client = await pool.connect();
+    const client = getSupabaseClient();
     
-    try {
-      const result = await client.query('SELECT * FROM notifications ORDER BY sent_at DESC LIMIT 50');
-      return NextResponse.json({ success: true, data: result.rows });
-    } finally {
-      client.release();
+    const { data, error } = await client
+      .from('notifications')
+      .select('*')
+      .order('sent_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error('[notifications] Query error:', error);
+      return NextResponse.json({ error: '获取通知列表失败' }, { status: 500 });
     }
+
+    return NextResponse.json({ success: true, data: data || [] });
   } catch (error) {
-    console.error('获取通知列表失败:', error);
+    console.error('[notifications] Error:', error);
     return NextResponse.json({ error: '获取通知列表失败' }, { status: 500 });
   }
 }
@@ -42,26 +48,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '标题和内容为必填项' }, { status: 400 });
     }
 
-    const client = await pool.connect();
-    
-    try {
-      const result = await client.query(
-        `INSERT INTO notifications (title, content, type, recipients, status)
-         VALUES ($1, $2, $3, $4, 'sent')
-         RETURNING *`,
-        [title, content, type || 'system', recipients || 'all']
-      );
+    const client = getSupabaseClient();
+    const { data, error } = await client
+      .from('notifications')
+      .insert({
+        title,
+        content,
+        type: type || 'system',
+        recipients: recipients || 'all',
+        status: 'sent',
+      })
+      .select()
+      .single();
 
-      // TODO: 实际发送通知（短信/邮件/站内信）
-      // 根据recipients筛选目标用户
-      // 调用短信/邮件服务发送
-
-      return NextResponse.json({ success: true, data: result.rows[0] });
-    } finally {
-      client.release();
+    if (error) {
+      console.error('[notifications] Insert error:', error);
+      return NextResponse.json({ error: '发送通知失败' }, { status: 500 });
     }
+
+    // TODO: 实际发送通知（短信/邮件/站内信）
+    // 根据recipients筛选目标用户
+    // 调用短信/邮件服务发送
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('发送通知失败:', error);
+    console.error('[notifications] Error:', error);
     return NextResponse.json({ error: '发送通知失败' }, { status: 500 });
   }
 }
