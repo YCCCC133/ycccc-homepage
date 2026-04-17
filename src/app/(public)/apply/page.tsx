@@ -167,6 +167,36 @@ export default function ApplyPage() {
     },
   });
 
+  // 一键填充模拟测试数据
+  const fillMockData = () => {
+    const mockData: Partial<FormData> = {
+      applicantName: '张伟',
+      birthDate: '1990-06-15',
+      age: '34',
+      householdAddress: '河南省郑州市金水区花园路88号锦苑小区3号楼501室',
+      idCard: '410105199006151234',
+      phone: '13812345678',
+      workStartDate: '2024-02-20',
+      workEndDate: '2025-02-28',
+      workLocationType: '写字楼',
+      workLocation: '北京市海淀区中关村大街1号科技大厦A座12层',
+      workStreet: '北京市海淀区中关村大街',
+      defendantName: '北京华创科技有限公司',
+      defendantContact: '010-88888888 转 8888（人事部）',
+      unpaidAmount: '85000',
+      unpaidCalculation: '月工资25000元 × 3个月（2024年12月至2025年2月）= 75000元，另加逾期支付经济补偿金10000元',
+      hasAgent: false,
+      hasEvidence: true,
+      hasLaborContract: false,
+      hasChatRecords: true,
+      agreeTerms: true,
+      signature: '已签名',
+    };
+    
+    form.reset(mockData as FormData);
+    toast.success('已填充模拟数据，请检查后修改');
+  };
+
   const watchAllFields = form.watch();
   
   // 计算年龄
@@ -1146,6 +1176,18 @@ export default function ApplyPage() {
                   提交支持起诉申请
                 </>
               )}
+            </Button>
+
+            {/* 开发调试按钮：一键填充模拟数据 */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground hover:text-emerald-600 h-8"
+              onClick={fillMockData}
+            >
+              <Sparkles className="mr-1 h-3 w-3" />
+              填充模拟数据（开发测试用）
             </Button>
 
           </form>

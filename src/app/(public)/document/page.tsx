@@ -464,6 +464,10 @@ export default function DocumentPage() {
   // 签名状态
   const [signature, setSignature] = useState('');
   
+  // 编辑模式状态
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingDocId, setEditingDocId] = useState<number | null>(null);
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -524,6 +528,202 @@ export default function DocumentPage() {
       considerMediation: '',
     },
   });
+
+  // 一键填充模拟测试数据
+  const fillMockData = useCallback(() => {
+    const mockData: Partial<FormData> = {
+      // 原告信息
+      plaintiffName: '张伟',
+      plaintiffGender: 'male',
+      plaintiffBirthDate: '1990-06-15',
+      plaintiffNation: '汉族',
+      plaintiffWorkUnit: '自由职业',
+      plaintiffPosition: '软件工程师',
+      plaintiffPhone: '13812345678',
+      plaintiffResidence: '北京市朝阳区建国路88号现代城1号楼1501室',
+      plaintiffHabitualResidence: '北京市朝阳区建国路88号现代城1号楼1501室',
+      plaintiffIdType: '居民身份证',
+      plaintiffIdCard: '110105199006151234',
+      
+      // 被告信息
+      defendantName: '北京华创科技有限公司',
+      defendantAddress: '北京市海淀区中关村大街1号科技大厦A座1201室',
+      defendantRegisterAddress: '北京市海淀区中关村大街1号科技大厦A座1201室',
+      defendantLegalPerson: '李明',
+      defendantLegalPersonPosition: '法定代表人兼董事长',
+      defendantLegalPersonPhone: '010-88888888',
+      defendantCreditCode: '91110000123456789X',
+      defendantType: '有限责任公司',
+      
+      // 诉讼请求
+      claimWage: true,
+      claimWageDetail: '85000元（2024年9月至2025年2月，共计6个月）',
+      claimDoubleWage: true,
+      claimDoubleWageDetail: '170000元（2024年3月至2025年2月，未签劳动合同期间的双倍工资差额）',
+      claimOvertime: true,
+      claimOvertimeDetail: '加班费约25000元（含工作日加班、休息日加班及法定节假日加班）',
+      claimAnnualLeave: true,
+      claimAnnualLeaveDetail: '未休年休假工资报酬约5500元',
+      claimSocialInsurance: true,
+      claimSocialInsuranceDetail: '2024年3月至2025年2月期间未依法缴纳社会保险的经济补偿约30000元',
+      claimTerminationCompensation: true,
+      claimIllegalTermination: true,
+      claimLitigationFee: true,
+      claimTotalAmount: '315500',
+      
+      // 事实与理由
+      contractSignInfo: '申请人于2024年2月20日到被申请人处面试，2月25日正式入职，担任高级软件工程师一职。双方口头约定月工资25000元，每月15日发放上个月工资。工作期间，被申请人一直未与申请人签订书面劳动合同，也未为申请人缴纳社会保险。',
+      contractExecutionInfo: '申请人入职后主要负责公司核心系统的开发工作，工作地点位于北京市海淀区中关村大街1号科技大厦。入职以来，申请人勤勉尽责完成了各项工作任务，多次受到部门领导表扬。然而，被申请人自2024年9月起开始拖欠工资，截至2025年2月已累计拖欠6个月工资共计150000元。期间申请人多次向公司催要工资，公司均以资金周转困难为由推脱。此外，申请人存在大量加班情况，包括工作日延长工作时间加班约200小时，休息日加班约30天，法定节假日加班约5天，但公司从未支付过加班费。',
+      terminationInfo: '2025年2月28日，被申请人突然通知申请人公司经营困难，要求申请人次日办理离职手续。申请人于2025年3月1日正式离职，离职时被申请人未支付任何经济补偿。申请人认为，被申请人拖欠工资、未签劳动合同、未缴纳社保、违法解除劳动合同等行为已严重侵犯申请人的合法权益。',
+      arbitrationInfo: '申请人曾向北京市海淀区劳动人事争议仲裁委员会申请劳动仲裁，仲裁委于2025年3月15日作出裁决，支持了申请人部分仲裁请求。但申请人认为仲裁裁决对部分事项认定有误，故依法向人民法院提起诉讼。',
+      otherFacts: '申请人系外地来京务工人员，在京工作生活多年，符合《保障农民工工资支付条例》中关于农民工的认定标准。本案涉及工资拖欠、社会保险等关系到劳动者基本权益的事项，请求法院依法保护劳动者的合法权益。',
+      legalBasis: '《中华人民共和国劳动法》第五十条：工资应当以货币形式按月支付给劳动者本人。不得克扣或者无故拖欠劳动者的工资。\n《劳动合同法》第十条：建立劳动关系，应当订立书面劳动合同。已建立劳动关系，未同时订立书面劳动合同的，应当自用工之日起一个月内订立书面劳动合同。\n《劳动合同法》第八十二条：用人单位自用工之日起超过一个月不满一年未与劳动者订立书面劳动合同的，应当向劳动者每月支付二倍的工资。\n《劳动合同法》第八十七条：用人单位违反本法规定解除或者终止劳动合同的，应当依照本法第四十七条规定的经济补偿标准的二倍向劳动者支付赔偿金。',
+      evidenceList: '1.银行流水交易明细（证明工资标准及发放情况）\n2.工作证、工牌、门禁卡\n3.钉钉/企业微信工作记录截图\n4.加班打卡记录\n5.与公司领导的沟通记录（微信、短信、邮件）\n6.公司工位照片及办公环境视频\n7.同事证言\n8.个人所得税完税证明\n9.社保缴费记录查询结果\n10.劳动仲裁裁决书',
+      
+      // 调解意愿
+      understandMediation: true,
+      understandMediationBenefits: true,
+      considerMediation: 'yes',
+    };
+    
+    form.reset(mockData as FormData);
+    setUploadedFiles({
+      idCardFront: undefined,
+      idCardBack: undefined,
+      evidenceFiles: [],
+    });
+    setSignature('');
+    toast.success('已填充模拟数据，请检查后修改');
+  }, [form]);
+
+  // 从 URL 参数加载文书数据
+  useEffect(() => {
+    const loadDocumentData = async () => {
+      // 获取 URL 参数
+      const params = new URLSearchParams(window.location.search);
+      const docId = params.get('id');
+      const action = params.get('action');
+      
+      if (docId && (action === 'edit' || action === 'view')) {
+        try {
+          console.log('[document] Loading document:', docId);
+          const response = await fetch(`/api/documents/${docId}`);
+          const result = await response.json();
+          
+          if (result.success && result.data) {
+            const data = result.data;
+            
+            // 恢复表单数据
+            const formData: Partial<FormData> = {};
+            
+            // 原告信息
+            formData.plaintiffName = data.plaintiff_name || '';
+            formData.plaintiffGender = data.plaintiff_gender || '';
+            formData.plaintiffBirthDate = data.plaintiff_birth_date || '';
+            formData.plaintiffNation = data.plaintiff_nation || '';
+            formData.plaintiffWorkUnit = data.plaintiff_work_unit || '';
+            formData.plaintiffPosition = data.plaintiff_position || '';
+            formData.plaintiffPhone = data.plaintiff_phone || '';
+            formData.plaintiffResidence = data.plaintiff_residence || '';
+            formData.plaintiffHabitualResidence = data.plaintiff_habitual_residence || '';
+            formData.plaintiffIdType = data.plaintiff_id_type || '';
+            formData.plaintiffIdCard = data.plaintiff_id_card || '';
+            
+            // 代理人
+            formData.hasAgent = data.has_agent || false;
+            formData.agentName = data.agent_name || '';
+            formData.agentUnit = data.agent_unit || '';
+            formData.agentPosition = data.agent_position || '';
+            formData.agentPhone = data.agent_phone || '';
+            formData.agentPermission = data.agent_permission || '';
+            
+            // 被告信息
+            formData.defendantName = data.defendant_name || '';
+            formData.defendantAddress = data.defendant_address || '';
+            formData.defendantRegisterAddress = data.defendant_register_address || '';
+            formData.defendantLegalPerson = data.defendant_legal_person || '';
+            formData.defendantLegalPersonPosition = data.defendant_legal_person_position || '';
+            formData.defendantLegalPersonPhone = data.defendant_legal_person_phone || '';
+            formData.defendantCreditCode = data.defendant_credit_code || '';
+            formData.defendantType = data.defendant_type || '';
+            
+            // 诉讼请求
+            if (data.claims) {
+              const claims = typeof data.claims === 'string' ? JSON.parse(data.claims) : data.claims;
+              formData.claimWage = claims.claimWage || false;
+              formData.claimWageDetail = claims.claimWageDetail || '';
+              formData.claimDoubleWage = claims.claimDoubleWage || false;
+              formData.claimDoubleWageDetail = claims.claimDoubleWageDetail || '';
+              formData.claimOvertime = claims.claimOvertime || false;
+              formData.claimOvertimeDetail = claims.claimOvertimeDetail || '';
+              formData.claimAnnualLeave = claims.claimAnnualLeave || false;
+              formData.claimAnnualLeaveDetail = claims.claimAnnualLeaveDetail || '';
+              formData.claimSocialInsurance = claims.claimSocialInsurance || false;
+              formData.claimSocialInsuranceDetail = claims.claimSocialInsuranceDetail || '';
+              formData.claimTerminationCompensation = claims.claimTerminationCompensation || false;
+              formData.claimIllegalTermination = claims.claimIllegalTermination || false;
+              formData.claimLitigationFee = claims.claimLitigationFee !== false;
+              formData.claimOther = claims.claimOther || '';
+            }
+            formData.claimTotalAmount = data.claim_total_amount ? String(data.claim_total_amount) : '';
+            
+            // 诉前保全
+            formData.hasPreservation = data.has_preservation || false;
+            formData.preservationCourt = data.preservation_court || '';
+            formData.preservationDate = data.preservation_date || '';
+            formData.preservationCaseNo = data.preservation_case_no || '';
+            
+            // 事实与理由
+            formData.contractSignInfo = data.contract_sign_info || '';
+            formData.contractExecutionInfo = data.contract_execution_info || '';
+            formData.terminationInfo = data.termination_info || '';
+            formData.injuryInfo = data.injury_info || '';
+            formData.arbitrationInfo = data.arbitration_info || '';
+            formData.otherFacts = data.other_facts || '';
+            formData.legalBasis = data.legal_basis || '';
+            formData.evidenceList = data.evidence_list || '';
+            
+            // 调解意愿
+            formData.understandMediation = data.understand_mediation || false;
+            formData.understandMediationBenefits = data.understand_mediation_benefits || false;
+            formData.considerMediation = data.consider_mediation || '';
+            
+            // 恢复表单数据
+            form.reset(formData as FormData);
+            
+            // 恢复文件 URL
+            if (data.signature_url) {
+              setSignature(data.signature_url);
+            }
+            
+            // 恢复文书内容
+            if (data.document_content) {
+              setGeneratedDocument(data.document_content);
+            }
+            
+            // 设置编辑模式
+            setEditingDocId(data.id);
+            if (action === 'view') {
+              setIsEditMode(false);
+              toast.info('当前为查看模式，无法编辑');
+            } else {
+              setIsEditMode(true);
+              toast.success('已加载文书数据，可进行编辑');
+            }
+            
+            setDocNumber(data.doc_number || String(data.id));
+          } else {
+            toast.error(result.error || '加载文书失败');
+          }
+        } catch (error) {
+          console.error('[document] Load error:', error);
+          toast.error('加载文书失败，请检查网络');
+        }
+      }
+    };
+    
+    loadDocumentData();
+  }, [form]);
 
   const watchAllFields = form.watch();
   
@@ -799,14 +999,27 @@ XXXX人民法院
         
         // 完整表单数据
         form_data: data,
+        status: 'pending',
       };
       
-      // 3. 调用 API 提交
-      const response = await fetch('/api/documents/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submitData),
-      });
+      // 3. 调用 API 提交或更新
+      let response;
+      if (isEditMode && editingDocId) {
+        // 编辑模式：更新已有文书
+        submitData.status = 'draft'; // 编辑后重新变为草稿
+        response = await fetch(`/api/documents/${editingDocId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(submitData),
+        });
+      } else {
+        // 新增模式
+        response = await fetch('/api/documents/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(submitData),
+        });
+      }
       
       const result = await response.json();
       console.log('[document] Submit result:', result);
@@ -814,7 +1027,7 @@ XXXX人民法院
       if (result.success && result.data) {
         setDocNumber(result.data.doc_number || result.data.id);
         setSubmitSuccess(true);
-        toast.success('文书已生成并提交成功');
+        toast.success(isEditMode ? '文书已更新成功' : '文书已生成并提交成功');
         
         // 滚动到预览区域
         setTimeout(() => {
@@ -2125,7 +2338,7 @@ XXXX人民法院
                         ) : (
                           <>
                             <Sparkles className="mr-2 h-5 w-5" />
-                            一键生成并提交民事起诉状
+                            {isEditMode ? '重新生成并更新文书' : '一键生成并提交民事起诉状'}
                           </>
                         )}
                       </Button>
@@ -2148,6 +2361,18 @@ XXXX人民法院
                             仅生成预览
                           </>
                         )}
+                      </Button>
+                      
+                      {/* 开发调试按钮：一键填充模拟数据 */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs text-muted-foreground hover:text-emerald-600 h-8"
+                        onClick={fillMockData}
+                      >
+                        <Sparkles className="mr-1 h-3 w-3" />
+                        填充模拟数据（开发测试用）
                       </Button>
                     </div>
                   </form>

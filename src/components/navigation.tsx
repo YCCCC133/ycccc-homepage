@@ -23,6 +23,7 @@ const navigation = [
   { name: '线索填报', href: '/report', icon: FileText },
   { name: '智能咨询', href: '/consult', icon: MessageSquare },
   { name: '文书生成', href: '/document', icon: PenTool },
+  { name: '我的文书', href: '/documents', icon: FolderOpen },
   { name: '支持起诉', href: '/apply', icon: Send },
 ];
 

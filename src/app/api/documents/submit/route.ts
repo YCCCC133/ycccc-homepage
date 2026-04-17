@@ -188,9 +188,9 @@ export async function POST(request: NextRequest) {
         agent_phone,
         agent_permission,
         
-        // 诉讼请求
-        claims: claims || null,
-        claim_total_amount: claim_total_amount ? parseFloat(claim_total_amount) : null,
+        // 诉讼请求 - claims 需要是对象格式
+        claims: claims ? (typeof claims === 'string' ? JSON.parse(claims) : claims) : null,
+        claim_total_amount: claim_total_amount ? parseFloat(String(claim_total_amount)) : null,
         
         // 诉前保全
         has_preservation: has_preservation || false,
