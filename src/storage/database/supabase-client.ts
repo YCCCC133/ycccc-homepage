@@ -139,4 +139,26 @@ function getSupabaseClient(token?: string): SupabaseClient {
   return createClient(url, key, config);
 }
 
-export { getSupabaseClient, getSupabaseCredentials, ensureEnvLoaded };
+// 获取使用 service role key 的客户端（绕过 RLS）
+function getSupabaseServiceRoleClient(): SupabaseClient {
+  const { url, serviceRoleKey } = getSupabaseCredentials();
+  
+  if (!serviceRoleKey) {
+    console.warn('[supabase-client] No service role key, falling back to anon key');
+    return getSupabaseClient();
+  }
+  
+  console.log('[supabase-client] Creating service role client');
+  
+  return createClient(url, serviceRoleKey, {
+    db: {
+      timeout: 30000,
+    },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+export { getSupabaseClient, getSupabaseCredentials, ensureEnvLoaded, getSupabaseServiceRoleClient };

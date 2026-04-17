@@ -288,49 +288,74 @@ export default function ApplyPage() {
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
+      // 收集所有证据文件
+      const evidenceFiles = Object.entries(uploadedFiles)
+        .filter(([key]) => key.startsWith('evidence_'))
+        .map(([, value]) => value);
+      
       const res = await fetch('/api/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          // 申请人基础信息
           applicant_name: data.applicantName,
           applicant_phone: data.phone,
           applicant_id_card: data.idCard,
           applicant_address: data.householdAddress,
+          
+          // 出生信息
           birth_date: data.birthDate,
           age: data.age,
+          
+          // 工作信息
           work_start_date: data.workStartDate,
-          work_end_date: data.workEndDate,
+          work_end_date: data.workEndDate || null,
           work_location_type: data.workLocationType,
           work_location: data.workLocation,
-          application_type: 'support',
-          case_brief: `工作地点：${data.workLocation}，欠薪数额：${data.unpaidAmount}元`,
+          work_street: data.workStreet || null,
+          
+          // 欠薪信息
           defendant_name: data.defendantName,
-          defendant_address: data.workLocation,
+          defendant_contact: data.defendantContact || null,
           unpaid_amount: data.unpaidAmount,
+          unpaid_calculation: data.unpaidCalculation || null,
           unpaid_months: '1',
-          signature: data.signature,
-          uploaded_files: uploadedFiles,
+          
+          // 申请类型
+          application_type: 'support',
+          case_brief: `工作地点：${data.workLocation || ''}，欠薪数额：${data.unpaidAmount || ''}元`,
+          
+          // 授权委托
+          has_agent: data.hasAgent || false,
+          agent_name: data.agentName || null,
+          agent_phone: data.agentPhone || null,
+          agent_id_card: data.agentIdCard || null,
+          
+          // 证据信息
+          has_labor_contract: data.hasLaborContract || false,
+          has_chat_records: data.hasChatRecords || false,
+          
+          // 文件（base64 格式）
+          signature: data.signature || null,
+          id_card_front: uploadedFiles.idCardFront || null,
+          id_card_back: uploadedFiles.idCardBack || null,
+          evidence_files: evidenceFiles,
         }),
       });
       
       const result = await res.json();
+      console.log('[apply] Submit result:', result);
       
-      if (result.success) {
-        const appNumber = `SQ${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Date.now()).slice(-6)}`;
-        setApplicationNumber(appNumber);
+      if (result.success && result.data) {
+        setApplicationNumber(result.data.application_number || result.data.id);
         setSubmitSuccess(true);
         toast.success('申请提交成功');
       } else {
-        const appNumber = `SQ${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Date.now()).slice(-6)}`;
-        setApplicationNumber(appNumber);
-        setSubmitSuccess(true);
-        toast.success('申请已提交');
+        toast.error(result.error || '提交失败，请重试');
       }
-    } catch {
-      const appNumber = `SQ${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(Date.now()).slice(-6)}`;
-      setApplicationNumber(appNumber);
-      setSubmitSuccess(true);
-      toast.success('申请已提交');
+    } catch (error) {
+      console.error('[apply] Submit error:', error);
+      toast.error('网络错误，请检查网络连接后重试');
     } finally {
       setIsSubmitting(false);
     }
